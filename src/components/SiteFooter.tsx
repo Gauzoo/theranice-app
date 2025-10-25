@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function SiteFooter() {
   return (
     <footer className="bg-[#333333] text-[#FEFAE0]">
@@ -16,19 +18,19 @@ export default function SiteFooter() {
             <h3 className="text-lg font-semibold text-[#D4A373] mb-4">Liens rapides</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="/#nos-espaces" className="hover:text-[#D4A373] transition-colors">
+                <Link href="/#nos-espaces" className="hover:text-[#D4A373] transition-colors">
                   Nos espaces
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/#forfait" className="hover:text-[#D4A373] transition-colors">
+                <Link href="/#forfait" className="hover:text-[#D4A373] transition-colors">
                   Forfait
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/#contact" className="hover:text-[#D4A373] transition-colors">
+                <Link href="/#contact" className="hover:text-[#D4A373] transition-colors">
                   Contact
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
