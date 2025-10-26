@@ -50,6 +50,8 @@ export default function SiteHeader() {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   // État pour savoir si on est côté client (pour éviter l'hydration mismatch)
   const [isMounted, setIsMounted] = useState(false);
+  // État pour le menu mobile
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Surveille le scroll pour mettre à jour l'état du header
   useEffect(() => {
@@ -102,6 +104,9 @@ export default function SiteHeader() {
     href: string,
     targetId: string,
   ) => {
+    // Ferme le menu mobile
+    setIsMobileMenuOpen(false);
+    
     const hashIndex = href.indexOf("#"); // Cherche si le lien contient une ancre (#)
 
     // Cas spécial : clic sur "Accueil" quand on est déjà sur la page d'accueil
@@ -153,7 +158,8 @@ export default function SiteHeader() {
           </span>
         </div>
         
-        <nav>
+        {/* Menu desktop - masqué en mobile */}
+        <nav className="hidden lg:block">
           <ul className="flex items-center gap-6 text-lg font-medium uppercase tracking-wide"> 
             {NAV_LINKS.map((link) => {
               // Vérifie si ce lien correspond à la section active (seulement côté client)
@@ -186,6 +192,75 @@ export default function SiteHeader() {
             })}
           </ul>
         </nav>
+
+        {/* Bouton hamburger - visible seulement en mobile */}
+        <button
+          className="lg:hidden flex flex-col gap-1.5 w-8 h-8 justify-center items-center cursor-pointer"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Menu"
+        >
+          <span
+            className={`block h-0.5 w-6 transition-all duration-300 ${
+              isScrolled ? "bg-slate-900" : "bg-white"
+            } ${isMobileMenuOpen ? "rotate-45 translate-y-2" : ""}`}
+          />
+          <span
+            className={`block h-0.5 w-6 transition-all duration-300 ${
+              isScrolled ? "bg-slate-900" : "bg-white"
+            } ${isMobileMenuOpen ? "opacity-0" : ""}`}
+          />
+          <span
+            className={`block h-0.5 w-6 transition-all duration-300 ${
+              isScrolled ? "bg-slate-900" : "bg-white"
+            } ${isMobileMenuOpen ? "-rotate-45 -translate-y-2" : ""}`}
+          />
+        </button>
+
+        {/* Menu mobile - slide de droite */}
+        <div
+          className={`fixed top-0 right-0 h-screen w-64 bg-slate-50 z-40 transform transition-transform duration-300 ease-in-out lg:hidden ${
+            isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          {/* Bouton de fermeture (croix) */}
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="absolute top-6 right-6 w-8 h-8 flex items-center justify-center cursor-pointer group"
+            aria-label="Fermer le menu"
+          >
+            <span className="block w-6 h-0.5 bg-[#333333] group-hover:bg-[#D4A373] transition-colors duration-200 rotate-45 absolute" />
+            <span className="block w-6 h-0.5 bg-[#333333] group-hover:bg-[#D4A373] transition-colors duration-200 -rotate-45 absolute" />
+          </button>
+
+          <nav className="flex flex-col gap-8 p-8 pt-24">
+            {NAV_LINKS.map((link) => {
+              const isActive = isMounted && activeSection === link.id;
+              
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={(event) => handleNavClick(event, link.href, link.id)}
+                  className={`text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
+                    isActive
+                      ? "text-[#D4A373]"
+                      : "text-[#333333] hover:text-[#D4A373]"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Overlay sombre derrière le menu mobile */}
+        {isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
       </div>
     </header>
   );
