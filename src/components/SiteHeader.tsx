@@ -142,7 +142,7 @@ export default function SiteHeader() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <div className="flex items-center gap-4">
           <Image
-            src="/logosombre.svg"
+            src="/logo6sombre.png"
             alt="Theranice"
             width={120}
             height={120}

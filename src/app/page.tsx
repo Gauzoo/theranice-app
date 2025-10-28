@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import Carousel from "@/components/Carousel";
 
 export default function Home() {
   return (
@@ -43,12 +44,56 @@ export default function Home() {
         </div>
       </section>
 
-  <section className="mx-auto max-w-6xl px-6 py-16 scroll-mt-24" id="nos-espaces">
-        <h2 className="text-2xl font-semibold">Nos espaces</h2>
+      <section className="mx-auto max-w-6xl px-6 py-16 scroll-mt-24" id="nos-espaces">
+        <h2 className="text-3xl font-semibold">Nos espaces</h2>
+        <h3 className="mt-6 text-xl font-semibold text-[#D4A373]">Nice Valrose</h3>
         <p className="mt-4 text-justify text-slate-600">
           Une salle lumineuse de 35 m² avec mobilier modulable, climatisation réversible, équipement audio, et connexion fibre. Idéale pour les consultations individuelles ou de petit groupe. Deuxième salle prévue prochainement.
         </p>
-        <p className="mt-4 text-justify text-slate-600">
+        
+        {/* Carrousel de photos */}
+        <div className="mt-8">
+          <Carousel 
+            images={[
+              "/photos/1.jpg",
+              "/photos/2.jpg",
+              "/photos/3.jpg"
+            ]} 
+          />
+        </div>
+        
+        {/* Équipements */}
+        <div className="mt-8 border-2 border-[#D4A373] bg-white p-6 shadow-sm">
+          <h4 className="text-xl font-semibold text-[#D4A373]">Équipements disponibles</h4>
+          <ul className="mt-4 grid grid-cols-1 gap-3 text-slate-600 sm:grid-cols-2 md:grid-cols-3">
+            <li className="flex items-center gap-2">
+              <span className="text-[#D4A373]">✓</span>
+              Équipement 1
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="text-[#D4A373]">✓</span>
+              Équipement 2
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="text-[#D4A373]">✓</span>
+              Équipement 3
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="text-[#D4A373]">✓</span>
+              Équipement 4
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="text-[#D4A373]">✓</span>
+              Équipement 5
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="text-[#D4A373]">✓</span>
+              Équipement 6
+            </li>
+          </ul>
+        </div>
+        
+        <p className="mt-8 text-justify text-slate-600">
           Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
         </p>
         <p className="mt-4 text-justify text-slate-600">
@@ -59,8 +104,8 @@ export default function Home() {
         </p>
       </section>
 
-  <section className="mx-auto max-w-6xl px-6 py-16 scroll-mt-24" id="forfait">
-        <h2 className="text-2xl font-semibold">Forfait demi-journée</h2>
+      <section className="mx-auto max-w-6xl px-6 py-16 scroll-mt-24" id="forfait">
+        <h2 className="text-3xl font-semibold">Forfait demi-journée</h2>
         <ul className="mt-6 grid gap-3 text-slate-600">
           <li>• Matin ou après-midi (4 heures)</li>
           <li>• Accès libre au coin thé &amp; matériel de base</li>
@@ -78,8 +123,8 @@ export default function Home() {
         </p>
       </section>
 
-  <section className="mx-auto max-w-6xl px-6 py-16 pb-32 scroll-mt-24" id="contact">
-        <h2 className="text-2xl font-semibold">Contact</h2>
+      <section className="mx-auto max-w-6xl px-6 py-16 pb-32 scroll-mt-24" id="contact">
+        <h2 className="text-3xl font-semibold">Contact</h2>
         <p className="mt-4 text-justify text-slate-600">
           Besoin d&apos;infos supplémentaires ou d&apos;une visite ? Écrivez-nous à contact@theranice.fr ou appelez le 06 00 00 00 00. Nous répondons sous 24 heures et proposons des visites sur rendez-vous.
         </p>
@@ -88,6 +133,15 @@ export default function Home() {
         </p>
         <p className="mt-4 text-justify text-slate-600">
           Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+        </p>
+        <p className="mt-4 text-justify text-slate-600">
+          Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.
+        </p>
+        <p className="mt-4 text-justify text-slate-600">
+          Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.
+        </p>
+        <p className="mt-4 text-justify text-slate-600">
+          Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.
         </p>
         <p className="mt-4 text-justify text-slate-600">
           Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.
