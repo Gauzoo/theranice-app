@@ -109,7 +109,7 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-6 py-16 scroll-mt-24" id="forfait">
         <h2 className="text-3xl font-semibold">Forfait demi-journée</h2>
         <p className="mt-6 text-slate-600">
-          Découvrez nos forfaits flexibles et nos conditions d'utilisation.
+          Découvrez nos forfaits flexibles et nos conditions d&apos;utilisation.
         </p>
         
         <div className="mt-8">
