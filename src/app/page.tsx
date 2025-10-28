@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import Carousel from "@/components/Carousel";
+import FAQ from "@/components/FAQ";
+import ContactForm from "@/components/ContactForm";
 
 export default function Home() {
   return (
@@ -106,46 +108,59 @@ export default function Home() {
 
       <section className="mx-auto max-w-6xl px-6 py-16 scroll-mt-24" id="forfait">
         <h2 className="text-3xl font-semibold">Forfait demi-journée</h2>
-        <ul className="mt-6 grid gap-3 text-slate-600">
-          <li>• Matin ou après-midi (4 heures)</li>
-          <li>• Accès libre au coin thé &amp; matériel de base</li>
-          <li>• Code serrure connecté envoyé après confirmation</li>
-          <li>• Annulation sans frais jusqu&apos;à 24h avant</li>
-        </ul>
-        <p className="mt-6 text-justify text-slate-600">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+        <p className="mt-6 text-slate-600">
+          Découvrez nos forfaits flexibles et nos conditions d'utilisation.
         </p>
-        <p className="mt-4 text-justify text-slate-600">
-          Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.
-        </p>
-        <p className="mt-4 text-justify text-slate-600">
-          Totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
-        </p>
+        
+        <div className="mt-8">
+          <FAQ
+            items={[
+              {
+                question: "Quel est le prix d'une demi-journée ?",
+                answer: "Le tarif pour une demi-journée (4 heures) est de XX€. Ce tarif inclut l'accès à la salle équipée, le coin thé, le matériel de base, et le code d'accès sécurisé. Des forfaits avec plusieurs créneaux sont également disponibles à tarif préférentiel."
+              },
+              {
+                question: "Comment pratiquer chez THÉRANICE ?",
+                answer: "Pour pratiquer chez THÉRANICE, il vous suffit d'acheter un forfait demi-journée via notre plateforme de réservation en ligne. Une fois votre paiement confirmé, vous recevrez un code d'accès pour la serrure connectée."
+              },
+              {
+                question: "Quels sont les règles d'utilisation des cabinets ?",
+                answer: "Les cabinets doivent être utilisés dans le respect des autres praticiens. Merci de laisser l'espace propre et rangé après votre passage. Le matériel mis à disposition doit être utilisé avec soin. Toute dégradation sera facturée."
+              },
+              {
+                question: "Comment acheter un forfait ?",
+                answer: "L'achat d'un forfait se fait directement en ligne via notre système de réservation. Sélectionnez votre créneau (matin ou après-midi), procédez au paiement sécurisé, et recevez instantanément votre confirmation avec le code d'accès."
+              },
+              {
+                question: "Y a-t-il un délai d'utilisation des forfaits ?",
+                answer: "Les forfaits achetés sont valables pour la date et le créneau sélectionnés lors de la réservation. Ils ne sont pas reportables, sauf en cas d'annulation effectuée au moins 24h avant le créneau réservé."
+              },
+              {
+                question: "Comment réserver un créneau ?",
+                answer: "Consultez le calendrier des disponibilités sur notre plateforme, choisissez le jour et le créneau souhaité (matin 8h-12h ou après-midi 13h-17h), puis validez votre réservation en procédant au paiement."
+              }
+            ]}
+          />
+        </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-16 pb-32 scroll-mt-24" id="contact">
         <h2 className="text-3xl font-semibold">Contact</h2>
-        <p className="mt-4 text-justify text-slate-600">
-          Besoin d&apos;infos supplémentaires ou d&apos;une visite ? Écrivez-nous à contact@theranice.fr ou appelez le 06 00 00 00 00. Nous répondons sous 24 heures et proposons des visites sur rendez-vous.
+        <p className="mt-6 text-slate-600">
+          Besoin d&apos;infos supplémentaires ou d&apos;une visite ? Remplissez le formulaire ci-dessous et nous vous répondrons dans les plus brefs délais.
         </p>
-        <p className="mt-4 text-justify text-slate-600">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Quis ipsum suspendisse ultrices gravida. Risus commodo viverra maecenas accumsan lacus vel facilisis. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-        </p>
-        <p className="mt-4 text-justify text-slate-600">
-          Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-        </p>
-        <p className="mt-4 text-justify text-slate-600">
-          Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.
-        </p>
-        <p className="mt-4 text-justify text-slate-600">
-          Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.
-        </p>
-        <p className="mt-4 text-justify text-slate-600">
-          Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.
-        </p>
-        <p className="mt-4 text-justify text-slate-600">
-          Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.
-        </p>
+        
+        <ContactForm />
+        
+        <div className="mt-8 text-center text-slate-600">
+          <p>Vous pouvez également nous contacter directement :</p>
+          <p className="mt-2">
+            <strong>Email :</strong> contact@theranice.fr
+          </p>
+          <p className="mt-1">
+            <strong>Téléphone :</strong> 06 00 00 00 00
+          </p>
+        </div>
       </section>
     </div>
   );
