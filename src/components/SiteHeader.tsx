@@ -158,40 +158,55 @@ export default function SiteHeader() {
           </span>
         </div>
         
-        {/* Menu desktop - masqué en mobile */}
-        <nav className="hidden lg:block">
-          <ul className="flex items-center gap-6 text-lg font-medium uppercase tracking-wide"> 
-            {NAV_LINKS.map((link) => {
-              // Vérifie si ce lien correspond à la section active (seulement côté client)
-              const isActive = isMounted && activeSection === link.id;
-              
-              // Définit la couleur du lien
-              let linkColor = "";
-              if (isActive) {
-                // Section active = doré
-                linkColor = "text-[#D4A373]";
-              } else if (isScrolled) {
-                // Header scrollé = gris foncé avec hover doré
-                linkColor = "text-[#333333] hover:text-[#D4A373]";
-              } else {
-                // Header transparent = blanc avec hover doré
-                linkColor = "text-white hover:text-[#D4A373]";
-              }
-              
-              return (
-                <li key={link.href}>
-                  <Link
-                    className={`transition-colors duration-200 ${linkColor}`}
-                    href={link.href}
-                    onClick={(event) => handleNavClick(event, link.href, link.id)}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        {/* Navigation + Bouton Mon compte regroupés */}
+        <div className="hidden lg:flex items-center gap-6">
+          {/* Menu desktop */}
+          <nav>
+            <ul className="flex items-center gap-6 text-lg font-medium uppercase tracking-wide"> 
+              {NAV_LINKS.map((link) => {
+                // Vérifie si ce lien correspond à la section active (seulement côté client)
+                const isActive = isMounted && activeSection === link.id;
+                
+                // Définit la couleur du lien
+                let linkColor = "";
+                if (isActive) {
+                  // Section active = doré
+                  linkColor = "text-[#D4A373]";
+                } else if (isScrolled) {
+                  // Header scrollé = gris foncé avec hover doré
+                  linkColor = "text-[#333333] hover:text-[#D4A373]";
+                } else {
+                  // Header transparent = blanc avec hover doré
+                  linkColor = "text-white hover:text-[#D4A373]";
+                }
+                
+                return (
+                  <li key={link.href}>
+                    <Link
+                      className={`transition-colors duration-200 ${linkColor}`}
+                      href={link.href}
+                      onClick={(event) => handleNavClick(event, link.href, link.id)}
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+          
+          {/* Bouton Mon compte - style rectangulaire */}
+          <Link
+            href="/compte"
+            className={`px-5 py-2 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
+              isScrolled
+                ? "bg-[#D4A373] text-white hover:bg-[#c49363]" 
+                : "bg-[#FEFAE0] text-[#333333] hover:bg-[#D4A373]"
+            }`}
+          >
+            Mon compte
+          </Link>
+        </div>
 
         {/* Bouton hamburger - visible seulement en mobile */}
         <button
@@ -251,6 +266,14 @@ export default function SiteHeader() {
                 </Link>
               );
             })}
+            {/* Bouton Mon compte dans le menu mobile */}
+            <Link
+              href="/compte"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-lg font-medium uppercase tracking-wide transition-colors duration-200 text-[#333333] hover:text-[#D4A373]"
+            >
+              Mon compte
+            </Link>
           </nav>
         </div>
 
