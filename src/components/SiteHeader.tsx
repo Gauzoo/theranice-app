@@ -13,7 +13,7 @@ const garamond = EB_Garamond({
 const NAV_LINKS = [
   { href: "/#hero", label: "Accueil", id: "hero" },
   { href: "/#nos-espaces", label: "Nos espaces", id: "nos-espaces" },
-  { href: "/#forfait", label: "Forfait", id: "forfait" },
+  { href: "/#forfait", label: "FAQ", id: "forfait" },
   { href: "/#contact", label: "Contact", id: "contact" },
 ];
 

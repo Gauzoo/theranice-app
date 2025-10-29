@@ -3,6 +3,12 @@ import Link from "next/link";
 import Carousel from "@/components/Carousel";
 import FAQ from "@/components/FAQ";
 import ContactForm from "@/components/ContactForm";
+import { EB_Garamond } from "next/font/google";
+
+const garamond = EB_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
 
 export default function Home() {
   return (
@@ -46,9 +52,11 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-16 scroll-mt-24" id="nos-espaces">
-        <h2 className="text-3xl font-semibold">Nos espaces</h2>
-        <h3 className="mt-6 text-xl font-semibold text-[#D4A373]">Nice Valrose</h3>
+      <section className="bg-[#FFFFFF] py-16 scroll-mt-24" id="nos-espaces">
+        <div className="mx-auto max-w-6xl px-6">
+        <h2 className={`${garamond.className} text-4xl text-[#D4A373] font-semibold`}>▸ Nos espaces</h2>
+
+        <h3 className="mt-6 text-xl font-semibold text-[#333333]">Nice Valrose</h3>
         <p className="mt-4 text-justify text-slate-600">
           Une salle lumineuse de 35 m² avec mobilier modulable, climatisation réversible, équipement audio, et connexion fibre. Idéale pour les consultations individuelles ou de petit groupe. Deuxième salle prévue prochainement.
         </p>
@@ -66,7 +74,7 @@ export default function Home() {
         
         {/* Équipements */}
         <div className="mt-8 border-2 border-[#D4A373] bg-white p-6 shadow-sm">
-          <h4 className="text-xl font-semibold text-[#D4A373]">Équipements disponibles</h4>
+          <h4 className="text-xl font-semibold text-[#333333]">Équipements disponibles</h4>
           <ul className="mt-4 grid grid-cols-1 gap-3 text-slate-600 sm:grid-cols-2 md:grid-cols-3">
             <li className="flex items-center gap-2">
               <span className="text-[#D4A373]">✓</span>
@@ -104,15 +112,17 @@ export default function Home() {
         <p className="mt-4 text-justify text-slate-600">
           Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
         </p>
+        </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-16 scroll-mt-24" id="forfait">
-        <h2 className="text-3xl font-semibold">Forfait demi-journée</h2>
+      <section className="bg-[#FFFFFF] py-16 scroll-mt-24" id="forfait">
+        <div className="mx-auto max-w-6xl px-6">
+        <h2 className={`${garamond.className} text-4xl text-[#D4A373] font-semibold`}>▸ Foire aux questions</h2>
         <p className="mt-6 text-slate-600">
           Découvrez nos forfaits flexibles et nos conditions d&apos;utilisation.
         </p>
         
-        <div className="mt-8">
+        <div className="mt-8 " >
           <FAQ
             items={[
               {
@@ -142,10 +152,12 @@ export default function Home() {
             ]}
           />
         </div>
+        </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-16 pb-32 scroll-mt-24" id="contact">
-        <h2 className="text-3xl font-semibold">Contact</h2>
+      <section className="bg-[#FFFFFF] py-16 pb-32 scroll-mt-24" id="contact">
+        <div className="mx-auto max-w-6xl px-6">
+        <h2 className={`${garamond.className} text-4xl text-[#D4A373] font-semibold`}>▸ Contact</h2>
         <p className="mt-6 text-slate-600">
           Besoin d&apos;infos supplémentaires ou d&apos;une visite ? Remplissez le formulaire ci-dessous et nous vous répondrons dans les plus brefs délais.
         </p>
@@ -160,6 +172,7 @@ export default function Home() {
           <p className="mt-1">
             <strong>Téléphone :</strong> 06 00 00 00 00
           </p>
+        </div>
         </div>
       </section>
     </div>

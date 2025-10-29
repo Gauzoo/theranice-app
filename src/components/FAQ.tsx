@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from "react";
@@ -27,7 +28,7 @@ export default function FAQ({ items }: FAQProps) {
         >
           <button
             onClick={() => toggleItem(index)}
-            className="flex w-full cursor-pointer items-center justify-between p-4 text-left transition-colors hover:bg-slate-50"
+            className="flex w-full cursor-pointer items-center justify-between p-3 text-left transition-colors hover:bg-slate-50"
           >
             <h4 className="text-lg font-semibold text-slate-900">
               {item.question}
@@ -54,7 +55,7 @@ export default function FAQ({ items }: FAQProps) {
               openIndex === index ? "max-h-96" : "max-h-0"
             }`}
           >
-            <div className="border-t border-slate-200 p-4 text-slate-600">
+            <div className="border-t border-slate-200 p-3 text-slate-600">
               {item.answer}
             </div>
           </div>
