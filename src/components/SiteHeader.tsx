@@ -4,8 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { EB_Garamond } from "next/font/google";
 import { useEffect, useState, useRef, type MouseEvent as ReactMouseEvent } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import LoginModal from "./LoginModal";
+import { createClient } from "@/lib/supabase/client";
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -47,7 +48,9 @@ const smoothScrollTo = (targetY: number, duration: number) => {
 
 export default function SiteHeader() {
   const pathname = usePathname(); // Hook Next.js pour obtenir le chemin actuel
+  const router = useRouter();
   const monCompteButtonRef = useRef<HTMLButtonElement>(null); // Référence au bouton Mon compte
+  const dropdownRef = useRef<HTMLDivElement>(null); // Référence au menu déroulant
   
   // État pour savoir si on a scrollé (pour changer le style du header)
   const [isScrolled, setIsScrolled] = useState(false);
@@ -59,9 +62,60 @@ export default function SiteHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // État pour la modal de connexion
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  // État pour les infos utilisateur
+  const [user, setUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  // État pour le menu déroulant
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  // Position du triangle pour le menu déroulant
+  const [dropdownStyle, setDropdownStyle] = useState({
+    trianglePosition: '64px'
+  });
 
   // Détermine si on est sur la page d'accueil
   const isHomePage = pathname === "/";
+
+  // Vérifie si l'utilisateur est connecté
+  useEffect(() => {
+    const supabase = createClient();
+    
+    // Récupère l'utilisateur actuel
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      
+      // Si l'utilisateur est connecté, récupère son profil
+      if (user) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+          .then(({ data }) => {
+            setUserProfile(data);
+          });
+      }
+    });
+
+    // Écoute les changements d'authentification
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => {
+            setUserProfile(data);
+          });
+      } else {
+        setUserProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Surveille le scroll pour mettre à jour l'état du header
   useEffect(() => {
@@ -82,6 +136,51 @@ export default function SiteHeader() {
     window.addEventListener("scroll", handleScroll, { passive: true }); // Écoute les événements de scroll
     return () => window.removeEventListener("scroll", handleScroll); // Nettoyage à la destruction du composant
   }, [isHomePage]);
+
+  // Calcule la position du triangle pour le menu déroulant
+  useEffect(() => {
+    const updateDropdownPosition = () => {
+      if (isDropdownOpen && monCompteButtonRef?.current) {
+        const buttonRect = monCompteButtonRef.current.getBoundingClientRect();
+        const windowWidth = window.innerWidth;
+        
+        // Position du triangle : au centre du bouton
+        const buttonCenter = buttonRect.left + (buttonRect.width / 2);
+        const modalRightEdge = buttonRect.right;
+        const triangleFromRight = modalRightEdge - buttonCenter - 70;
+        
+        setDropdownStyle({
+          trianglePosition: `${triangleFromRight}px`
+        });
+      }
+    };
+
+    updateDropdownPosition();
+    
+    // Écoute les changements de taille de fenêtre
+    window.addEventListener('resize', updateDropdownPosition);
+    
+    return () => {
+      window.removeEventListener('resize', updateDropdownPosition);
+    };
+  }, [isDropdownOpen]);
+
+  // Ferme le dropdown quand on clique ailleurs
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   // Détecte quelle section est visible à l'écran
   useEffect(() => {
@@ -114,6 +213,14 @@ export default function SiteHeader() {
     // Nettoyage quand le composant est détruit
     return () => observer.disconnect();
   }, [isHomePage]);
+
+  // Gère la déconnexion
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setIsDropdownOpen(false);
+    router.refresh();
+  };
 
   // Gère les clics sur les liens du menu
   const handleNavClick = (
@@ -223,19 +330,94 @@ export default function SiteHeader() {
             </ul>
           </nav>
           
-          {/* Bouton Mon compte - style rectangulaire */}
-          <button
-            ref={monCompteButtonRef}
-            onClick={() => setIsLoginModalOpen(true)}
-            className={`cursor-pointer rounded px-5 py-1.5 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
-              isScrolled
-                ? "bg-[#D4A373] text-white hover:bg-[#c49363]" 
-                : "bg-[#FFFFFF] text-[#333333] hover:bg-[#D4A373]"
-            }`}
-          >
-            Mon compte
-          </button>
+          {/* Bouton Mon compte / User menu */}
+          {user ? (
+            // Si l'utilisateur est connecté, affiche son prénom avec menu déroulant
+            <div className="relative" ref={dropdownRef}>
+              <button
+                ref={monCompteButtonRef}
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className={`cursor-pointer rounded px-5 py-1.5 text-lg font-medium uppercase tracking-wide transition-colors duration-200 flex items-center gap-2 ${
+                  isScrolled
+                    ? "bg-[#D4A373] text-white hover:bg-[#c49363]" 
+                    : "bg-[#333333] text-[#FFFFFF] hover:bg-[#D4A373]"
+                }`}
+              >
+                {userProfile?.prenom || "Mon compte"}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                  className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+              </button>
+
+
+
+              {/* Menu déroulant */}
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-[13px] w-48 z-[110]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  {/* Triangle pointant vers le centre du bouton */}
+                  <div 
+                    style={{ right: dropdownStyle.trianglePosition }}
+                    className="absolute -top-3 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-b-[12px] border-b-white"
+                  ></div>
+                  
+                  <div className="bg-white rounded-md shadow-lg overflow-hidden">
+                    <Link
+                      href="/profil"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="block w-full px-4 py-2.5 text-1xl font-semibold text-[#333333] hover:bg-[#FAEDCD] transition-colors"
+                    >
+                      Mon profil
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2.5 text-1xl font-semibold text-[#333333] hover:bg-[#FAEDCD] transition-colors cursor-pointer"
+                    >
+                      Déconnexion
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            // Si l'utilisateur n'est pas connecté, affiche "Mon compte"
+            <>
+              {/* Desktop : Modal */}
+              <button
+                ref={monCompteButtonRef}
+                onClick={() => setIsLoginModalOpen(true)}
+                className={`hidden lg:block cursor-pointer rounded px-5 py-1.5 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
+                  isScrolled
+                    ? "bg-[#D4A373] text-white hover:bg-[#c49363]" 
+                    : "bg-[#333333] text-[#FFFFFF] hover:bg-[#D4A373]"
+                }`}
+              >
+                Mon compte
+              </button>
+              
+              {/* Mobile : Lien vers /connexion */}
+              <Link
+                href="/connexion"
+                className={`lg:hidden cursor-pointer rounded px-5 py-1.5 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
+                  isScrolled
+                    ? "bg-[#D4A373] text-white hover:bg-[#c49363]" 
+                    : "bg-[#333333] text-[#FFFFFF] hover:bg-[#D4A373]"
+                }`}
+              >
+                Mon compte
+              </Link>
+            </>
+          )}
         </div>
+
+
+
 
         {/* Bouton hamburger - visible seulement en mobile */}
         <button
@@ -295,16 +477,35 @@ export default function SiteHeader() {
                 </Link>
               );
             })}
-            {/* Bouton Mon compte dans le menu mobile */}
-            <button
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                setIsLoginModalOpen(true);
-              }}
-              className="cursor-pointer text-lg font-medium uppercase tracking-wide transition-colors duration-200 text-[#333333] hover:text-[#D4A373] text-left"
-            >
-              Mon compte
-            </button>
+            {/* Lien Mon compte / Profil dans le menu mobile */}
+            {user ? (
+              <>
+                <Link
+                  href="/profil"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="text-lg font-medium uppercase tracking-wide transition-colors duration-200 text-[#333333] hover:text-[#D4A373]"
+                >
+                  Mon profil
+                </Link>
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="cursor-pointer text-lg font-medium uppercase tracking-wide transition-colors duration-200 text-[#333333] hover:text-[#D4A373] text-left"
+                >
+                  Déconnexion
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/connexion"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-lg font-medium uppercase tracking-wide transition-colors duration-200 text-[#333333] hover:text-[#D4A373]"
+              >
+                Mon compte
+              </Link>
+            )}
           </nav>
         </div>
 

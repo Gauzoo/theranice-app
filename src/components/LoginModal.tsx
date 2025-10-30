@@ -2,6 +2,8 @@
 
 import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 
 interface LoginModalProps {
@@ -15,6 +17,10 @@ export default function LoginModal({ isOpen, onClose, buttonRef }: LoginModalPro
     email: '',
     password: ''
   });
+  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const [modalStyle, setModalStyle] = useState({
     top: '80px',
@@ -54,11 +60,32 @@ export default function LoginModal({ isOpen, onClose, buttonRef }: LoginModalPro
     };
   }, [isOpen, buttonRef]);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Implémenter la logique de connexion
-    console.log('Connexion:', formData);
-    alert('Connexion en cours...');
+    setLoading(true);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (signInError) {
+        throw signInError;
+      }
+
+      if (data.user) {
+        onClose();
+        router.refresh();
+      }
+    } catch (err: any) {
+      setError(err.message || "Email ou mot de passe incorrect");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,6 +147,13 @@ export default function LoginModal({ isOpen, onClose, buttonRef }: LoginModalPro
             MON COMPTE
           </h2>
 
+          {/* Message d'erreur */}
+          {error && (
+            <div className="bg-red-50 border border-red-300 text-red-800 px-3 py-2 rounded text-sm mb-2">
+              {error}
+            </div>
+          )}
+
           {/* Formulaire */}
           <form onSubmit={handleSubmit} className="space-y-2">
             {/* Email */}
@@ -153,9 +187,10 @@ export default function LoginModal({ isOpen, onClose, buttonRef }: LoginModalPro
             {/* Bouton Connexion */}
             <button
               type="submit"
-              className="w-full bg-[#D4A373] text-white font-semibold py-2 cursor-pointer hover:bg-[#c49363] transition-colors uppercase tracking-wide"
+              disabled={loading}
+              className="w-full bg-[#D4A373] text-white font-semibold py-2 cursor-pointer hover:bg-[#c49363] transition-colors uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Connexion
+              {loading ? "Connexion..." : "Connexion"}
             </button>
 
             {/* Bouton Créer un compte */}

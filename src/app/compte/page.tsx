@@ -1,5 +1,10 @@
+"use client";
+
 import Image from "next/image";
 import { EB_Garamond } from "next/font/google";
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -7,6 +12,74 @@ const garamond = EB_Garamond({
 });
 
 export default function ComptePage() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+    const confirmPassword = formData.get("confirm_password") as string;
+    const nom = formData.get("nom") as string;
+    const prenom = formData.get("prenom") as string;
+    const telephone = formData.get("telephone") as string;
+    const therapie = formData.get("therapie") as string;
+
+    // Vérification que les mots de passe correspondent
+    if (password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas");
+      setLoading(false);
+      return;
+    }
+
+    // Vérification de la longueur du mot de passe
+    if (password.length < 6) {
+      setError("Le mot de passe doit contenir au moins 6 caractères");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+
+      // Créer le compte utilisateur
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            nom,
+            prenom,
+            telephone,
+            therapie,
+          },
+        },
+      });
+
+      if (signUpError) {
+        throw signUpError;
+      }
+
+      if (data.user) {
+        setSuccess(true);
+        // Rediriger vers la page d'accueil après 2 secondes
+        setTimeout(() => {
+          router.push("/");
+        }, 2000);
+      }
+    } catch (err: any) {
+      setError(err.message || "Une erreur est survenue lors de l'inscription");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-slate-50 text-slate-900">
       {/* Hero section - réduite de moitié */}
@@ -36,9 +109,20 @@ export default function ComptePage() {
         <div className="mx-auto max-w-3xl px-6">
           <h2 className={`${garamond.className} text-4xl font-semibold mb-8 text-[#D4A373]`}>▸ Inscription</h2>
 
+          {/* Messages d'erreur et de succès */}
+          {error && (
+            <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
 
+          {success && (
+            <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded">
+              Compte créé avec succès ! Vérifiez votre email pour confirmer votre inscription.
+            </div>
+          )}
           
-          <form className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Nom et Prénom */}
             <div className="grid gap-6 md:grid-cols-2">
               <div>
@@ -150,9 +234,10 @@ export default function ComptePage() {
             <div className="flex justify-center pt-4">
               <button
                 type="submit"
-                className="cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363]"
+                disabled={loading}
+                className="cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Créer mon compte
+                {loading ? "Création en cours..." : "Créer mon compte"}
               </button>
             </div>
           </form>
