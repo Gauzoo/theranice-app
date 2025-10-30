@@ -103,8 +103,9 @@ export default function ProfilPage() {
       setTimeout(() => {
         setSuccess(false);
       }, 3000);
-    } catch (err: any) {
-      setError(err.message || "Une erreur est survenue lors de la mise à jour");
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "Une erreur est survenue lors de la mise à jour");
     } finally {
       setLoading(false);
     }
@@ -216,7 +217,7 @@ export default function ProfilPage() {
                 disabled
                 className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 bg-slate-100 cursor-not-allowed"
               />
-              <p className="mt-1 text-xs text-slate-500">L'email ne peut pas être modifié</p>
+              <p className="mt-1 text-xs text-slate-500">L&apos;email ne peut pas être modifié</p>
             </div>
 
             {/* Téléphone */}

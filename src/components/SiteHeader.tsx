@@ -63,8 +63,8 @@ export default function SiteHeader() {
   // État pour la modal de connexion
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   // État pour les infos utilisateur
-  const [user, setUser] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ nom?: string; prenom?: string; telephone?: string; therapie?: string } | null>(null);
   // État pour le menu déroulant
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   // Position du triangle pour le menu déroulant
@@ -142,7 +142,6 @@ export default function SiteHeader() {
     const updateDropdownPosition = () => {
       if (isDropdownOpen && monCompteButtonRef?.current) {
         const buttonRect = monCompteButtonRef.current.getBoundingClientRect();
-        const windowWidth = window.innerWidth;
         
         // Position du triangle : au centre du bouton
         const buttonCenter = buttonRect.left + (buttonRect.width / 2);

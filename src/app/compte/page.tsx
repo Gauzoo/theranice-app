@@ -73,8 +73,9 @@ export default function ComptePage() {
           router.push("/");
         }, 2000);
       }
-    } catch (err: any) {
-      setError(err.message || "Une erreur est survenue lors de l'inscription");
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "Une erreur est survenue lors de l'inscription");
     } finally {
       setLoading(false);
     }

@@ -81,8 +81,9 @@ export default function LoginModal({ isOpen, onClose, buttonRef }: LoginModalPro
         onClose();
         router.refresh();
       }
-    } catch (err: any) {
-      setError(err.message || "Email ou mot de passe incorrect");
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "Email ou mot de passe incorrect");
     } finally {
       setLoading(false);
     }
