@@ -42,12 +42,6 @@ export default function Home() {
             >
               Voir les disponibilités
             </Link>
-            <Link
-              className="rounded-full border border-white/80 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-white/10"
-              href="/#contact"
-            >
-              Parler à l&apos;équipe
-            </Link>
           </div>
         </div>
       </section>

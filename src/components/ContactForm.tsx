@@ -49,7 +49,7 @@ export default function ContactForm() {
             value={formData.nom}
             onChange={handleChange}
             required
-            className="mt-2 w-full border-2 border-[#D4A373] px-4 py-2 text-slate-900 transition-colors focus:border-[#D4A373] focus:outline-none"
+            className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
             placeholder="Votre nom"
           />
         </div>
@@ -66,7 +66,7 @@ export default function ContactForm() {
             value={formData.prenom}
             onChange={handleChange}
             required
-            className="mt-2 w-full border-2 border-[#D4A373] px-4 py-2 text-slate-900 transition-colors focus:border-[#D4A373] focus:outline-none"
+            className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
             placeholder="Votre prénom"
           />
         </div>
@@ -84,7 +84,7 @@ export default function ContactForm() {
           value={formData.sujet}
           onChange={handleChange}
           required
-          className="mt-2 w-full border-2 border-[#D4A373] px-4 py-2 text-slate-900 transition-colors focus:border-[#D4A373] focus:outline-none"
+          className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
           placeholder="Objet de votre message"
         />
       </div>
@@ -101,7 +101,7 @@ export default function ContactForm() {
           onChange={handleChange}
           required
           rows={6}
-          className="mt-2 w-full resize-none border-2 border-[#D4A373] px-4 py-2 text-slate-900 transition-colors focus:border-[#D4A373] focus:outline-none"
+          className="mt-2 w-full resize-none border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
           placeholder="Votre message..."
         />
       </div>

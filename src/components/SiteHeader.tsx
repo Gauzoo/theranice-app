@@ -3,7 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { EB_Garamond } from "next/font/google";
-import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useState, useRef, type MouseEvent as ReactMouseEvent } from "react";
+import { usePathname } from "next/navigation";
+import LoginModal from "./LoginModal";
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -44,6 +46,9 @@ const smoothScrollTo = (targetY: number, duration: number) => {
 };
 
 export default function SiteHeader() {
+  const pathname = usePathname(); // Hook Next.js pour obtenir le chemin actuel
+  const monCompteButtonRef = useRef<HTMLButtonElement>(null); // Référence au bouton Mon compte
+  
   // État pour savoir si on a scrollé (pour changer le style du header)
   const [isScrolled, setIsScrolled] = useState(false);
   // État pour savoir quelle section est actuellement visible
@@ -52,13 +57,22 @@ export default function SiteHeader() {
   const [isMounted, setIsMounted] = useState(false);
   // État pour le menu mobile
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // État pour la modal de connexion
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // Détermine si on est sur la page d'accueil
+  const isHomePage = pathname === "/";
 
   // Surveille le scroll pour mettre à jour l'état du header
   useEffect(() => {
     // Indique qu'on est maintenant côté client
     setIsMounted(true);
-    // Initialise activeSection côté client uniquement
-    setActiveSection("hero");
+    // Initialise activeSection côté client uniquement si on est sur la page d'accueil
+    if (isHomePage) {
+      setActiveSection("hero");
+    } else {
+      setActiveSection(null);
+    }
     
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 160); // Si on a scrollé plus de 16px, isScrolled = true
@@ -67,10 +81,13 @@ export default function SiteHeader() {
     handleScroll(); // Vérifie immédiatement au chargement
     window.addEventListener("scroll", handleScroll, { passive: true }); // Écoute les événements de scroll
     return () => window.removeEventListener("scroll", handleScroll); // Nettoyage à la destruction du composant
-  }, []);
+  }, [isHomePage]);
 
   // Détecte quelle section est visible à l'écran
   useEffect(() => {
+    // Ne surveille les sections que si on est sur la page d'accueil
+    if (!isHomePage) return;
+    
     // Observer qui surveille quand les sections entrent dans le viewport
     const observer = new IntersectionObserver(
       (entries) => {
@@ -96,7 +113,7 @@ export default function SiteHeader() {
 
     // Nettoyage quand le composant est détruit
     return () => observer.disconnect();
-  }, []);
+  }, [isHomePage]);
 
   // Gère les clics sur les liens du menu
   const handleNavClick = (
@@ -140,7 +157,18 @@ export default function SiteHeader() {
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ease-out ${headerClasses}`}
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-4">
+        <button
+          onClick={() => {
+            if (isHomePage) {
+              // Si on est sur la page d'accueil, scroll vers le haut
+              smoothScrollTo(0, HERO_DURATION);
+            } else {
+              // Si on est sur une autre page, navigue vers l'accueil
+              window.location.href = "/";
+            }
+          }}
+          className="flex items-center gap-4 cursor-pointer"
+        >
           <Image
             src="/logo6sombre.png"
             alt="Theranice"
@@ -156,7 +184,7 @@ export default function SiteHeader() {
           >
             THÉRANICE
           </span>
-        </div>
+        </button>
         
         {/* Navigation + Bouton Mon compte regroupés */}
         <div className="hidden lg:flex items-center gap-6">
@@ -164,8 +192,8 @@ export default function SiteHeader() {
           <nav>
             <ul className="flex items-center gap-6 text-lg font-medium uppercase tracking-wide"> 
               {NAV_LINKS.map((link) => {
-                // Vérifie si ce lien correspond à la section active (seulement côté client)
-                const isActive = isMounted && activeSection === link.id;
+                // Vérifie si ce lien correspond à la section active (seulement côté client et sur la page d'accueil)
+                const isActive = isMounted && isHomePage && activeSection === link.id;
                 
                 // Définit la couleur du lien
                 let linkColor = "";
@@ -196,16 +224,17 @@ export default function SiteHeader() {
           </nav>
           
           {/* Bouton Mon compte - style rectangulaire */}
-          <Link
-            href="/compte"
-            className={`px-5 py-2 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
+          <button
+            ref={monCompteButtonRef}
+            onClick={() => setIsLoginModalOpen(true)}
+            className={`cursor-pointer rounded px-5 py-1.5 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
               isScrolled
                 ? "bg-[#D4A373] text-white hover:bg-[#c49363]" 
-                : "bg-[#FEFAE0] text-[#333333] hover:bg-[#D4A373]"
+                : "bg-[#FFFFFF] text-[#333333] hover:bg-[#D4A373]"
             }`}
           >
             Mon compte
-          </Link>
+          </button>
         </div>
 
         {/* Bouton hamburger - visible seulement en mobile */}
@@ -249,7 +278,7 @@ export default function SiteHeader() {
 
           <nav className="flex flex-col gap-8 p-8 pt-24">
             {NAV_LINKS.map((link) => {
-              const isActive = isMounted && activeSection === link.id;
+              const isActive = isMounted && isHomePage && activeSection === link.id;
               
               return (
                 <Link
@@ -267,13 +296,15 @@ export default function SiteHeader() {
               );
             })}
             {/* Bouton Mon compte dans le menu mobile */}
-            <Link
-              href="/compte"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-lg font-medium uppercase tracking-wide transition-colors duration-200 text-[#333333] hover:text-[#D4A373]"
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                setIsLoginModalOpen(true);
+              }}
+              className="cursor-pointer text-lg font-medium uppercase tracking-wide transition-colors duration-200 text-[#333333] hover:text-[#D4A373] text-left"
             >
               Mon compte
-            </Link>
+            </button>
           </nav>
         </div>
 
@@ -285,6 +316,13 @@ export default function SiteHeader() {
           />
         )}
       </div>
+
+      {/* Modal de connexion */}
+      <LoginModal 
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        buttonRef={monCompteButtonRef}
+      />
     </header>
   );
 }
