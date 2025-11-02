@@ -130,7 +130,7 @@ export default function SiteHeader() {
     }
     
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 160); // Si on a scrollé plus de 16px, isScrolled = true
+      setIsScrolled(window.scrollY > 10); // Si on a scrollé plus de 16px, isScrolled = true
     };
 
     handleScroll(); // Vérifie immédiatement au chargement
