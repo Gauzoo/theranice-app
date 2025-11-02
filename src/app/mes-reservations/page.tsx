@@ -364,7 +364,7 @@ export default function MesReservationsPage() {
                       )}
                       {!canCancel && !isCancelled && !isPast && (
                         <div className="text-sm text-slate-500 text-center max-w-[200px]">
-                          Annulation possible jusqu'à 24h avant
+                          Annulation possible jusqu&apos;à 24h avant
                         </div>
                       )}
                     </div>
