@@ -1,0 +1,469 @@
+"use client";
+
+import Image from "next/image";
+import { EB_Garamond } from "next/font/google";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
+
+const garamond = EB_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+type Room = "room1" | "room2" | "large";
+type Slot = "morning" | "afternoon";
+
+interface Booking {
+  date: string;
+  slot: Slot;
+  room: Room;
+}
+
+const ROOM_PRICES = {
+  room1: 50,
+  room2: 50,
+  large: 80,
+};
+
+const ROOM_LABELS = {
+  room1: "Salle 1 (35m²)",
+  room2: "Salle 2 (35m²)",
+  large: "Grande salle (70m²)",
+};
+
+export default function ReservationPage() {
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+  const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const router = useRouter();
+
+  // Fonction pour récupérer les réservations
+  const fetchBookings = async () => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('bookings')
+      .select('date, slot, room')
+      .eq('status', 'confirmed');
+    
+    if (data) {
+      setExistingBookings(data);
+    }
+  };
+
+  // Vérifie si l'utilisateur est connecté
+  useEffect(() => {
+    const supabase = createClient();
+    
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+
+    fetchBookings();
+  }, []);
+
+  // Vérifie si un créneau est disponible
+  const isSlotAvailable = (date: Date, slot: Slot, room: Room): boolean => {
+    // Utilise la date locale au lieu de UTC
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    // Trouve toutes les réservations pour cette date et ce créneau
+    const bookingsForSlot = existingBookings.filter(
+      b => b.date === dateStr && b.slot === slot
+    );
+
+    // Si on veut réserver la grande salle
+    if (room === 'large') {
+      // La grande salle est disponible si aucune salle n'est réservée
+      return bookingsForSlot.length === 0;
+    }
+
+    // Si on veut réserver une petite salle
+    // Elle est disponible si :
+    // 1. Elle n'est pas déjà réservée
+    // 2. La grande salle n'est pas réservée
+    const roomBooked = bookingsForSlot.some(b => b.room === room);
+    const largeBooked = bookingsForSlot.some(b => b.room === 'large');
+    
+    return !roomBooked && !largeBooked;
+  };
+
+  // Vérifie si une salle spécifique est disponible pour la date sélectionnée (tous créneaux)
+  const isRoomAvailableForDate = (room: Room): boolean => {
+    if (!selectedDate) return true;
+    
+    // Pour toutes les salles (y compris la grande), au moins un créneau doit être disponible
+    const morningAvailable = isSlotAvailable(selectedDate, 'morning', room);
+    const afternoonAvailable = isSlotAvailable(selectedDate, 'afternoon', room);
+    
+    return morningAvailable || afternoonAvailable;
+  };
+
+  // Vérifie si un créneau spécifique est disponible pour la date et salle sélectionnées
+  const isSlotAvailableForSelection = (slot: Slot): boolean => {
+    if (!selectedDate) return true;
+    
+    // Vérifie si le créneau est dans le passé (pour aujourd'hui uniquement)
+    const now = new Date();
+    const isToday = selectedDate.toDateString() === now.toDateString();
+    
+    if (isToday) {
+      const currentHour = now.getHours();
+      // Bloque le matin si on est après 12h
+      if (slot === 'morning' && currentHour >= 12) {
+        return false;
+      }
+      // Bloque l'après-midi si on est après 17h
+      if (slot === 'afternoon' && currentHour >= 17) {
+        return false;
+      }
+    }
+    
+    // Si une salle est sélectionnée, vérifie uniquement cette salle
+    if (selectedRoom) {
+      return isSlotAvailable(selectedDate, slot, selectedRoom);
+    }
+    
+    // Si aucune salle n'est sélectionnée, vérifie s'il existe AU MOINS UNE salle disponible pour ce créneau
+    const allRooms: Room[] = ['room1', 'room2', 'large'];
+    return allRooms.some(room => isSlotAvailable(selectedDate, slot, room));
+  };
+
+  const handleSubmit = async () => {
+    if (!user) {
+      router.push('/connexion');
+      return;
+    }
+
+    if (!selectedDate || !selectedRoom || !selectedSlot) {
+      setError("Veuillez sélectionner une date, une salle et un créneau");
+      return;
+    }
+
+    // Vérifie la disponibilité
+    if (!isSlotAvailable(selectedDate, selectedSlot, selectedRoom)) {
+      setError("Ce créneau n'est plus disponible");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+      // Utilise la date locale au lieu de UTC
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+
+      const { data: bookingData, error: bookingError } = await supabase
+        .from('bookings')
+        .insert({
+          user_id: user.id,
+          date: dateStr,
+          slot: selectedSlot,
+          room: selectedRoom,
+          price: ROOM_PRICES[selectedRoom],
+          status: 'confirmed',
+        })
+        .select()
+        .single();
+
+      if (bookingError) {
+        throw bookingError;
+      }
+
+      setSuccess(true);
+      
+      // Récupère les infos utilisateur pour l'email
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('nom, prenom')
+        .eq('id', user.id)
+        .single();
+
+      // Envoie l'email de confirmation
+      try {
+        await fetch('/api/send-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            nom: profile?.nom || '',
+            prenom: profile?.prenom || '',
+            date: dateStr,
+            slot: selectedSlot,
+            room: selectedRoom,
+            price: ROOM_PRICES[selectedRoom],
+            bookingId: bookingData.id
+          })
+        });
+      } catch (emailError) {
+        console.error('Erreur envoi email:', emailError);
+        // On ne bloque pas la réservation si l'email échoue
+      }
+      
+      // Recharge les réservations pour mettre à jour les indicateurs
+      await fetchBookings();
+      
+      // Réinitialise le formulaire
+      setTimeout(() => {
+        setSelectedDate(null);
+        setSelectedRoom(null);
+        setSelectedSlot(null);
+        setSuccess(false);
+        router.push('/mes-reservations');
+      }, 2000);
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "Une erreur est survenue lors de la réservation");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-slate-50 text-slate-900">
+      {/* Hero section */}
+      <section
+        className="relative isolate flex min-h-[40vh] items-center justify-center overflow-hidden pt-24 text-white"
+      >
+        <Image
+          src="/photos/covers1.jpg"
+          alt="Theranice"
+          fill
+          className="absolute inset-0 object-cover"
+          priority
+        />
+        <div className="absolute inset-0 bg-slate-900/40" aria-hidden="true" />
+        <div className="relative mx-auto flex max-w-4xl flex-col gap-4 px-6 py-16 text-center">
+          <h1 className="text-4xl font-semibold sm:text-5xl">
+            Réservation
+          </h1>
+          <p className="text-lg text-[slate-100]">
+            Choisissez votre date, salle et créneau
+          </p>
+        </div>
+      </section>
+
+      {/* Section formulaire de réservation */}
+      <section className="bg-[#FFFFFF] py-16">
+        <div className="mx-auto max-w-5xl px-6">
+          <h2 className={`${garamond.className} text-4xl font-semibold mb-8 text-[#D4A373]`}>
+            ▸ Réserver un créneau
+          </h2>
+
+          {/* Messages */}
+          {error && (
+            <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded mb-6">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded mb-6">
+              Réservation confirmée ! Redirection...
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Calendrier */}
+            <div>
+              <h3 className="text-xl font-semibold text-[#333333] mb-4">
+                1. Choisissez une date
+              </h3>
+              <div className="calendar-container">
+                <Calendar
+                  onChange={(value) => setSelectedDate(value as Date)}
+                  value={selectedDate}
+                  minDate={new Date()}
+                  locale="fr-FR"
+                  tileClassName={({ date }) => {
+                    // Utilise la date locale au lieu de UTC
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const dateStr = `${year}-${month}-${day}`;
+                    const bookingsForDate = existingBookings.filter(b => b.date === dateStr);
+                    
+                    if (bookingsForDate.length === 0) return null;
+                    
+                    // Vérifie si tous les créneaux/salles sont complets
+                    // Pour chaque créneau, vérifie si toutes les salles sont indisponibles
+                    const allRooms: Room[] = ['room1', 'room2', 'large'];
+                    const allSlots: Slot[] = ['morning', 'afternoon'];
+                    
+                    let availableCount = 0;
+                    for (const slot of allSlots) {
+                      for (const room of allRooms) {
+                        if (isSlotAvailable(date, slot, room)) {
+                          availableCount++;
+                        }
+                      }
+                    }
+                    
+                    // Complet = aucun créneau/salle n'est disponible
+                    const isFull = availableCount === 0;
+                    
+                    if (isFull) return 'has-full-booking';
+                    return 'has-booking';
+                  }}
+                />
+              </div>
+              
+              {/* Légende */}
+              <div className="mt-4 space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-[#D4A373]"></div>
+                  <span className="text-slate-600">Partiellement réservé</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-[#d06264]"></div>
+                  <span className="text-slate-600">Complet</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Salle et créneau */}
+            <div className="space-y-6">
+              {/* Sélection de la salle */}
+              <div>
+                <h3 className="text-xl font-semibold text-[#333333] mb-4">
+                  2. Choisissez une salle
+                </h3>
+                <div className="space-y-3">
+                  {(Object.keys(ROOM_PRICES) as Room[]).map((room) => {
+                    const isAvailable = isRoomAvailableForDate(room);
+                    
+                    return (
+                      <label
+                        key={room}
+                        className={`flex items-center justify-between p-4 border-2 transition-colors ${
+                          !isAvailable
+                            ? 'opacity-50 cursor-not-allowed bg-slate-100 border-slate-200'
+                            : selectedRoom === room
+                            ? 'border-[#D4A373] bg-[#D4A373]/10 cursor-pointer'
+                            : 'border-slate-300 hover:border-[#D4A373] cursor-pointer'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="radio"
+                            name="room"
+                            value={room}
+                            checked={selectedRoom === room}
+                            onChange={() => setSelectedRoom(room)}
+                            disabled={!isAvailable}
+                            className="w-4 h-4 text-[#D4A373] disabled:opacity-50"
+                          />
+                          <span className="font-medium">
+                            {ROOM_LABELS[room]}
+                            {!isAvailable && <span className="ml-2 text-sm text-red-600">(Indisponible)</span>}
+                          </span>
+                        </div>
+                        <span className={`font-semibold ${isAvailable ? 'text-[#D4A373]' : 'text-slate-400'}`}>
+                          {ROOM_PRICES[room]}€
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Sélection du créneau */}
+              <div>
+                <h3 className="text-xl font-semibold text-[#333333] mb-4">
+                  3. Choisissez un créneau
+                </h3>
+                <div className="space-y-3">
+                  <label
+                    className={`flex items-center justify-between p-4 border-2  transition-colors ${
+                      !isSlotAvailableForSelection('morning')
+                        ? 'opacity-50 cursor-not-allowed bg-slate-100 border-slate-200'
+                        : selectedSlot === 'morning'
+                        ? 'border-[#D4A373] bg-[#D4A373]/10 cursor-pointer'
+                        : 'border-slate-300 hover:border-[#D4A373] cursor-pointer'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="slot"
+                        value="morning"
+                        checked={selectedSlot === 'morning'}
+                        onChange={() => setSelectedSlot('morning')}
+                        disabled={!isSlotAvailableForSelection('morning')}
+                        className="w-4 h-4 text-[#D4A373] disabled:opacity-50"
+                      />
+                      <span className="font-medium">
+                        Matin (8h-12h)
+                        {!isSlotAvailableForSelection('morning') && <span className="ml-2 text-sm text-red-600">(Indisponible)</span>}
+                      </span>
+                    </div>
+                  </label>
+
+                  <label
+                    className={`flex items-center justify-between p-4 border-2 transition-colors ${
+                      !isSlotAvailableForSelection('afternoon')
+                        ? 'opacity-50 cursor-not-allowed bg-slate-100 border-slate-200'
+                        : selectedSlot === 'afternoon'
+                        ? 'border-[#D4A373] bg-[#D4A373]/10 cursor-pointer'
+                        : 'border-slate-300 hover:border-[#D4A373] cursor-pointer'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="slot"
+                        value="afternoon"
+                        checked={selectedSlot === 'afternoon'}
+                        onChange={() => setSelectedSlot('afternoon')}
+                        disabled={!isSlotAvailableForSelection('afternoon')}
+                        className="w-4 h-4 text-[#D4A373] disabled:opacity-50"
+                      />
+                      <span className="font-medium">
+                        Après-midi (13h-17h)
+                        {!isSlotAvailableForSelection('afternoon') && <span className="ml-2 text-sm text-red-600">(Indisponible)</span>}
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Total et bouton */}
+              {selectedRoom && (
+                <div className="border-t-2 border-[#333333] pt-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-xl font-semibold text-[#333333]">Total :</span>
+                    <span className="text-3xl font-bold text-[#D4A373]">
+                      {ROOM_PRICES[selectedRoom]}€
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={handleSubmit}
+                    disabled={loading || !selectedDate || !selectedRoom || !selectedSlot || (selectedDate && selectedRoom && selectedSlot && !isSlotAvailable(selectedDate, selectedSlot, selectedRoom))}
+                    className="w-full cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? "Réservation en cours..." : user ? "Réserver" : "Se connecter pour réserver"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}

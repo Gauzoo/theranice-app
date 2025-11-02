@@ -120,27 +120,27 @@ export default function Home() {
           <FAQ
             items={[
               {
-                question: "Quel est le prix d'une demi-journée ?",
+                question: "▸ Quel est le prix d'une demi-journée ?",
                 answer: "Le tarif pour une demi-journée (4 heures) est de XX€. Ce tarif inclut l'accès à la salle équipée, le coin thé, le matériel de base, et le code d'accès sécurisé. Des forfaits avec plusieurs créneaux sont également disponibles à tarif préférentiel."
               },
               {
-                question: "Comment pratiquer chez THÉRANICE ?",
+                question: "▸ Comment pratiquer chez THÉRANICE ?",
                 answer: "Pour pratiquer chez THÉRANICE, il vous suffit d'acheter un forfait demi-journée via notre plateforme de réservation en ligne. Une fois votre paiement confirmé, vous recevrez un code d'accès pour la serrure connectée."
               },
               {
-                question: "Quels sont les règles d'utilisation des cabinets ?",
+                question: "▸ Quels sont les règles d'utilisation des cabinets ?",
                 answer: "Les cabinets doivent être utilisés dans le respect des autres praticiens. Merci de laisser l'espace propre et rangé après votre passage. Le matériel mis à disposition doit être utilisé avec soin. Toute dégradation sera facturée."
               },
               {
-                question: "Comment acheter un forfait ?",
+                question: "▸ Comment acheter un forfait ?",
                 answer: "L'achat d'un forfait se fait directement en ligne via notre système de réservation. Sélectionnez votre créneau (matin ou après-midi), procédez au paiement sécurisé, et recevez instantanément votre confirmation avec le code d'accès."
               },
               {
-                question: "Y a-t-il un délai d'utilisation des forfaits ?",
+                question: "▸ Y a-t-il un délai d'utilisation des forfaits ?",
                 answer: "Les forfaits achetés sont valables pour la date et le créneau sélectionnés lors de la réservation. Ils ne sont pas reportables, sauf en cas d'annulation effectuée au moins 24h avant le créneau réservé."
               },
               {
-                question: "Comment réserver un créneau ?",
+                question: "▸ Comment réserver un créneau ?",
                 answer: "Consultez le calendrier des disponibilités sur notre plateforme, choisissez le jour et le créneau souhaité (matin 8h-12h ou après-midi 13h-17h), puis validez votre réservation en procédant au paiement."
               }
             ]}

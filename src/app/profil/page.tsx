@@ -146,7 +146,7 @@ export default function ProfilPage() {
             {!isEditing && (
               <button
                 onClick={() => setIsEditing(true)}
-                className="cursor-pointer bg-[#D4A373] px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] rounded"
+                className="cursor-pointer bg-[#D4A373] px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363]"
               >
                 Modifier
               </button>

@@ -18,6 +18,7 @@ const NAV_LINKS = [
   { href: "/#nos-espaces", label: "Nos espaces", id: "nos-espaces" },
   { href: "/#forfait", label: "FAQ", id: "forfait" },
   { href: "/#contact", label: "Contact", id: "contact" },
+  { href: "/reservation", label: "Réservation", id: "reservation" },
 ];
 
 const HEADER_OFFSET = 96;
@@ -293,18 +294,20 @@ export default function SiteHeader() {
         </button>
         
         {/* Navigation + Bouton Mon compte regroupés */}
-        <div className="hidden lg:flex items-center gap-6">
+        <div className="hidden xl:flex items-center gap-6">
           {/* Menu desktop */}
           <nav>
             <ul className="flex items-center gap-6 text-lg font-medium uppercase tracking-wide"> 
               {NAV_LINKS.map((link) => {
+                // Vérifie si on est sur la page de ce lien
+                const isCurrentPage = pathname === link.href;
                 // Vérifie si ce lien correspond à la section active (seulement côté client et sur la page d'accueil)
                 const isActive = isMounted && isHomePage && activeSection === link.id;
                 
                 // Définit la couleur du lien
                 let linkColor = "";
-                if (isActive) {
-                  // Section active = doré
+                if (isCurrentPage || isActive) {
+                  // Page active ou section active = doré
                   linkColor = "text-[#D4A373]";
                 } else if (isScrolled) {
                   // Header scrollé = gris foncé avec hover doré
@@ -368,9 +371,24 @@ export default function SiteHeader() {
                   
                   <div className="bg-white rounded-md shadow-lg overflow-hidden">
                     <Link
+                      href="/mes-reservations"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className={`block w-full px-4 py-2.5 text-1xl font-semibold transition-colors ${
+                        pathname === "/mes-reservations" 
+                          ? "text-[#D4A373] bg-[#FAEDCD]" 
+                          : "text-[#333333] hover:bg-[#FAEDCD]"
+                      }`}
+                    >
+                      Mes réservations
+                    </Link>
+                    <Link
                       href="/profil"
                       onClick={() => setIsDropdownOpen(false)}
-                      className="block w-full px-4 py-2.5 text-1xl font-semibold text-[#333333] hover:bg-[#FAEDCD] transition-colors"
+                      className={`block w-full px-4 py-2.5 text-1xl font-semibold transition-colors ${
+                        pathname === "/profil" 
+                          ? "text-[#D4A373] bg-[#FAEDCD]" 
+                          : "text-[#333333] hover:bg-[#FAEDCD]"
+                      }`}
                     >
                       Mon profil
                     </Link>
@@ -391,7 +409,7 @@ export default function SiteHeader() {
               <button
                 ref={monCompteButtonRef}
                 onClick={() => setIsLoginModalOpen(true)}
-                className={`hidden lg:block cursor-pointer rounded px-5 py-1.5 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
+                className={`hidden xl:block cursor-pointer rounded px-5 py-1.5 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
                   isScrolled
                     ? "bg-[#D4A373] text-white hover:bg-[#c49363]" 
                     : "bg-[#333333] text-[#FFFFFF] hover:bg-[#D4A373]"
@@ -403,7 +421,7 @@ export default function SiteHeader() {
               {/* Mobile : Lien vers /connexion */}
               <Link
                 href="/connexion"
-                className={`lg:hidden cursor-pointer rounded px-5 py-1.5 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
+                className={`xl:hidden cursor-pointer rounded px-5 py-1.5 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
                   isScrolled
                     ? "bg-[#D4A373] text-white hover:bg-[#c49363]" 
                     : "bg-[#333333] text-[#FFFFFF] hover:bg-[#D4A373]"
@@ -420,7 +438,7 @@ export default function SiteHeader() {
 
         {/* Bouton hamburger - visible seulement en mobile */}
         <button
-          className="lg:hidden flex flex-col gap-1.5 w-8 h-8 justify-center items-center cursor-pointer"
+          className="xl:hidden flex flex-col gap-1.5 w-8 h-8 justify-center items-center cursor-pointer"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           aria-label="Menu"
         >
@@ -443,7 +461,7 @@ export default function SiteHeader() {
 
         {/* Menu mobile - slide de droite */}
         <div
-          className={`fixed top-0 right-0 h-screen w-64 bg-slate-50 z-40 transform transition-transform duration-300 ease-in-out lg:hidden ${
+          className={`fixed top-0 right-0 h-screen w-64 bg-slate-50 z-40 transform transition-transform duration-300 ease-in-out xl:hidden ${
             isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
@@ -459,6 +477,7 @@ export default function SiteHeader() {
 
           <nav className="flex flex-col gap-8 p-8 pt-24">
             {NAV_LINKS.map((link) => {
+              const isCurrentPage = pathname === link.href;
               const isActive = isMounted && isHomePage && activeSection === link.id;
               
               return (
@@ -467,7 +486,7 @@ export default function SiteHeader() {
                   href={link.href}
                   onClick={(event) => handleNavClick(event, link.href, link.id)}
                   className={`text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
-                    isActive
+                    isCurrentPage || isActive
                       ? "text-[#D4A373]"
                       : "text-[#333333] hover:text-[#D4A373]"
                   }`}
@@ -476,16 +495,28 @@ export default function SiteHeader() {
                 </Link>
               );
             })}
-            {/* Lien Mon compte / Profil dans le menu mobile */}
+            {/* Liens utilisateur dans le menu mobile */}
             {user ? (
               <>
                 <Link
+                  href="/mes-reservations"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
+                    pathname === "/mes-reservations" ? "text-[#D4A373]" : "text-[#333333] hover:text-[#D4A373]"
+                  }`}
+                >
+                  Mes réservations
+                </Link>
+                <Link
                   href="/profil"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-lg font-medium uppercase tracking-wide transition-colors duration-200 text-[#333333] hover:text-[#D4A373]"
+                  className={`text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
+                    pathname === "/profil" ? "text-[#D4A373]" : "text-[#333333] hover:text-[#D4A373]"
+                  }`}
                 >
                   Mon profil
                 </Link>
+                
                 <button
                   onClick={() => {
                     setIsMobileMenuOpen(false);
@@ -511,7 +542,7 @@ export default function SiteHeader() {
         {/* Overlay sombre derrière le menu mobile */}
         {isMobileMenuOpen && (
           <div
-            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+            className="fixed inset-0 bg-black/50 z-30 xl:hidden"
             onClick={() => setIsMobileMenuOpen(false)}
           />
         )}

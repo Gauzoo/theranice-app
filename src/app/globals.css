@@ -59,3 +59,139 @@ body {
 .animate-slideDown {
   animation: slideDown 0.3s ease-out;
 }
+
+/* Styles pour react-calendar */
+.calendar-container .react-calendar {
+  width: 100% !important;
+  border: none !important;
+  font-family: 'Poppins', sans-serif !important;
+  background: white !important;
+  border-radius: 16px !important;
+  padding: 20px !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+}
+
+/* Navigation */
+.calendar-container .react-calendar__navigation {
+  display: flex !important;
+  height: 50px !important;
+  margin-bottom: 20px !important;
+}
+
+.calendar-container .react-calendar__navigation button {
+  color: #333333 !important;
+  font-weight: 600 !important;
+  font-size: 16px !important;
+  background: none !important;
+  border-radius: 8px !important;
+  transition: all 0.2s !important;
+}
+
+.calendar-container .react-calendar__navigation button:enabled:hover {
+  background: #FEFAE0 !important;
+}
+
+.calendar-container .react-calendar__navigation button:disabled {
+  opacity: 0.3 !important;
+}
+
+/* Jours de la semaine */
+.calendar-container .react-calendar__month-view__weekdays {
+  text-align: center !important;
+  text-transform: uppercase !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  color: #64748b !important;
+  margin-bottom: 10px !important;
+}
+
+.calendar-container .react-calendar__month-view__weekdays__weekday {
+  padding: 12px 0 !important;
+}
+
+/* Tuiles des jours */
+.calendar-container .react-calendar__tile {
+  padding: 16px 8px !important;
+  background: none !important;
+  border-radius: 12px !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  color: #334155 !important;
+  position: relative !important;
+  transition: all 0.2s !important;
+  aspect-ratio: 1 / 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.calendar-container .react-calendar__tile:enabled:hover {
+  background: #D4A373 !important;
+  transform: scale(1.05) !important;
+}
+
+/* Jour actuel */
+.calendar-container .react-calendar__tile--now {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+  font-weight: 700 !important;
+}
+
+.calendar-container .react-calendar__tile--now:enabled:hover {
+  background: #bae6fd !important;
+}
+
+/* Jour sélectionné */
+.calendar-container .react-calendar__tile--active {
+  background: #D4A373 !important;
+  color: white !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 6px -1px rgba(212, 163, 115, 0.4) !important;
+}
+
+.calendar-container .react-calendar__tile--active:enabled:hover {
+  background: #c39363 !important;
+}
+
+/* Jours des autres mois */
+.calendar-container .react-calendar__month-view__days__day--neighboringMonth {
+  color: #cbd5e1 !important;
+}
+
+/* Indicateur de réservation - points colorés sous le jour */
+.calendar-container .react-calendar__tile abbr {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.calendar-container .react-calendar__tile.has-booking::after,
+.calendar-container .react-calendar__tile.has-full-booking::after {
+  content: '' !important;
+  display: block !important;
+  position: absolute !important;
+  bottom: 6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  z-index: 10 !important;
+  pointer-events: none !important;
+}
+
+.calendar-container .react-calendar__tile.has-booking::after {
+  background: #D4A373 !important;
+}
+
+.calendar-container .react-calendar__tile.has-full-booking::after {
+  background: #d06264 !important;
+}
+
+.calendar-container .react-calendar__tile--active.has-booking::after {
+  background: #D4A373 !important;
+}
+
+.calendar-container .react-calendar__tile--active.has-full-booking::after {
+  background: #d06264 !important;
+}
