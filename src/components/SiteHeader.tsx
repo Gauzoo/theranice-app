@@ -409,7 +409,7 @@ export default function SiteHeader() {
               <button
                 ref={monCompteButtonRef}
                 onClick={() => setIsLoginModalOpen(true)}
-                className={`hidden xl:block cursor-pointer rounded px-5 py-1.5 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
+                className={`hidden xl:block cursor-pointer px-5 py-1.5 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
                   isScrolled
                     ? "bg-[#D4A373] text-white hover:bg-[#c49363]" 
                     : "bg-[#333333] text-[#FFFFFF] hover:bg-[#D4A373]"
@@ -421,7 +421,7 @@ export default function SiteHeader() {
               {/* Mobile : Lien vers /connexion */}
               <Link
                 href="/connexion"
-                className={`xl:hidden cursor-pointer rounded px-5 py-1.5 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
+                className={`xl:hidden cursor-pointer px-5 py-1.5 text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
                   isScrolled
                     ? "bg-[#D4A373] text-white hover:bg-[#c49363]" 
                     : "bg-[#333333] text-[#FFFFFF] hover:bg-[#D4A373]"
