@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@/lib/supabase/server';
 
 // Désactive le body parser de Next.js pour Stripe webhooks
 export const dynamic = 'force-dynamic';

@@ -48,7 +48,6 @@ export default function ReservationPage() {
   const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const router = useRouter();
 
   // Fonction pour récupérer les réservations
@@ -279,12 +278,6 @@ export default function ReservationPage() {
           {error && (
             <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded mb-6">
               {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded mb-6">
-              Page de paiement ouverte ! Complétez votre paiement dans le nouvel onglet. Une fois terminé, votre réservation sera confirmée.
             </div>
           )}
 

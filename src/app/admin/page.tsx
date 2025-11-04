@@ -41,11 +41,9 @@ const SLOT_LABELS: Record<string, string> = {
 };
 
 export default function AdminDashboard() {
-  const [user, setUser] = useState<{ email?: string } | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "today" | "upcoming" | "past">("upcoming");
-  const [showAddModal, setShowAddModal] = useState(false);
   const router = useRouter();
 
   // Statistiques
@@ -58,6 +56,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkAuth = async () => {
@@ -79,7 +78,6 @@ export default function AdminDashboard() {
       return;
     }
 
-    setUser(user);
     fetchBookings();
   };
 
@@ -120,9 +118,10 @@ export default function AdminDashboard() {
       console.log('Bookings récupérées:', bookingsWithProfiles.length);
       setBookings(bookingsWithProfiles as Booking[]);
       calculateStats(bookingsWithProfiles as Booking[]);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching bookings:', error);
-      alert('Erreur : ' + error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
+      alert('Erreur : ' + errorMessage);
     } finally {
       setLoading(false);
     }
@@ -229,9 +228,10 @@ export default function AdminDashboard() {
         // Recharge depuis Supabase pour être sûr
         setTimeout(() => fetchBookings(), 500);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erreur catch:', err);
-      alert('Erreur : ' + err.message);
+      const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
+      alert('Erreur : ' + errorMessage);
     }
   };
 
