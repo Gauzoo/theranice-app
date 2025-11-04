@@ -257,7 +257,7 @@ export default function AdminDashboard() {
     console.log('Users fetched:', { data, error, count: data?.length });
     
     if (!error && data) {
-      setUsers(data as any);
+      setUsers(data);
     } else if (error) {
       console.error('Error fetching users:', error);
     }
@@ -583,7 +583,7 @@ export default function AdminDashboard() {
                 </label>
                 <select
                   value={newBooking.slot}
-                  onChange={(e) => setNewBooking({ ...newBooking, slot: e.target.value as any })}
+                  onChange={(e) => setNewBooking({ ...newBooking, slot: e.target.value as 'morning' | 'afternoon' | 'fullday' })}
                   className="w-full border border-slate-300 rounded px-3 py-2"
                 >
                   <option value="morning">Matin (8h-12h)</option>
