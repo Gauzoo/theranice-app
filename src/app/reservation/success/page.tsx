@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { EB_Garamond } from "next/font/google";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 const garamond = EB_Garamond({
@@ -11,7 +11,7 @@ const garamond = EB_Garamond({
   weight: ["400", "500", "600", "700"],
 });
 
-export default function SuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const [loading, setLoading] = useState(true);
@@ -91,5 +91,20 @@ export default function SuccessPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-[#D4A373] border-t-transparent"></div>
+          <p className="mt-4 text-slate-600">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }
