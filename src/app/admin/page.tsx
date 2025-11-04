@@ -44,7 +44,18 @@ export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "today" | "upcoming" | "past">("upcoming");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [users, setUsers] = useState<Array<{id: string, nom: string, prenom: string, telephone?: string}>>([]);
   const router = useRouter();
+
+  // Formulaire d'ajout
+  const [newBooking, setNewBooking] = useState({
+    userId: '',
+    date: '',
+    slot: 'morning' as 'morning' | 'afternoon' | 'fullday',
+    room: 'room1' as 'room1' | 'room2' | 'large',
+    price: 50,
+  });
 
   // Statistiques
   const [stats, setStats] = useState({
@@ -79,6 +90,7 @@ export default function AdminDashboard() {
     }
 
     fetchBookings();
+    fetchUsers();
   };
 
   const fetchBookings = async () => {
@@ -235,6 +247,103 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchUsers = async () => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, nom, prenom, telephone')
+      .order('nom');
+    
+    console.log('Users fetched:', { data, error, count: data?.length });
+    
+    if (!error && data) {
+      setUsers(data as any);
+    } else if (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  const handleAddBooking = async () => {
+    if (!newBooking.userId || !newBooking.date || !newBooking.slot || !newBooking.room) {
+      alert('Veuillez remplir tous les champs');
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      
+      // Vérifie la disponibilité
+      const { data: existingBookings } = await supabase
+        .from('bookings')
+        .select('slot, room')
+        .eq('date', newBooking.date)
+        .eq('status', 'confirmed');
+
+      // Logique de vérification de disponibilité (même que dans le webhook)
+      let isAvailable = true;
+      if (newBooking.slot === 'fullday') {
+        if (newBooking.room === 'large') {
+          isAvailable = !existingBookings || existingBookings.length === 0;
+        } else {
+          const roomBooked = existingBookings?.some(b => b.room === newBooking.room);
+          const largeBooked = existingBookings?.some(b => b.room === 'large');
+          isAvailable = !roomBooked && !largeBooked;
+        }
+      } else {
+        const fulldayBooked = existingBookings?.some(b => b.slot === 'fullday' && b.room === newBooking.room);
+        const largeFulldayBooked = existingBookings?.some(b => b.slot === 'fullday' && b.room === 'large');
+        
+        if (fulldayBooked || largeFulldayBooked) {
+          isAvailable = false;
+        } else {
+          const bookingsForSlot = existingBookings?.filter(b => b.slot === newBooking.slot);
+          if (newBooking.room === 'large') {
+            isAvailable = !bookingsForSlot || bookingsForSlot.length === 0;
+          } else {
+            const roomBooked = bookingsForSlot?.some(b => b.room === newBooking.room);
+            const largeBooked = bookingsForSlot?.some(b => b.room === 'large');
+            isAvailable = !roomBooked && !largeBooked;
+          }
+        }
+      }
+
+      if (!isAvailable) {
+        alert('Ce créneau n\'est pas disponible');
+        return;
+      }
+
+      // Crée la réservation
+      const { error } = await supabase
+        .from('bookings')
+        .insert({
+          user_id: newBooking.userId,
+          date: newBooking.date,
+          slot: newBooking.slot,
+          room: newBooking.room,
+          price: newBooking.price,
+          status: 'confirmed',
+        });
+
+      if (error) {
+        alert('Erreur lors de la création : ' + error.message);
+      } else {
+        alert('Réservation créée avec succès');
+        setShowAddModal(false);
+        setNewBooking({
+          userId: '',
+          date: '',
+          slot: 'morning',
+          room: 'room1',
+          price: 50,
+        });
+        fetchBookings();
+      }
+    } catch (err) {
+      console.error('Erreur:', err);
+      alert('Erreur lors de la création de la réservation');
+    }
+  };
+
   const filteredBookings = getFilteredBookings();
 
   if (loading) {
@@ -293,12 +402,17 @@ export default function AdminDashboard() {
 
         {/* Filtres */}
         <div className="bg-white p-6 shadow-md mb-8">
-
-
-          <h2 className={`${garamond.className} text-4xl font-semibold mb-8 text-[#D4A373]`}>
-            ▸ Réservations
-          </h2>
-
+          <div className="flex justify-between items-center mb-6">
+            <h2 className={`${garamond.className} text-2xl font-semibold text-[#D4A373]`}>
+              Réservations
+            </h2>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="bg-[#D4A373] hover:bg-[#c49363] text-white px-6 py-2 font-medium transition-colors cursor-pointer"
+            >
+              + Ajouter une réservation
+            </button>
+          </div>
 
           <div className="flex flex-wrap gap-3 mb-6">
             <button
@@ -411,6 +525,135 @@ export default function AdminDashboard() {
           )}
         </div>
       </div>
+
+      {/* Modal d'ajout de réservation */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className={`${garamond.className} text-2xl font-semibold text-[#D4A373]`}>
+                Ajouter une réservation
+              </h2>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-500 hover:text-slate-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Sélection du client */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Client *
+                </label>
+                <select
+                  value={newBooking.userId}
+                  onChange={(e) => setNewBooking({ ...newBooking, userId: e.target.value })}
+                  className="w-full border border-slate-300 rounded px-3 py-2"
+                >
+                  <option value="">-- Sélectionnez un client --</option>
+                  {users.map(user => (
+                    <option key={user.id} value={user.id}>
+                      {user.prenom} {user.nom} {user.telephone ? `(${user.telephone})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Date */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Date *
+                </label>
+                <input
+                  type="date"
+                  value={newBooking.date}
+                  onChange={(e) => setNewBooking({ ...newBooking, date: e.target.value })}
+                  className="w-full border border-slate-300 rounded px-3 py-2"
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+
+              {/* Créneau */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Créneau *
+                </label>
+                <select
+                  value={newBooking.slot}
+                  onChange={(e) => setNewBooking({ ...newBooking, slot: e.target.value as any })}
+                  className="w-full border border-slate-300 rounded px-3 py-2"
+                >
+                  <option value="morning">Matin (8h-12h)</option>
+                  <option value="afternoon">Après-midi (13h-17h)</option>
+                  <option value="fullday">Journée complète (8h-17h)</option>
+                </select>
+              </div>
+
+              {/* Salle */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Salle *
+                </label>
+                <select
+                  value={newBooking.room}
+                  onChange={(e) => {
+                    const room = e.target.value as 'room1' | 'room2' | 'large';
+                    const slot = newBooking.slot;
+                    let price = 50;
+                    
+                    if (slot === 'fullday') {
+                      price = room === 'large' ? 140 : 90;
+                    } else {
+                      price = room === 'large' ? 80 : 50;
+                    }
+                    
+                    setNewBooking({ ...newBooking, room, price });
+                  }}
+                  className="w-full border border-slate-300 rounded px-3 py-2"
+                >
+                  <option value="room1">Salle 1 (35m²)</option>
+                  <option value="room2">Salle 2 (35m²)</option>
+                  <option value="large">Grande salle (70m²)</option>
+                </select>
+              </div>
+
+              {/* Prix */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Prix (€) *
+                </label>
+                <input
+                  type="number"
+                  value={newBooking.price}
+                  onChange={(e) => setNewBooking({ ...newBooking, price: parseFloat(e.target.value) })}
+                  className="w-full border border-slate-300 rounded px-3 py-2"
+                  min="0"
+                  step="1"
+                />
+              </div>
+
+              {/* Boutons */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={handleAddBooking}
+                  className="flex-1 bg-[#D4A373] hover:bg-[#c49363] text-white px-6 py-2 font-medium transition-colors cursor-pointer"
+                >
+                  Créer la réservation
+                </button>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 bg-slate-200 hover:bg-[#FAEDCD] text-slate-700 px-6 py-2 font-medium transition-colors cursor-pointer"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
