@@ -14,7 +14,7 @@ const garamond = EB_Garamond({
 });
 
 type Room = "room1" | "room2" | "large";
-type Slot = "morning" | "afternoon";
+type Slot = "morning" | "afternoon" | "fullday";
 
 interface Booking {
   date: string;
@@ -26,6 +26,12 @@ const ROOM_PRICES = {
   room1: 50,
   room2: 50,
   large: 80,
+};
+
+const FULLDAY_PRICES = {
+  room1: 90,
+  room2: 90,
+  large: 140,
 };
 
 const ROOM_LABELS = {
@@ -77,21 +83,49 @@ export default function ReservationPage() {
     const day = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
     
-    // Trouve toutes les réservations pour cette date et ce créneau
-    const bookingsForSlot = existingBookings.filter(
-      b => b.date === dateStr && b.slot === slot
-    );
+    // Trouve toutes les réservations pour cette date
+    const bookingsForDate = existingBookings.filter(b => b.date === dateStr);
+
+    // Si on veut réserver la journée complète
+    if (slot === 'fullday') {
+      // La journée est disponible si :
+      // - Pour la grande salle : aucune réservation n'existe (ni matin, ni après-midi, ni journée)
+      // - Pour les petites salles : cette salle n'est pas réservée ET la grande salle n'est pas réservée
+      if (room === 'large') {
+        return bookingsForDate.length === 0;
+      } else {
+        const roomBookedAnytime = bookingsForDate.some(b => b.room === room);
+        const largeBookedAnytime = bookingsForDate.some(b => b.room === 'large');
+        return !roomBookedAnytime && !largeBookedAnytime;
+      }
+    }
+
+    // Si on veut réserver matin ou après-midi
+    // Vérifie d'abord s'il y a une réservation journée sur cette salle
+    const fulldayBooked = bookingsForDate.some(b => b.slot === 'fullday' && b.room === room);
+    if (fulldayBooked) {
+      return false; // La journée est réservée, donc matin et après-midi sont bloqués
+    }
+
+    // Vérifie si la grande salle est réservée en journée complète (bloque TOUTES les salles)
+    const largeFulldayBooked = bookingsForDate.some(b => b.slot === 'fullday' && b.room === 'large');
+    if (largeFulldayBooked) {
+      return false; // Si grande salle réservée toute la journée, rien n'est disponible
+    }
+    
+    // Trouve toutes les réservations pour ce créneau spécifique
+    const bookingsForSlot = bookingsForDate.filter(b => b.slot === slot);
 
     // Si on veut réserver la grande salle
     if (room === 'large') {
-      // La grande salle est disponible si aucune salle n'est réservée
+      // La grande salle est disponible si aucune salle n'est réservée pour ce créneau
       return bookingsForSlot.length === 0;
     }
 
     // Si on veut réserver une petite salle
     // Elle est disponible si :
-    // 1. Elle n'est pas déjà réservée
-    // 2. La grande salle n'est pas réservée
+    // 1. Elle n'est pas déjà réservée pour ce créneau
+    // 2. La grande salle n'est pas réservée pour ce créneau
     const roomBooked = bookingsForSlot.some(b => b.room === room);
     const largeBooked = bookingsForSlot.some(b => b.room === 'large');
     
@@ -167,68 +201,45 @@ export default function ReservationPage() {
       const day = String(selectedDate.getDate()).padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
 
-      const { data: bookingData, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
-          user_id: user.id,
-          date: dateStr,
-          slot: selectedSlot,
-          room: selectedRoom,
-          price: ROOM_PRICES[selectedRoom],
-          status: 'confirmed',
-        })
-        .select()
-        .single();
-
-      if (bookingError) {
-        throw bookingError;
-      }
-
-      setSuccess(true);
-      
-      // Récupère les infos utilisateur pour l'email
+      // Récupère les infos utilisateur pour le paiement
       const { data: profile } = await supabase
         .from('profiles')
         .select('nom, prenom')
         .eq('id', user.id)
         .single();
 
-      // Envoie l'email de confirmation
-      try {
-        await fetch('/api/send-confirmation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: user.email,
-            nom: profile?.nom || '',
-            prenom: profile?.prenom || '',
-            date: dateStr,
-            slot: selectedSlot,
-            room: selectedRoom,
-            price: ROOM_PRICES[selectedRoom],
-            bookingId: bookingData.id
-          })
-        });
-      } catch (emailError) {
-        console.error('Erreur envoi email:', emailError);
-        // On ne bloque pas la réservation si l'email échoue
+      // Calcule le prix en fonction du créneau
+      const price = selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom];
+
+      // Crée une session de paiement Stripe
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          date: dateStr,
+          slot: selectedSlot,
+          room: selectedRoom,
+          price: price,
+          email: user.email,
+          nom: profile?.nom || '',
+          prenom: profile?.prenom || '',
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
       }
-      
-      // Recharge les réservations pour mettre à jour les indicateurs
-      await fetchBookings();
-      
-      // Réinitialise le formulaire
-      setTimeout(() => {
-        setSelectedDate(null);
-        setSelectedRoom(null);
-        setSelectedSlot(null);
-        setSuccess(false);
-        router.push('/mes-reservations');
-      }, 2000);
+
+      // Redirige vers Stripe Checkout (même fenêtre)
+      if (data.url) {
+        window.location.href = data.url;
+      }
     } catch (err) {
       const error = err as Error;
-      setError(error.message || "Une erreur est survenue lors de la réservation");
-    } finally {
+      setError(error.message || "Une erreur est survenue lors de la création du paiement");
       setLoading(false);
     }
   };
@@ -273,7 +284,7 @@ export default function ReservationPage() {
 
           {success && (
             <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded mb-6">
-              Réservation confirmée ! Redirection...
+              Page de paiement ouverte ! Complétez votre paiement dans le nouvel onglet. Une fois terminé, votre réservation sera confirmée.
             </div>
           )}
 
@@ -438,6 +449,35 @@ export default function ReservationPage() {
                       </span>
                     </div>
                   </label>
+
+                  <label
+                    className={`flex items-center justify-between p-4 border-2 transition-colors ${
+                      !isSlotAvailableForSelection('fullday')
+                        ? 'opacity-50 cursor-not-allowed bg-slate-100 border-slate-200'
+                        : selectedSlot === 'fullday'
+                        ? 'border-[#D4A373] bg-[#D4A373]/10 cursor-pointer'
+                        : 'border-slate-300 hover:border-[#D4A373] cursor-pointer'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="slot"
+                        value="fullday"
+                        checked={selectedSlot === 'fullday'}
+                        onChange={() => setSelectedSlot('fullday')}
+                        disabled={!isSlotAvailableForSelection('fullday')}
+                        className="w-4 h-4 text-[#D4A373] disabled:opacity-50"
+                      />
+                      <span className="font-medium">
+                        Journée complète (8h-17h)
+                        {!isSlotAvailableForSelection('fullday') && <span className="ml-2 text-sm text-red-600">(Indisponible)</span>}
+                      </span>
+                    </div>
+                    <span className={`font-semibold ${isSlotAvailableForSelection('fullday') ? 'text-[#D4A373]' : 'text-slate-400'}`}>
+                      {selectedRoom && FULLDAY_PRICES[selectedRoom]}€
+                    </span>
+                  </label>
                 </div>
               </div>
 
@@ -447,7 +487,7 @@ export default function ReservationPage() {
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-xl font-semibold text-[#333333]">Total :</span>
                     <span className="text-3xl font-bold text-[#D4A373]">
-                      {ROOM_PRICES[selectedRoom]}€
+                      {selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom]}€
                     </span>
                   </div>
 

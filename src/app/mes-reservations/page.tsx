@@ -13,7 +13,7 @@ const garamond = EB_Garamond({
 
 type BookingStatus = "confirmed" | "cancelled";
 type Room = "room1" | "room2" | "large";
-type Slot = "morning" | "afternoon";
+type Slot = "morning" | "afternoon" | "fullday";
 
 interface Booking {
   id: string;
@@ -34,6 +34,7 @@ const ROOM_LABELS = {
 const SLOT_LABELS = {
   morning: "Matin (8h-12h)",
   afternoon: "Après-midi (13h-17h)",
+  fullday: "Journée complète (8h-17h)",
 };
 
 export default function MesReservationsPage() {
@@ -218,40 +219,40 @@ export default function MesReservationsPage() {
         <div className="flex flex-wrap gap-3 mb-8">
           <button
             onClick={() => setFilter("upcoming")}
-            className={`px-6 py-2.5 font-medium transition-all cursor-pointer ${
+            className={`px-4 py-2 font-medium transition-all cursor-pointer ${
               filter === "upcoming"
-                ? "bg-[#D4A373] text-white shadow-md"
-                : "bg-white text-slate-700 hover:bg-[#FAEDCD] border border-slate-200"
+                ? "bg-[#D4A373] text-white"
+                : "bg-slate-100 text-slate-700 hover:bg-[#FAEDCD]"
             }`}
           >
             À venir
           </button>
           <button
             onClick={() => setFilter("past")}
-            className={`px-6 py-2.5  font-medium transition-all cursor-pointer ${
+            className={`px-4 py-2 font-medium transition-all cursor-pointer ${
               filter === "past"
-                ? "bg-[#D4A373] text-white shadow-md"
-                : "bg-white text-slate-700 hover:bg-[#FAEDCD] border border-slate-200"
+                ? "bg-[#D4A373] text-white"
+                : "bg-slate-100 text-slate-700 hover:bg-[#FAEDCD]"
             }`}
           >
             Passées
           </button>
           <button
             onClick={() => setFilter("cancelled")}
-            className={`px-6 py-2.5  font-medium transition-all cursor-pointer ${
+            className={`px-4 py-2 font-medium transition-all cursor-pointer ${
               filter === "cancelled"
-                ? "bg-[#D4A373] text-white shadow-md"
-                : "bg-white text-slate-700 hover:bg-[#FAEDCD] border border-slate-200"
+                ? "bg-[#D4A373] text-white"
+                : "bg-slate-100 text-slate-700 hover:bg-[#FAEDCD]"
             }`}
           >
             Annulées
           </button>
           <button
             onClick={() => setFilter("all")}
-            className={`px-6 py-2.5  font-medium transition-all cursor-pointer ${
+            className={`px-4 py-2 font-medium transition-all cursor-pointer ${
               filter === "all"
-                ? "bg-[#D4A373] text-white shadow-md"
-                : "bg-white text-slate-700 hover:bg-[#FAEDCD] border border-slate-200"
+                ? "bg-[#D4A373] text-white"
+                : "bg-slate-100 text-slate-700 hover:bg-[#FAEDCD]"
             }`}
           >
             Toutes
