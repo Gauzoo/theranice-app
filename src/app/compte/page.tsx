@@ -126,19 +126,7 @@ export default function ComptePage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Nom et Prénom */}
             <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <label htmlFor="nom" className="block text-sm font-semibold text-slate-900">
-                  Nom <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="nom"
-                  name="nom"
-                  required
-                  className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
-                  placeholder="Votre nom"
-                />
-              </div>
+
 
               <div>
                 <label htmlFor="prenom" className="block text-sm font-semibold text-slate-900">
@@ -153,6 +141,20 @@ export default function ComptePage() {
                   placeholder="Votre prénom"
                 />
               </div>
+              <div>
+                <label htmlFor="nom" className="block text-sm font-semibold text-slate-900">
+                  Nom <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="nom"
+                  name="nom"
+                  required
+                  className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
+                  placeholder="Votre nom"
+                />
+              </div>
+
             </div>
 
             {/* Email */}

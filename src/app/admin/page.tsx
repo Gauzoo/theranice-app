@@ -28,6 +28,15 @@ interface Booking {
   };
 }
 
+interface Member {
+  id: string;
+  nom: string;
+  prenom: string;
+  telephone?: string;
+  email?: string;
+  created_at: string;
+}
+
 const ROOM_LABELS: Record<string, string> = {
   room1: "Salle 1",
   room2: "Salle 2",
@@ -46,6 +55,12 @@ export default function AdminDashboard() {
   const [filter, setFilter] = useState<"all" | "today" | "upcoming" | "past">("upcoming");
   const [showAddModal, setShowAddModal] = useState(false);
   const [users, setUsers] = useState<Array<{id: string, nom: string, prenom: string, telephone?: string}>>([]);
+  
+  // Section Membres
+  const [members, setMembers] = useState<Member[]>([]);
+  const [showEditMemberModal, setShowEditMemberModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  
   const router = useRouter();
 
   // Formulaire d'ajout
@@ -91,6 +106,22 @@ export default function AdminDashboard() {
 
     fetchBookings();
     fetchUsers();
+    fetchMembers();
+  };
+
+  const fetchMembers = async () => {
+    try {
+      const response = await fetch('/api/admin/members');
+      const result = await response.json();
+      
+      if (result.members) {
+        setMembers(result.members);
+      } else {
+        console.error('Error fetching members:', result.error);
+      }
+    } catch (error) {
+      console.error('Error fetching members:', error);
+    }
   };
 
   const fetchBookings = async () => {
@@ -248,18 +279,79 @@ export default function AdminDashboard() {
   };
 
   const fetchUsers = async () => {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, nom, prenom, telephone')
-      .order('nom');
-    
-    console.log('Users fetched:', { data, error, count: data?.length });
-    
-    if (!error && data) {
-      setUsers(data);
-    } else if (error) {
+    try {
+      const response = await fetch('/api/admin/members');
+      const result = await response.json();
+      
+      console.log('Users fetched:', { count: result.members?.length });
+      
+      if (result.members) {
+        setUsers(result.members);
+      } else {
+        console.error('Error fetching users:', result.error);
+      }
+    } catch (error) {
       console.error('Error fetching users:', error);
+    }
+  };
+
+  const handleEditMember = (member: Member) => {
+    setEditingMember(member);
+    setShowEditMemberModal(true);
+  };
+
+  const handleSaveMember = async () => {
+    if (!editingMember) return;
+
+    const supabase = createClient();
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        nom: editingMember.nom,
+        prenom: editingMember.prenom,
+        telephone: editingMember.telephone,
+      })
+      .eq('id', editingMember.id);
+
+    if (error) {
+      alert('Erreur lors de la modification : ' + error.message);
+    } else {
+      alert('Membre modifié avec succès');
+      setShowEditMemberModal(false);
+      setEditingMember(null);
+      fetchMembers();
+    }
+  };
+
+  const handleDeleteMember = async (memberId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce membre ? Cette action est irréversible.')) {
+      return;
+    }
+
+    const supabase = createClient();
+    
+    // Vérifier si le membre a des réservations
+    const { data: memberBookings } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('user_id', memberId);
+
+    if (memberBookings && memberBookings.length > 0) {
+      alert('Impossible de supprimer ce membre car il a des réservations associées.');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', memberId);
+
+    if (error) {
+      alert('Erreur lors de la suppression : ' + error.message);
+    } else {
+      alert('Membre supprimé avec succès');
+      fetchMembers();
     }
   };
 
@@ -404,7 +496,7 @@ export default function AdminDashboard() {
         <div className="bg-white p-6 shadow-md mb-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className={`${garamond.className} text-2xl font-semibold text-[#D4A373]`}>
-              Réservations
+              ▸ Réservations
             </h2>
             <button
               onClick={() => setShowAddModal(true)}
@@ -510,6 +602,68 @@ export default function AdminDashboard() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleDeleteBooking(booking.id)}
+                            className="text-red-600 hover:text-red-700 text-sm font-medium cursor-pointer"
+                            title="Supprimer"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Section Membres */}
+        <div className="bg-white p-6 shadow-md mb-8">
+          <h2 className={`text-2xl font-bold text-[#D4A373] mb-6 ${garamond.className}`}>
+            ▸ Membres inscrits
+          </h2>
+
+          {/* Liste des membres */}
+          {loading ? (
+            <div className="text-center py-8">Chargement...</div>
+          ) : members.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              Aucun membre inscrit
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-[#FAEDCD]">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Prénom</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Nom</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Email</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Téléphone</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Date d&apos;inscription</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map((member) => (
+                    <tr key={member.id} className="border-b border-slate-200 hover:bg-slate-50">
+                      <td className="px-4 py-3">{member.prenom}</td>
+                      <td className="px-4 py-3">{member.nom}</td>
+                      <td className="px-4 py-3">{member.email || '-'}</td>
+                      <td className="px-4 py-3">{member.telephone || '-'}</td>
+                      <td className="px-4 py-3">
+                        {new Date(member.created_at).toLocaleDateString('fr-FR')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditMember(member)}
+                            className="text-[#D4A373] hover:text-[#c49363] text-sm font-medium cursor-pointer"
+                            title="Modifier"
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMember(member.id)}
                             className="text-red-600 hover:text-red-700 text-sm font-medium cursor-pointer"
                             title="Supprimer"
                           >
@@ -645,6 +799,80 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   onClick={() => setShowAddModal(false)}
+                  className="flex-1 bg-slate-200 hover:bg-[#FAEDCD] text-slate-700 px-6 py-2 font-medium transition-colors cursor-pointer"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal d'édition de membre */}
+      {showEditMemberModal && editingMember && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h3 className={`text-2xl font-bold text-[#D4A373] mb-6 ${garamond.className}`}>
+                Modifier le membre
+              </h3>
+
+              <div className="space-y-4">
+                {/* Prénom */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Prénom *
+                  </label>
+                  <input
+                    type="text"
+                    value={editingMember.prenom}
+                    onChange={(e) => setEditingMember({ ...editingMember, prenom: e.target.value })}
+                    className="w-full border border-slate-300 rounded px-3 py-2"
+                  />
+                </div>
+
+                {/* Nom */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Nom *
+                  </label>
+                  <input
+                    type="text"
+                    value={editingMember.nom}
+                    onChange={(e) => setEditingMember({ ...editingMember, nom: e.target.value })}
+                    className="w-full border border-slate-300 rounded px-3 py-2"
+                  />
+                </div>
+
+                {/* Téléphone */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Téléphone
+                  </label>
+                  <input
+                    type="tel"
+                    value={editingMember.telephone || ''}
+                    onChange={(e) => setEditingMember({ ...editingMember, telephone: e.target.value })}
+                    className="w-full border border-slate-300 rounded px-3 py-2"
+                    placeholder="06 12 34 56 78"
+                  />
+                </div>
+              </div>
+
+              {/* Boutons */}
+              <div className="flex gap-4 mt-6">
+                <button
+                  onClick={handleSaveMember}
+                  className="flex-1 bg-[#D4A373] hover:bg-[#c49363] text-white px-6 py-2 font-medium transition-colors cursor-pointer"
+                >
+                  Enregistrer
+                </button>
+                <button
+                  onClick={() => {
+                    setShowEditMemberModal(false);
+                    setEditingMember(null);
+                  }}
                   className="flex-1 bg-slate-200 hover:bg-[#FAEDCD] text-slate-700 px-6 py-2 font-medium transition-colors cursor-pointer"
                 >
                   Annuler

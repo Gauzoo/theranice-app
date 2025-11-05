@@ -37,7 +37,7 @@ export default function Home() {
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-start">
             <Link
-              className="rounded-full bg-white/90 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-slate-900 transition-colors hover:bg-white"
+              className=" bg-white/90 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-slate-900 transition-colors hover:bg-white"
               href="/reservation"
             >
               Voir les disponibilités
