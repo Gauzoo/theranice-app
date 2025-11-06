@@ -15,10 +15,10 @@ export async function GET() {
       }
     );
 
-    // Récupère tous les membres
+    // Récupère tous les membres avec les champs de validation
     const { data: members, error } = await supabaseAdmin
       .from('profiles')
-      .select('id, nom, prenom, telephone, created_at')
+      .select('id, nom, prenom, telephone, created_at, account_status, activite_exercee, carte_identite_url, kbis_url, documents_submitted_at, validation_notes')
       .order('created_at', { ascending: false });
 
     if (error) {

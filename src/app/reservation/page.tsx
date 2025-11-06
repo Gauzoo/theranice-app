@@ -40,8 +40,12 @@ const ROOM_LABELS = {
   large: "Grande salle (70m²)",
 };
 
+type AccountStatus = 'pending' | 'documents_submitted' | 'approved' | 'rejected';
+
 export default function ReservationPage() {
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+  const [accountStatus, setAccountStatus] = useState<AccountStatus | null>(null);
+  const [accountLoading, setAccountLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
@@ -63,14 +67,31 @@ export default function ReservationPage() {
     }
   };
 
-  // Vérifie si l'utilisateur est connecté
+  // Vérifie si l'utilisateur est connecté et son statut de compte
   useEffect(() => {
-    const supabase = createClient();
-    
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    const checkUserAndStatus = async () => {
+      const supabase = createClient();
+      
+      const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-    });
 
+      if (user) {
+        // Récupère le statut du compte
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('account_status')
+          .eq('id', user.id)
+          .single();
+
+        if (profile) {
+          setAccountStatus(profile.account_status || 'pending');
+        }
+      }
+
+      setAccountLoading(false);
+    };
+
+    checkUserAndStatus();
     fetchBookings();
   }, []);
 
@@ -274,12 +295,52 @@ export default function ReservationPage() {
             ▸ Réserver un créneau
           </h2>
 
-          {/* Messages */}
-          {error && (
-            <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded mb-6">
-              {error}
+          {/* Chargement du statut */}
+          {accountLoading ? (
+            <div className="text-center py-8">
+              <p className="text-slate-600">Vérification de votre compte...</p>
             </div>
-          )}
+          ) : !user ? (
+            /* Non connecté */
+            <div className="bg-yellow-50 border border-yellow-300 text-yellow-800 px-6 py-4 rounded mb-6">
+              <h3 className="font-semibold text-lg mb-2">Connexion requise</h3>
+              <p className="mb-4">Vous devez être connecté pour effectuer une réservation.</p>
+              <button
+                onClick={() => router.push('/connexion')}
+                className="bg-[#D4A373] text-white px-6 py-2 font-semibold uppercase tracking-wide hover:bg-[#c49363] transition-colors"
+              >
+                Se connecter
+              </button>
+            </div>
+          ) : accountStatus !== 'approved' ? (
+            /* Compte non approuvé */
+            <div className="bg-red-50 border border-red-300 text-red-800 px-6 py-4 rounded mb-6">
+              <h3 className="font-semibold text-lg mb-2">
+                {accountStatus === 'pending' && 'Documents manquants'}
+                {accountStatus === 'documents_submitted' && 'Validation en cours'}
+                {accountStatus === 'rejected' && 'Compte non validé'}
+              </h3>
+              <p className="mb-4">
+                {accountStatus === 'pending' && 'Merci de compléter vos documents (carte d\'identité, KBIS, activité exercée) dans votre profil avant de pouvoir réserver.'}
+                {accountStatus === 'documents_submitted' && 'Vos documents sont en cours de vérification par l\'administrateur. Vous pourrez réserver une fois votre compte validé.'}
+                {accountStatus === 'rejected' && 'Votre compte a été rejeté. Veuillez contacter l\'administrateur pour plus d\'informations.'}
+              </p>
+              <button
+                onClick={() => router.push('/profil')}
+                className="bg-[#D4A373] text-white px-6 py-2 font-semibold uppercase tracking-wide hover:bg-[#c49363] transition-colors"
+              >
+                Aller à mon profil
+              </button>
+            </div>
+          ) : (
+            /* Compte approuvé - afficher le formulaire */
+            <>
+              {/* Messages */}
+              {error && (
+                <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded mb-6">
+                  {error}
+                </div>
+              )}
 
           <div className="grid md:grid-cols-2 gap-8">
             {/* Calendrier */}
@@ -495,6 +556,8 @@ export default function ReservationPage() {
               )}
             </div>
           </div>
+          </>
+          )}
         </div>
       </section>
     </div>

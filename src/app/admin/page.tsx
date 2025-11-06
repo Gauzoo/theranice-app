@@ -37,6 +37,15 @@ interface Member {
   created_at: string;
 }
 
+interface PendingValidation extends Member {
+  account_status: 'pending' | 'documents_submitted' | 'approved' | 'rejected';
+  activite_exercee?: string;
+  carte_identite_url?: string;
+  kbis_url?: string;
+  documents_submitted_at?: string;
+  validation_notes?: string;
+}
+
 const ROOM_LABELS: Record<string, string> = {
   room1: "Salle 1",
   room2: "Salle 2",
@@ -60,6 +69,12 @@ export default function AdminDashboard() {
   const [members, setMembers] = useState<Member[]>([]);
   const [showEditMemberModal, setShowEditMemberModal] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  
+  // Section Validation de comptes
+  const [pendingValidations, setPendingValidations] = useState<PendingValidation[]>([]);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [selectedValidation, setSelectedValidation] = useState<PendingValidation | null>(null);
+  const [validationNotes, setValidationNotes] = useState('');
   
   const router = useRouter();
 
@@ -107,6 +122,24 @@ export default function AdminDashboard() {
     fetchBookings();
     fetchUsers();
     fetchMembers();
+    fetchPendingValidations();
+  };
+
+  const fetchPendingValidations = async () => {
+    try {
+      const response = await fetch('/api/admin/members');
+      const result = await response.json();
+      
+      if (result.members) {
+        // Filtrer uniquement les comptes en attente de validation
+        const pending = result.members.filter((m: PendingValidation) => 
+          m.account_status === 'documents_submitted' || m.account_status === 'pending'
+        );
+        setPendingValidations(pending);
+      }
+    } catch (error) {
+      console.error('Error fetching pending validations:', error);
+    }
   };
 
   const fetchMembers = async () => {
@@ -353,6 +386,109 @@ export default function AdminDashboard() {
       alert('Membre supprimé avec succès');
       fetchMembers();
     }
+  };
+
+  const handleApproveAccount = async (userId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir approuver ce compte ?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/validate-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action: 'approve' }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // Envoyer l'email d'approbation au user
+        const user = pendingValidations.find(v => v.id === userId);
+        if (user && user.email) {
+          try {
+            await fetch('/api/emails/account-approved', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userEmail: user.email,
+                userName: `${user.prenom} ${user.nom}`,
+              }),
+            });
+          } catch (emailError) {
+            console.error('Erreur lors de l\'envoi de l\'email:', emailError);
+            // Ne pas bloquer le processus si l'email échoue
+          }
+        }
+
+        alert('Compte approuvé avec succès !');
+        fetchPendingValidations();
+        fetchMembers();
+      } else {
+        alert('Erreur : ' + result.error);
+      }
+    } catch (error) {
+      alert('Erreur lors de l\'approbation du compte');
+      console.error(error);
+    }
+  };
+
+  const handleRejectAccount = async (userId: string, notes: string) => {
+    if (!notes.trim()) {
+      alert('Veuillez indiquer la raison du rejet');
+      return;
+    }
+
+    if (!confirm('Êtes-vous sûr de vouloir rejeter ce compte ?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/validate-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action: 'reject', notes }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // Envoyer l'email de rejet au user
+        const user = pendingValidations.find(v => v.id === userId);
+        if (user && user.email) {
+          try {
+            await fetch('/api/emails/account-rejected', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userEmail: user.email,
+                userName: `${user.prenom} ${user.nom}`,
+                rejectionNotes: notes,
+              }),
+            });
+          } catch (emailError) {
+            console.error('Erreur lors de l\'envoi de l\'email:', emailError);
+            // Ne pas bloquer le processus si l'email échoue
+          }
+        }
+
+        alert('Compte rejeté');
+        setShowValidationModal(false);
+        setValidationNotes('');
+        fetchPendingValidations();
+        fetchMembers();
+      } else {
+        alert('Erreur : ' + result.error);
+      }
+    } catch (error) {
+      alert('Erreur lors du rejet du compte');
+      console.error(error);
+    }
+  };
+
+  const openValidationModal = (validation: PendingValidation) => {
+    setSelectedValidation(validation);
+    setShowValidationModal(true);
   };
 
   const handleAddBooking = async () => {
@@ -602,10 +738,113 @@ export default function AdminDashboard() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleDeleteBooking(booking.id)}
-                            className="text-red-600 hover:text-red-700 text-sm font-medium cursor-pointer"
+                            className="text-[#d06264] hover:text-red-700 text-sm font-medium cursor-pointer"
                             title="Supprimer"
                           >
                             Supprimer
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Section Validation de comptes */}
+        <div className="bg-white p-6 shadow-md mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className={`text-2xl font-bold text-[#D4A373] ${garamond.className}`}>
+              ▸ Comptes en attente de validation
+            </h2>
+            {pendingValidations.length > 0 && (
+              <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-semibold">
+                {pendingValidations.length} en attente
+              </span>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="text-center py-8">Chargement...</div>
+          ) : pendingValidations.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              Aucun compte en attente de validation
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-[#FAEDCD]">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Prénom</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Nom</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Email</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Téléphone</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Activité</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Statut</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Documents</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingValidations.map((validation) => (
+                    <tr key={validation.id} className="border-b border-slate-200 hover:bg-slate-50">
+                      <td className="px-4 py-3">{validation.prenom}</td>
+                      <td className="px-4 py-3">{validation.nom}</td>
+                      <td className="px-4 py-3">{validation.email || '-'}</td>
+                      <td className="px-4 py-3">{validation.telephone || '-'}</td>
+                      <td className="px-4 py-3">{validation.activite_exercee || '-'}</td>
+                      <td className="px-4 py-3">
+                        {validation.account_status === 'pending' ? (
+                          <span className="text-yellow-600 text-sm">Documents manquants</span>
+                        ) : (
+                          <span className="text-blue-600 text-sm">Documents soumis</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          {validation.carte_identite_url ? (
+                            <a
+                              href={`/api/admin/view-document?userId=${validation.id}&fileType=carte`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#D4A373] hover:text-[#c49363] text-sm underline"
+                            >
+                              Carte d&apos;identité
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 text-sm">Pas de carte ID</span>
+                          )}
+                          {validation.kbis_url ? (
+                            <a
+                              href={`/api/admin/view-document?userId=${validation.id}&fileType=kbis`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#D4A373] hover:text-[#c49363] text-sm underline"
+                            >
+                              KBIS
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 text-sm">Pas de KBIS</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleApproveAccount(validation.id)}
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 text-sm font-medium rounded cursor-pointer"
+                            title="Approuver"
+                          >
+                            Approuver
+                          </button>
+                          <button
+                            onClick={() => openValidationModal(validation)}
+                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 text-sm font-medium rounded cursor-pointer"
+                            title="Rejeter"
+                          >
+                            Rejeter
                           </button>
                         </div>
                       </td>
@@ -664,7 +903,7 @@ export default function AdminDashboard() {
                           </button>
                           <button
                             onClick={() => handleDeleteMember(member.id)}
-                            className="text-red-600 hover:text-red-700 text-sm font-medium cursor-pointer"
+                            className="text-[#d06264] hover:text-red-700 text-sm font-medium cursor-pointer"
                             title="Supprimer"
                           >
                             Supprimer
@@ -874,6 +1113,99 @@ export default function AdminDashboard() {
                     setEditingMember(null);
                   }}
                   className="flex-1 bg-slate-200 hover:bg-[#FAEDCD] text-slate-700 px-6 py-2 font-medium transition-colors cursor-pointer"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de rejet de compte */}
+      {showValidationModal && selectedValidation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h3 className={`text-2xl font-bold text-[#D4A373] mb-4 ${garamond.className}`}>
+                Rejeter le compte de {selectedValidation.prenom} {selectedValidation.nom}
+              </h3>
+
+              {/* Informations du compte */}
+              <div className="bg-slate-50 p-4 rounded mb-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="font-semibold">Email:</span> {selectedValidation.email}
+                  </div>
+                  <div>
+                    <span className="font-semibold">Téléphone:</span> {selectedValidation.telephone}
+                  </div>
+                  <div className="col-span-2">
+                    <span className="font-semibold">Activité:</span> {selectedValidation.activite_exercee || 'Non renseignée'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Documents */}
+              <div className="mb-4">
+                <h4 className="font-semibold mb-2">Documents soumis :</h4>
+                <div className="flex gap-4">
+                  {selectedValidation.carte_identite_url ? (
+                    <a
+                      href={`/api/admin/view-document?userId=${selectedValidation.id}&fileType=carte`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#D4A373] hover:text-[#c49363] underline text-sm"
+                    >
+                      📄 Voir la carte d&apos;identité
+                    </a>
+                  ) : (
+                    <span className="text-slate-400 text-sm">Pas de carte d&apos;identité</span>
+                  )}
+                  {selectedValidation.kbis_url ? (
+                    <a
+                      href={`/api/admin/view-document?userId=${selectedValidation.id}&fileType=kbis`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#D4A373] hover:text-[#c49363] underline text-sm"
+                    >
+                      📄 Voir le KBIS
+                    </a>
+                  ) : (
+                    <span className="text-slate-400 text-sm">Pas de KBIS</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Raison du rejet */}
+              <div className="mb-4">
+                <label className="block font-semibold mb-2">
+                  Raison du rejet <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={validationNotes}
+                  onChange={(e) => setValidationNotes(e.target.value)}
+                  placeholder="Ex: Documents illisibles, KBIS expiré, activité non conforme..."
+                  rows={4}
+                  className="w-full border border-slate-300 rounded px-3 py-2 focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
+                />
+              </div>
+
+              {/* Boutons */}
+              <div className="flex gap-4">
+                <button
+                  onClick={() => handleRejectAccount(selectedValidation.id, validationNotes)}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-2 font-medium transition-colors cursor-pointer rounded"
+                >
+                  Confirmer le rejet
+                </button>
+                <button
+                  onClick={() => {
+                    setShowValidationModal(false);
+                    setSelectedValidation(null);
+                    setValidationNotes('');
+                  }}
+                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-2 font-medium transition-colors cursor-pointer rounded"
                 >
                   Annuler
                 </button>
