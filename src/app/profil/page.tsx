@@ -42,6 +42,7 @@ export default function ProfilPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
   const router = useRouter();
   
   const [formData, setFormData] = useState({
@@ -91,7 +92,14 @@ export default function ProfilPage() {
           kbis_url: profile.kbis_url || "",
           validation_notes: profile.validation_notes || "",
         });
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          email: user.email || "",
+        }));
       }
+
+      setIsProfileLoading(false);
     };
 
     fetchUserData();
@@ -319,23 +327,30 @@ export default function ProfilPage() {
       {/* Section statut du compte */}
       <section className="bg-slate-50 py-8">
         <div className="mx-auto max-w-3xl px-6">
-          <div className={`border px-6 py-4 rounded ${STATUS_LABELS[formData.account_status].color}`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-lg mb-1">
-                  Statut du compte : {STATUS_LABELS[formData.account_status].label}
-                </h3>
-                <p className="text-sm">
-                  {STATUS_LABELS[formData.account_status].description}
-                </p>
-                {formData.account_status === 'rejected' && formData.validation_notes && (
-                  <p className="text-sm mt-2 font-medium">
-                    Note : {formData.validation_notes}
+          {isProfileLoading ? (
+            <div className="rounded border border-slate-200 bg-white px-6 py-6 shadow-sm">
+              <div className="mb-3 h-3 w-44 animate-pulse rounded bg-slate-200" />
+              <div className="h-3 w-72 animate-pulse rounded bg-slate-200" />
+            </div>
+          ) : (
+            <div className={`border px-6 py-4 rounded ${STATUS_LABELS[formData.account_status].color}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">
+                    Statut du compte : {STATUS_LABELS[formData.account_status].label}
+                  </h3>
+                  <p className="text-sm">
+                    {STATUS_LABELS[formData.account_status].description}
                   </p>
-                )}
+                  {formData.account_status === 'rejected' && formData.validation_notes && (
+                    <p className="text-sm mt-2 font-medium">
+                      Note : {formData.validation_notes}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 

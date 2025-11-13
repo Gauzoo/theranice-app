@@ -27,9 +27,9 @@ export default function RootLayout({
   return (
     <html lang="fr" className="scroll-smooth">
       <body className={`${poppins.className} antialiased`}>
-        <div className="min-h-screen bg-slate-50 text-slate-900">
+        <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
           <SiteHeader />
-          <main className="min-h-[calc(100vh-500px)]">{children}</main>
+          <main className="flex-1">{children}</main>
           <SiteFooter />
         </div>
       </body>

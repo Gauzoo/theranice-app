@@ -67,32 +67,58 @@ export default function ReservationPage() {
     }
   };
 
-  // Vérifie si l'utilisateur est connecté et son statut de compte
+  const loadAccountStatus = async (supabaseClient: ReturnType<typeof createClient>, userId: string) => {
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('account_status')
+      .eq('id', userId)
+      .single();
+
+    if (profile) {
+      setAccountStatus(profile.account_status || 'pending');
+    } else {
+      setAccountStatus('pending');
+    }
+  };
+
+  // Vérifie si l'utilisateur est connecté et met à jour le statut à chaque changement d'auth
   useEffect(() => {
-    const checkUserAndStatus = async () => {
-      const supabase = createClient();
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+    const supabase = createClient();
 
-      if (user) {
-        // Récupère le statut du compte
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('account_status')
-          .eq('id', user.id)
-          .single();
+    const initialize = async () => {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      setUser(currentUser);
 
-        if (profile) {
-          setAccountStatus(profile.account_status || 'pending');
-        }
+      if (currentUser) {
+        await loadAccountStatus(supabase, currentUser.id);
+      } else {
+        setAccountStatus(null);
       }
 
       setAccountLoading(false);
     };
 
-    checkUserAndStatus();
+    initialize();
     fetchBookings();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const sessionUser = session?.user ?? null;
+      setUser(sessionUser);
+
+      if (sessionUser) {
+        setAccountLoading(true);
+        await loadAccountStatus(supabase, sessionUser.id);
+        setAccountLoading(false);
+      } else {
+        setAccountStatus(null);
+        setAccountLoading(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Vérifie si un créneau est disponible
@@ -289,7 +315,7 @@ export default function ReservationPage() {
       </section>
 
       {/* Section formulaire de réservation */}
-      <section className="bg-[#FFFFFF] py-16">
+      <section className="bg-[#FFFFFF] py-16 min-h-[60vh]">
         <div className="mx-auto max-w-5xl px-6">
           <h2 className={`${garamond.className} text-4xl font-semibold mb-8 text-[#D4A373]`}>
             ▸ Réserver un créneau
@@ -302,15 +328,50 @@ export default function ReservationPage() {
             </div>
           ) : !user ? (
             /* Non connecté */
-            <div className="bg-yellow-50 border border-yellow-300 text-yellow-800 px-6 py-4 rounded mb-6">
-              <h3 className="font-semibold text-lg mb-2">Connexion requise</h3>
-              <p className="mb-4">Vous devez être connecté pour effectuer une réservation.</p>
-              <button
-                onClick={() => router.push('/connexion')}
-                className="bg-[#D4A373] text-white px-6 py-2 font-semibold uppercase tracking-wide hover:bg-[#c49363] transition-colors"
-              >
-                Se connecter
-              </button>
+            <div className="mb-10 rounded-lg border border-[#D4A373] px-6 py-8 shadow-sm">
+              <div className="grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start">
+                <div>
+                  <h3 className="mb-3 text-xl font-semibold text-yellow-900">
+                    Connexion requise
+                  </h3>
+                  <p className="text-yellow-900/90 text-justify">
+                    Créez votre espace thérapeute ou connectez-vous pour accéder aux disponibilités, soumettre vos documents et réserver vos créneaux en quelques clics.
+                  </p>
+                  <div className="mt-6 flex flex-wrap gap-4">
+                    <button
+                      onClick={() => router.push('/connexion')}
+                      className="cursor-pointer bg-[#D4A373] px-6 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363]"
+                    >
+                      Se connecter
+                    </button>
+                    <button
+                      onClick={() => router.push('/compte')}
+                      className="cursor-pointer border border-[#D4A373] px-6 py-3 font-semibold uppercase tracking-wide text-[#D4A373] transition-colors hover:bg-[#D4A373] hover:text-white"
+                    >
+                      Créer un compte
+                    </button>
+                  </div>
+                </div>
+                <div className="rounded-md border border-yellow-200 bg-white/70 p-5">
+                  <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-yellow-700">
+                    Comment ça marche ?
+                  </h4>
+                  <ul className="space-y-3 text-sm text-yellow-800">
+                    <li className="flex items-start gap-3">
+                      <span className="mt-2 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#D4A373]" aria-hidden />
+                      <span>Complétez votre profil praticien et ajoutez vos documents réglementaires.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-2 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#D4A373]" aria-hidden />
+                      <span>Recevez la validation de l’équipe Theranice.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-2 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#D4A373]" aria-hidden />
+                      <span>Choisissez une salle, un créneau et réglez en ligne en toute sécurité.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </div>
           ) : accountStatus !== 'approved' ? (
             /* Compte non approuvé */

@@ -26,9 +26,7 @@ export default function Home() {
         />
         <div className="absolute inset-0 bg-slate-900/40" aria-hidden="true" />
         <div className="relative mx-auto flex max-w-4xl flex-col gap-6 px-6 py-24 text-center sm:text-left">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-200">
-            Espace thérapeutique partagé
-          </p>
+  
           <h1 className="text-4xl font-semibold sm:text-5xl">
             Louez un lieu apaisant pour vos séances à Nice
           </h1>
