@@ -367,7 +367,7 @@ export default function ReservationPage() {
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="mt-2 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#D4A373]" aria-hidden />
-                      <span>Choisissez une salle, un créneau et réglez en ligne en toute sécurité.</span>
+                      <span>Choisissez une salle, un créneau et réglez en ligne en toute sécurité. Recevez votre code d'accès par email.</span>
                     </li>
                   </ul>
                 </div>
