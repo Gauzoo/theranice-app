@@ -7,6 +7,7 @@ import { useEffect, useState, useRef, type MouseEvent as ReactMouseEvent } from 
 import { usePathname, useRouter } from "next/navigation";
 import LoginModal from "./LoginModal";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -63,9 +64,10 @@ export default function SiteHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // État pour la modal de connexion
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  // État pour les infos utilisateur
-  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
-  const [userProfile, setUserProfile] = useState<{ nom?: string; prenom?: string; telephone?: string; therapie?: string } | null>(null);
+  
+  // Utilisation du contexte d'authentification
+  const { user, profile: userProfile } = useAuth();
+
   // État pour le menu déroulant
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   // Position du triangle pour le menu déroulant
@@ -76,47 +78,7 @@ export default function SiteHeader() {
   // Détermine si on est sur la page d'accueil
   const isHomePage = pathname === "/";
 
-  // Vérifie si l'utilisateur est connecté
-  useEffect(() => {
-    const supabase = createClient();
-    
-    // Récupère l'utilisateur actuel
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      
-      // Si l'utilisateur est connecté, récupère son profil
-      if (user) {
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-          .then(({ data }) => {
-            setUserProfile(data);
-          });
-      }
-    });
-
-    // Écoute les changements d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data }) => {
-            setUserProfile(data);
-          });
-      } else {
-        setUserProfile(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  // L'authentification est gérée par AuthContext
 
   // Surveille le scroll pour mettre à jour l'état du header
   useEffect(() => {

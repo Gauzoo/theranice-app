@@ -5,6 +5,7 @@ import { EB_Garamond } from "next/font/google";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -37,6 +38,7 @@ const STATUS_LABELS: Record<AccountStatus, { label: string; color: string; descr
 };
 
 export default function ProfilPage() {
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,16 +64,15 @@ export default function ProfilPage() {
 
   // Récupère les données de l'utilisateur au chargement
   useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      router.push("/");
+      return;
+    }
+
     const fetchUserData = async () => {
       const supabase = createClient();
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        // Si pas connecté, redirige vers la page d'accueil
-        router.push("/");
-        return;
-      }
 
       // Récupère le profil depuis la table profiles
       const { data: profile } = await supabase
@@ -103,7 +104,7 @@ export default function ProfilPage() {
     };
 
     fetchUserData();
-  }, [router]);
+  }, [user, authLoading, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({

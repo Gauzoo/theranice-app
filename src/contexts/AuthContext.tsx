@@ -32,63 +32,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
     let mounted = true;
 
-    // Initialise l'authentification - RAPIDE avec getSession (OK côté client pour l'UI)
-    const initAuth = async () => {
+    const getProfile = async (userId: string) => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
         
-        if (!mounted) return;
-
-        if (session?.user) {
-          setUser(session.user);
-          
-          // Récupère le profil
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (mounted && profileData) {
-            setProfile(profileData);
-          }
+        if (mounted && data) {
+          setProfile(data);
         }
       } catch (error) {
-        console.error('AuthContext error:', error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        console.error('Error fetching profile:', error);
       }
     };
 
-    initAuth();
-
-    // Écoute les changements d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-
-      if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setProfile(null);
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        // Re-vérifie l'utilisateur de manière sécurisée
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        
-        if (currentUser) {
-          setUser(currentUser);
-          
-          // Récupère le profil
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentUser.id)
-            .single();
-          
-          if (mounted && profileData) {
-            setProfile(profileData);
-          }
+    // Vérification initiale de la session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted) {
+        if (session?.user) {
+          setUser(session.user);
+          getProfile(session.user.id);
         }
+        setLoading(false);
+      }
+    });
+
+    // Écoute les changements d'état (connexion, déconnexion, refresh token)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) {
+        if (session?.user) {
+          setUser(session.user);
+          // On ne recharge le profil que si l'utilisateur a changé
+          if (session.user.id !== user?.id) {
+            getProfile(session.user.id);
+          }
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
+        setLoading(false);
       }
     });
 
@@ -96,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, []); // Dépendance vide pour ne s'exécuter qu'une fois
 
   return (
     <AuthContext.Provider value={{ user, profile, loading }}>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import { AuthProvider } from "@/contexts/AuthContext";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -25,13 +26,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className="scroll-smooth">
-      <body className={`${poppins.className} antialiased`}>
-        <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-          <SiteHeader />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
-        </div>
+    <html lang="fr" className="scroll-smooth" suppressHydrationWarning>
+      <body className={`${poppins.className} antialiased`} suppressHydrationWarning>
+        <AuthProvider>
+          <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+            <SiteHeader />
+            <main className="flex-1">{children}</main>
+            <SiteFooter />
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );

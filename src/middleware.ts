@@ -17,7 +17,9 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value, options }) =>
+            request.cookies.set(name, value)
+          )
           response = NextResponse.next({
             request,
           })
@@ -29,16 +31,17 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Vérifie si l'utilisateur est connecté
+  // IMPORTANT: Do not ignore this!
+  // This will refresh session if needed - required for Server Components
+  // https://supabase.com/docs/guides/auth/server-side/nextjs
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Si l'utilisateur n'est pas connecté et tente d'accéder à une route protégée
+  // Protection des routes
   if (!user && request.nextUrl.pathname.startsWith('/profil')) {
-    // Redirige vers la page d'accueil
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/'
+    redirectUrl.pathname = '/connexion'
     return NextResponse.redirect(redirectUrl)
   }
 
@@ -48,11 +51,11 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match toutes les routes sauf :
-     * - _next/static (fichiers statiques)
-     * - _next/image (optimisation d'images)
-     * - favicon.ico (favicon)
-     * - fichiers publics (images, etc.)
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
+import { useAuth } from "@/contexts/AuthContext";
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -43,9 +44,7 @@ const ROOM_LABELS = {
 type AccountStatus = 'pending' | 'documents_submitted' | 'approved' | 'rejected';
 
 export default function ReservationPage() {
-  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
-  const [accountStatus, setAccountStatus] = useState<AccountStatus | null>(null);
-  const [accountLoading, setAccountLoading] = useState(true);
+  const { user, profile, loading: authLoading } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
@@ -67,58 +66,9 @@ export default function ReservationPage() {
     }
   };
 
-  const loadAccountStatus = async (supabaseClient: ReturnType<typeof createClient>, userId: string) => {
-    const { data: profile } = await supabaseClient
-      .from('profiles')
-      .select('account_status')
-      .eq('id', userId)
-      .single();
-
-    if (profile) {
-      setAccountStatus(profile.account_status || 'pending');
-    } else {
-      setAccountStatus('pending');
-    }
-  };
-
-  // Vérifie si l'utilisateur est connecté et met à jour le statut à chaque changement d'auth
+  // Charge les réservations au montage
   useEffect(() => {
-    const supabase = createClient();
-
-    const initialize = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      setUser(currentUser);
-
-      if (currentUser) {
-        await loadAccountStatus(supabase, currentUser.id);
-      } else {
-        setAccountStatus(null);
-      }
-
-      setAccountLoading(false);
-    };
-
-    initialize();
     fetchBookings();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const sessionUser = session?.user ?? null;
-      setUser(sessionUser);
-
-      if (sessionUser) {
-        setAccountLoading(true);
-        await loadAccountStatus(supabase, sessionUser.id);
-        setAccountLoading(false);
-      } else {
-        setAccountStatus(null);
-        setAccountLoading(false);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Vérifie si un créneau est disponible
@@ -248,12 +198,8 @@ export default function ReservationPage() {
       const dateStr = `${year}-${month}-${day}`;
 
       // Récupère les infos utilisateur pour le paiement
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('nom, prenom')
-        .eq('id', user.id)
-        .single();
-
+      // Le profil est déjà chargé dans le contexte
+      
       // Calcule le prix en fonction du créneau
       const price = selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom];
 
@@ -322,7 +268,7 @@ export default function ReservationPage() {
           </h2>
 
           {/* Chargement du statut */}
-          {accountLoading ? (
+          {authLoading ? (
             <div className="text-center py-8">
               <p className="text-slate-600">Vérification de votre compte...</p>
             </div>
@@ -373,18 +319,18 @@ export default function ReservationPage() {
                 </div>
               </div>
             </div>
-          ) : accountStatus !== 'approved' ? (
+          ) : profile?.account_status !== 'approved' ? (
             /* Compte non approuvé */
             <div className="bg-red-50 border border-red-300 text-red-800 px-6 py-4 rounded mb-6">
               <h3 className="font-semibold text-lg mb-2">
-                {accountStatus === 'pending' && 'Documents manquants'}
-                {accountStatus === 'documents_submitted' && 'Validation en cours'}
-                {accountStatus === 'rejected' && 'Compte non validé'}
+                {(!profile?.account_status || profile.account_status === 'pending') && 'Documents manquants'}
+                {profile?.account_status === 'documents_submitted' && 'Validation en cours'}
+                {profile?.account_status === 'rejected' && 'Compte non validé'}
               </h3>
               <p className="mb-4">
-                {accountStatus === 'pending' && 'Merci de compléter vos documents (carte d\'identité, KBIS, activité exercée) dans votre profil avant de pouvoir réserver.'}
-                {accountStatus === 'documents_submitted' && 'Vos documents sont en cours de vérification par l\'administrateur. Vous pourrez réserver une fois votre compte validé.'}
-                {accountStatus === 'rejected' && 'Votre compte a été rejeté. Veuillez contacter l\'administrateur pour plus d\'informations.'}
+                {(!profile?.account_status || profile.account_status === 'pending') && 'Merci de compléter vos documents (carte d\'identité, KBIS, activité exercée) dans votre profil avant de pouvoir réserver.'}
+                {profile?.account_status === 'documents_submitted' && 'Vos documents sont en cours de vérification par l\'administrateur. Vous pourrez réserver une fois votre compte validé.'}
+                {profile?.account_status === 'rejected' && 'Votre compte a été rejeté. Veuillez contacter l\'administrateur pour plus d\'informations.'}
               </p>
               <button
                 onClick={() => router.push('/profil')}

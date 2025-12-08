@@ -5,6 +5,7 @@ import { EB_Garamond } from "next/font/google";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -38,7 +39,7 @@ const SLOT_LABELS = {
 };
 
 export default function MesReservationsPage() {
-  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+  const { user, loading: authLoading } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState<"all" | "upcoming" | "past" | "cancelled">("upcoming");
   const [loading, setLoading] = useState(true);
@@ -46,17 +47,15 @@ export default function MesReservationsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const supabase = createClient();
+    if (authLoading) return;
     
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        router.push("/connexion");
-        return;
-      }
-      setUser(user);
-      fetchBookings(user.id);
-    });
-  }, [router]);
+    if (!user) {
+      router.push("/connexion");
+      return;
+    }
+    
+    fetchBookings(user.id);
+  }, [user, authLoading, router]);
 
   const fetchBookings = async (userId: string) => {
     const supabase = createClient();
