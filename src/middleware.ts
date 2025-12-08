@@ -34,9 +34,16 @@ export async function middleware(request: NextRequest) {
   // IMPORTANT: Do not ignore this!
   // This will refresh session if needed - required for Server Components
   // https://supabase.com/docs/guides/auth/server-side/nextjs
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const {
+      data: { user: currentUser },
+    } = await supabase.auth.getUser()
+    user = currentUser
+  } catch (e) {
+    // En cas d'erreur réseau (fetch failed), on ne bloque pas l'application
+    console.error('Middleware auth error:', e)
+  }
 
   // Protection des routes
   if (!user && request.nextUrl.pathname.startsWith('/profil')) {
