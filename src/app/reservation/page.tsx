@@ -45,7 +45,7 @@ type AccountStatus = 'pending' | 'documents_submitted' | 'approved' | 'rejected'
 
 export default function ReservationPage() {
   const { user, profile, loading: authLoading } = useAuth();
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
@@ -128,45 +128,63 @@ export default function ReservationPage() {
     return !roomBooked && !largeBooked;
   };
 
-  // Vérifie si une salle spécifique est disponible pour la date sélectionnée (tous créneaux)
-  const isRoomAvailableForDate = (room: Room): boolean => {
-    if (!selectedDate) return true;
+  // Vérifie si une salle spécifique est disponible pour les dates sélectionnées (tous créneaux)
+  const isRoomAvailableForDates = (room: Room): boolean => {
+    if (selectedDates.length === 0) return true;
     
-    // Pour toutes les salles (y compris la grande), au moins un créneau doit être disponible
-    const morningAvailable = isSlotAvailable(selectedDate, 'morning', room);
-    const afternoonAvailable = isSlotAvailable(selectedDate, 'afternoon', room);
-    
-    return morningAvailable || afternoonAvailable;
+    // Pour chaque date sélectionnée, au moins un créneau doit être disponible
+    return selectedDates.every(date => {
+      const morningAvailable = isSlotAvailable(date, 'morning', room);
+      const afternoonAvailable = isSlotAvailable(date, 'afternoon', room);
+      return morningAvailable || afternoonAvailable;
+    });
   };
 
-  // Vérifie si un créneau spécifique est disponible pour la date et salle sélectionnées
+  // Vérifie si un créneau spécifique est disponible pour les dates et salle sélectionnées
   const isSlotAvailableForSelection = (slot: Slot): boolean => {
-    if (!selectedDate) return true;
+    if (selectedDates.length === 0) return true;
     
-    // Vérifie si le créneau est dans le passé (pour aujourd'hui uniquement)
-    const now = new Date();
-    const isToday = selectedDate.toDateString() === now.toDateString();
-    
-    if (isToday) {
-      const currentHour = now.getHours();
-      // Bloque le matin si on est après 12h
-      if (slot === 'morning' && currentHour >= 12) {
-        return false;
+    return selectedDates.every(date => {
+      // Vérifie si le créneau est dans le passé (pour aujourd'hui uniquement)
+      const now = new Date();
+      const isToday = date.toDateString() === now.toDateString();
+      
+      if (isToday) {
+        const currentHour = now.getHours();
+        // Bloque le matin si on est après 12h
+        if (slot === 'morning' && currentHour >= 12) {
+          return false;
+        }
+        // Bloque l'après-midi si on est après 17h
+        if (slot === 'afternoon' && currentHour >= 17) {
+          return false;
+        }
       }
-      // Bloque l'après-midi si on est après 17h
-      if (slot === 'afternoon' && currentHour >= 17) {
-        return false;
+      
+      // Si une salle est sélectionnée, vérifie uniquement cette salle
+      if (selectedRoom) {
+        return isSlotAvailable(date, slot, selectedRoom);
       }
-    }
+      
+      // Si aucune salle n'est sélectionnée, vérifie s'il existe AU MOINS UNE salle disponible pour ce créneau
+      const allRooms: Room[] = ['room1', 'room2', 'large'];
+      return allRooms.some(room => isSlotAvailable(date, slot, room));
+    });
+  };
+
+  const handleDateClick = (value: Date) => {
+    // Vérifie si la date est déjà sélectionnée
+    const dateIndex = selectedDates.findIndex(d => d.toDateString() === value.toDateString());
     
-    // Si une salle est sélectionnée, vérifie uniquement cette salle
-    if (selectedRoom) {
-      return isSlotAvailable(selectedDate, slot, selectedRoom);
+    if (dateIndex >= 0) {
+      // Si déjà sélectionnée, on la retire
+      const newDates = [...selectedDates];
+      newDates.splice(dateIndex, 1);
+      setSelectedDates(newDates);
+    } else {
+      // Sinon on l'ajoute
+      setSelectedDates([...selectedDates, value]);
     }
-    
-    // Si aucune salle n'est sélectionnée, vérifie s'il existe AU MOINS UNE salle disponible pour ce créneau
-    const allRooms: Room[] = ['room1', 'room2', 'large'];
-    return allRooms.some(room => isSlotAvailable(selectedDate, slot, room));
   };
 
   const handleSubmit = async () => {
@@ -175,14 +193,15 @@ export default function ReservationPage() {
       return;
     }
 
-    if (!selectedDate || !selectedRoom || !selectedSlot) {
-      setError("Veuillez sélectionner une date, une salle et un créneau");
+    if (selectedDates.length === 0 || !selectedRoom || !selectedSlot) {
+      setError("Veuillez sélectionner au moins une date, une salle et un créneau");
       return;
     }
 
-    // Vérifie la disponibilité
-    if (!isSlotAvailable(selectedDate, selectedSlot, selectedRoom)) {
-      setError("Ce créneau n'est plus disponible");
+    // Vérifie la disponibilité pour toutes les dates
+    const unavailableDate = selectedDates.find(date => !isSlotAvailable(date, selectedSlot, selectedRoom));
+    if (unavailableDate) {
+      setError(`Le créneau n'est plus disponible pour le ${unavailableDate.toLocaleDateString()}`);
       return;
     }
 
@@ -191,17 +210,22 @@ export default function ReservationPage() {
 
     try {
       const supabase = createClient();
-      // Utilise la date locale au lieu de UTC
-      const year = selectedDate.getFullYear();
-      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedDate.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
+      
+      // Prépare les dates au format string YYYY-MM-DD
+      const datesStr = selectedDates.map(date => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      });
 
       // Récupère les infos utilisateur pour le paiement
       // Le profil est déjà chargé dans le contexte
       
-      // Calcule le prix en fonction du créneau
-      const price = selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom];
+      // Calcule le prix unitaire en fonction du créneau
+      const unitPrice = selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom];
+      // Prix total = prix unitaire * nombre de dates
+      const totalPrice = unitPrice * selectedDates.length;
 
       // Crée une session de paiement Stripe
       const response = await fetch('/api/create-checkout-session', {
@@ -209,10 +233,10 @@ export default function ReservationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user.id,
-          date: dateStr,
+          dates: datesStr, // Envoie le tableau de dates
           slot: selectedSlot,
           room: selectedRoom,
-          price: price,
+          price: totalPrice, // Envoie le prix total
           email: user.email,
           nom: profile?.nom || '',
           prenom: profile?.prenom || '',
@@ -353,15 +377,20 @@ export default function ReservationPage() {
             {/* Calendrier */}
             <div>
               <h3 className="text-xl font-semibold text-[#333333] mb-4">
-                1. Choisissez une date
+                1. Choisissez vos dates
               </h3>
+              <p className="text-sm text-slate-500 mb-2">Cliquez sur une date pour la sélectionner ou la désélectionner.</p>
               <div className="calendar-container">
                 <Calendar
-                  onChange={(value) => setSelectedDate(value as Date)}
-                  value={selectedDate}
+                  onClickDay={handleDateClick}
+                  value={null} // On gère l'affichage via tileClassName
                   minDate={new Date()}
                   locale="fr-FR"
                   tileClassName={({ date }) => {
+                    // Vérifie si la date est sélectionnée
+                    const isSelected = selectedDates.some(d => d.toDateString() === date.toDateString());
+                    if (isSelected) return 'react-calendar__tile--active';
+
                     // Utilise la date locale au lieu de UTC
                     const year = date.getFullYear();
                     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -404,6 +433,10 @@ export default function ReservationPage() {
                   <div className="w-3 h-3 rounded-full bg-[#d06264]"></div>
                   <span className="text-slate-600">Complet</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-[#006edc]"></div>
+                  <span className="text-slate-600">Sélectionné</span>
+                </div>
               </div>
             </div>
 
@@ -416,7 +449,7 @@ export default function ReservationPage() {
                 </h3>
                 <div className="space-y-3">
                   {(Object.keys(ROOM_PRICES) as Room[]).map((room) => {
-                    const isAvailable = isRoomAvailableForDate(room);
+                    const isAvailable = isRoomAvailableForDates(room);
                     
                     return (
                       <label
@@ -441,7 +474,7 @@ export default function ReservationPage() {
                           />
                           <span className="font-medium">
                             {ROOM_LABELS[room]}
-                            {!isAvailable && <span className="ml-2 text-sm text-red-600">(Indisponible)</span>}
+                            {!isAvailable && <span className="ml-2 text-sm text-red-600">(Indisponible pour certaines dates)</span>}
                           </span>
                         </div>
                         <span className={`font-semibold ${isAvailable ? 'text-[#D4A373]' : 'text-slate-400'}`}>
@@ -546,15 +579,22 @@ export default function ReservationPage() {
               {selectedRoom && (
                 <div className="border-t-2 border-[#333333] pt-6">
                   <div className="flex justify-between items-center mb-4">
-                    <span className="text-xl font-semibold text-[#333333]">Total :</span>
+                    <div className="flex flex-col">
+                      <span className="text-xl font-semibold text-[#333333]">Total :</span>
+                      {selectedDates.length > 1 && (
+                        <span className="text-sm text-slate-500">
+                          ({selectedDates.length} dates x {selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom]}€)
+                        </span>
+                      )}
+                    </div>
                     <span className="text-3xl font-bold text-[#D4A373]">
-                      {selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom]}€
+                      {(selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom]) * (selectedDates.length || 0)}€
                     </span>
                   </div>
 
                   <button
                     onClick={handleSubmit}
-                    disabled={loading || !selectedDate || !selectedRoom || !selectedSlot || (selectedDate && selectedRoom && selectedSlot && !isSlotAvailable(selectedDate, selectedSlot, selectedRoom))}
+                    disabled={loading || selectedDates.length === 0 || !selectedRoom || !selectedSlot || selectedDates.some(date => !isSlotAvailable(date, selectedSlot, selectedRoom))}
                     className="w-full cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? "Réservation en cours..." : user ? "Réserver" : "Se connecter pour réserver"}

@@ -11,7 +11,12 @@ export async function POST(request: NextRequest) {
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-    const { userId, date, slot, room, price, email, nom, prenom } = await request.json();
+    const { userId, dates, slot, room, price, email, nom, prenom } = await request.json();
+
+    // Validation basique
+    if (!dates || !Array.isArray(dates) || dates.length === 0) {
+      return NextResponse.json({ error: 'Aucune date sélectionnée' }, { status: 400 });
+    }
 
     // Labels pour l'affichage
     const slotLabels: Record<string, string> = {
@@ -27,14 +32,12 @@ export async function POST(request: NextRequest) {
     };
     const roomLabel = roomLabels[room] || room;
 
-    // Formatage de la date
-    const bookingDate = new Date(date + 'T00:00:00');
-    const formattedDate = bookingDate.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    // Formatage de la description
+    const datesCount = dates.length;
+    // Limite la longueur de la description pour éviter les erreurs Stripe
+    const datesStr = dates.join(', ');
+    const truncatedDates = datesStr.length > 100 ? datesStr.substring(0, 97) + '...' : datesStr;
+    const description = `${datesCount} date${datesCount > 1 ? 's' : ''} : ${truncatedDates} - ${slotLabel}`;
 
     // Crée une session de checkout Stripe
     const session = await stripe.checkout.sessions.create({
@@ -45,7 +48,7 @@ export async function POST(request: NextRequest) {
             currency: 'eur',
             product_data: {
               name: `Réservation ${roomLabel}`,
-              description: `${formattedDate} - ${slotLabel}`,
+              description: description,
             },
             unit_amount: Math.round(price * 100), // Stripe attend le montant en centimes
           },
@@ -58,7 +61,8 @@ export async function POST(request: NextRequest) {
       customer_email: email,
       metadata: {
         userId,
-        date,
+        dates: JSON.stringify(dates), // Stocke le tableau de dates en JSON
+        date: dates[0], // BACKWARD COMPATIBILITY: Pour les webhooks existants qui attendent 'date'
         slot,
         room,
         price: price.toString(),

@@ -139,9 +139,10 @@ export default function MesReservationsPage() {
     
     const bookingDate = new Date(booking.date + 'T00:00:00');
     const now = new Date();
-    const hoursDiff = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const daysDiff = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
     
-    return hoursDiff > 24;
+    // Ne peut pas annuler si la réservation est dans moins de 7 jours
+    return daysDiff > 7;
   };
 
   const getFilteredBookings = (): Booking[] => {
@@ -364,7 +365,7 @@ export default function MesReservationsPage() {
                       )}
                       {!canCancel && !isCancelled && !isPast && (
                         <div className="text-sm text-slate-500 text-center max-w-[200px]">
-                          Annulation possible jusqu&apos;à 24h avant
+                          Annulation possible jusqu&apos;à 7 jours avant
                         </div>
                       )}
                     </div>
