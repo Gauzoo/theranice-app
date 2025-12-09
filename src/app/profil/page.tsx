@@ -752,7 +752,7 @@ export default function ProfilPage() {
                     <button
                       type="button"
                       onClick={() => handleDeleteDocument('carte')}
-                      className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
+                      className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
                       title="Supprimer le document"
                     >
                       X
@@ -843,7 +843,7 @@ export default function ProfilPage() {
                     <button
                       type="button"
                       onClick={() => handleDeleteDocument('kbis')}
-                      className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
+                      className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
                       title="Supprimer le document"
                     >
                       X

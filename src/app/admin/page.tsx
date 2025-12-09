@@ -715,9 +715,21 @@ export default function AdminDashboard() {
         {/* Filtres */}
         <div className="bg-white p-6 shadow-md mb-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className={`${garamond.className} text-2xl font-semibold text-[#D4A373]`}>
-              ▸ Réservations
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className={`${garamond.className} text-2xl font-semibold text-[#D4A373]`}>
+                ▸ Réservations
+              </h2>
+              <button
+                onClick={fetchBookings}
+                className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded font-medium text-sm transition-colors cursor-pointer flex items-center gap-2"
+                title="Rafraîchir les réservations"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Rafraîchir
+              </button>
+            </div>
             <button
               onClick={() => setShowAddModal(true)}
               className="bg-[#D4A373] hover:bg-[#c49363] text-white px-6 py-2 font-medium transition-colors cursor-pointer"
@@ -840,9 +852,21 @@ export default function AdminDashboard() {
         {/* Section Validation de comptes */}
         <div className="bg-white p-6 shadow-md mb-8">
           <div className="flex items-center justify-between mb-6">
-            <h2 className={`text-2xl font-bold text-[#D4A373] ${garamond.className}`}>
-              ▸ Comptes en attente de validation
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className={`text-2xl font-bold text-[#D4A373] ${garamond.className}`}>
+                ▸ Comptes en attente de validation
+              </h2>
+              <button
+                onClick={fetchPendingValidations}
+                className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded font-medium text-sm transition-colors cursor-pointer flex items-center gap-2"
+                title="Rafraîchir les comptes en attente"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Rafraîchir
+              </button>
+            </div>
             {pendingValidations.length > 0 && (
               <span className="bg-orange-100 text-orange-800 px-3 py-1 text-sm font-semibold">
                 {pendingValidations.length} en attente
@@ -907,7 +931,7 @@ export default function AdminDashboard() {
                                   </button>
                                   <button
                                     onClick={() => handleValidateDocument(validation.id, 'carte', 'reject')}
-                                    className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 text-xs rounded cursor-pointer"
+                                    className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-0.5 text-xs rounded cursor-pointer"
                                     title="Rejeter"
                                   >
                                     X
@@ -948,7 +972,7 @@ export default function AdminDashboard() {
                                   </button>
                                   <button
                                     onClick={() => handleValidateDocument(validation.id, 'kbis', 'reject')}
-                                    className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 text-xs rounded cursor-pointer"
+                                    className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-0.5 text-xs rounded cursor-pointer"
                                     title="Rejeter"
                                   >
                                     X
@@ -970,7 +994,7 @@ export default function AdminDashboard() {
                       <td className="px-4 py-3">
                         <button
                           onClick={() => openValidationModal(validation)}
-                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 text-sm font-medium rounded cursor-pointer"
+                          className="bg-[#d06264] hover:bg-[#c05254] text-white px-3 py-1 text-sm font-medium rounded cursor-pointer"
                           title="Rejeter le compte"
                         >
                           Rejeter
@@ -986,9 +1010,23 @@ export default function AdminDashboard() {
 
         {/* Section Membres */}
         <div className="bg-white p-6 shadow-md mb-8">
-          <h2 className={`text-2xl font-bold text-[#D4A373] mb-6 ${garamond.className}`}>
-            ▸ Membres inscrits
-          </h2>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <h2 className={`text-2xl font-bold text-[#D4A373] ${garamond.className}`}>
+                ▸ Membres inscrits
+              </h2>
+              <button
+                onClick={fetchMembers}
+                className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded font-medium text-sm transition-colors cursor-pointer flex items-center gap-2"
+                title="Rafraîchir les membres"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Rafraîchir
+              </button>
+            </div>
+          </div>
 
           {/* Liste des membres */}
           {loading ? (
@@ -1029,7 +1067,7 @@ export default function AdminDashboard() {
                           <span className="bg-[#D4A373] text-white px-2 py-1 rounded text-xs font-medium">À valider</span>
                         )}
                         {member.account_status === 'rejected' && (
-                          <span className="bg-red-600 text-white px-2 py-1 rounded text-xs font-medium">Rejeté</span>
+                          <span className="bg-[#d06264] text-white px-2 py-1 rounded text-xs font-medium">Rejeté</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -1338,7 +1376,7 @@ export default function AdminDashboard() {
               <div className="flex gap-4">
                 <button
                   onClick={() => handleRejectAccount(selectedValidation.id, validationNotes)}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-2 font-medium transition-colors cursor-pointer rounded"
+                  className="flex-1 bg-[#d06264] hover:bg-[#c05254] text-white px-6 py-2 font-medium transition-colors cursor-pointer rounded"
                 >
                   Confirmer le rejet
                 </button>
