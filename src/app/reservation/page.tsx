@@ -463,6 +463,11 @@ export default function ReservationPage() {
                             ? 'border-[#D4A373] bg-[#D4A373]/10 cursor-pointer'
                             : 'border-slate-300 hover:border-[#D4A373] cursor-pointer'
                         }`}
+                        onClick={(e) => {
+                          if (!isAvailable) {
+                            e.preventDefault();
+                          }
+                        }}
                       >
                         <div className="flex items-center gap-3">
                           <input
@@ -472,11 +477,11 @@ export default function ReservationPage() {
                             checked={selectedRoom === room}
                             onChange={() => setSelectedRoom(room)}
                             disabled={!isAvailable}
-                            className="w-4 h-4 text-[#D4A373] disabled:opacity-50"
+                            className="w-4 h-4 text-[#D4A373] disabled:opacity-50 disabled:cursor-not-allowed"
                           />
                           <span className="font-medium">
                             {ROOM_LABELS[room]}
-                            {!isAvailable && <span className="ml-2 text-sm text-red-600">(Indisponible pour certaines dates)</span>}
+                            {!isAvailable && <span className="ml-2 text-sm text-red-600">(Tous les créneaux indisponibles)</span>}
                           </span>
                         </div>
                         <span className={`font-semibold ${isAvailable ? 'text-[#D4A373]' : 'text-slate-400'}`}>
