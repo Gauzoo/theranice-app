@@ -35,6 +35,8 @@ interface Member {
   telephone?: string;
   email?: string;
   created_at: string;
+  account_status?: 'pending' | 'documents_submitted' | 'approved' | 'rejected';
+  activite_exercee?: string;
 }
 
 interface PendingValidation extends Member {

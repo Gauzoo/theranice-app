@@ -749,14 +749,16 @@ export default function ProfilPage() {
                         return fileName;
                       })()}
                     </a>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteDocument('carte')}
-                      className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
-                      title="Supprimer le document"
-                    >
-                      X
-                    </button>
+                    {formData.carte_identite_status !== 'approved' && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteDocument('carte')}
+                        className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
+                        title="Supprimer le document"
+                      >
+                        X
+                      </button>
+                    )}
                     {formData.carte_identite_status === 'pending' && (
                       <span className="bg-yellow-100 text-yellow-800 px-3 py-1 text-sm font-medium">
                         Document en attente de validation
@@ -840,14 +842,16 @@ export default function ProfilPage() {
                         return fileName;
                       })()}
                     </a>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteDocument('kbis')}
-                      className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
-                      title="Supprimer le document"
-                    >
-                      X
-                    </button>
+                    {formData.kbis_status !== 'approved' && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteDocument('kbis')}
+                        className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
+                        title="Supprimer le document"
+                      >
+                        X
+                      </button>
+                    )}
                     {formData.kbis_status === 'pending' && (
                       <span className="bg-yellow-100 text-yellow-800 px-3 py-1 text-sm font-medium">
                         Document en attente de validation
