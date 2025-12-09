@@ -343,18 +343,23 @@ export default function ReservationPage() {
                 </div>
               </div>
             </div>
-          ) : profile?.account_status !== 'approved' ? (
+          ) : !profile ? (
+            /* Chargement du profil */
+            <div className="text-center py-8">
+              <p className="text-slate-600">Chargement de votre profil...</p>
+            </div>
+          ) : profile.account_status !== 'approved' ? (
             /* Compte non approuvé */
             <div className="bg-red-50 border border-red-300 text-red-800 px-6 py-4 rounded mb-6">
               <h3 className="font-semibold text-lg mb-2">
-                {(!profile?.account_status || profile.account_status === 'pending') && 'Documents manquants'}
-                {profile?.account_status === 'documents_submitted' && 'Validation en cours'}
-                {profile?.account_status === 'rejected' && 'Compte non validé'}
+                {(!profile.account_status || profile.account_status === 'pending') && 'Documents manquants'}
+                {profile.account_status === 'documents_submitted' && 'Validation en cours'}
+                {profile.account_status === 'rejected' && 'Compte non validé'}
               </h3>
               <p className="mb-4">
-                {(!profile?.account_status || profile.account_status === 'pending') && 'Merci de compléter vos documents (carte d\'identité, KBIS, activité exercée) dans votre profil avant de pouvoir réserver.'}
-                {profile?.account_status === 'documents_submitted' && 'Vos documents sont en cours de vérification par l\'administrateur. Vous pourrez réserver une fois votre compte validé.'}
-                {profile?.account_status === 'rejected' && 'Votre compte a été rejeté. Veuillez contacter l\'administrateur pour plus d\'informations.'}
+                {(!profile.account_status || profile.account_status === 'pending') && 'Merci de compléter vos documents (carte d\'identité, KBIS, activité exercée) dans votre profil avant de pouvoir réserver.'}
+                {profile.account_status === 'documents_submitted' && 'Vos documents sont en cours de vérification par l\'administrateur. Vous pourrez réserver une fois votre compte validé.'}
+                {profile.account_status === 'rejected' && 'Votre compte a été rejeté. Veuillez contacter l\'administrateur pour plus d\'informations.'}
               </p>
               <button
                 onClick={() => router.push('/profil')}
