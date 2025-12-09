@@ -22,7 +22,7 @@ const STATUS_LABELS: Record<AccountStatus, { label: string; color: string; descr
   },
   documents_submitted: {
     label: "Documents soumis - En cours de validation",
-    color: "bg-blue-100 text-blue-800 border-blue-300",
+    color: "bg-[#D4A373] text-white border-[#D4A373]",
     description: "Vos documents sont en cours de vérification par l'administrateur."
   },
   approved: {
@@ -121,7 +121,7 @@ export default function ProfilPage() {
     });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'carte' | 'kbis') => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'carte' | 'kbis') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -144,6 +144,152 @@ export default function ProfilPage() {
       setKbisFile(file);
     }
     setError(null);
+
+    // Upload automatiquement le fichier
+    setUploadingDoc(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Utilisateur non connecté");
+
+      const documentType = type === 'carte' ? 'carte-identite' : 'kbis';
+      const fileUrl = await uploadDocument(file, documentType);
+
+      // Mettre à jour le profil avec la nouvelle URL ET le statut 'pending'
+      const updateData = type === 'carte' 
+        ? { 
+            carte_identite_url: fileUrl,
+            carte_identite_status: 'pending',
+            carte_identite_rejection_notes: null
+          }
+        : { 
+            kbis_url: fileUrl,
+            kbis_status: 'pending',
+            kbis_rejection_notes: null
+          };
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      // Mettre à jour l'état local
+      setFormData(prev => ({
+        ...prev,
+        ...(type === 'carte' 
+          ? { 
+              carte_identite_url: fileUrl,
+              carte_identite_status: 'pending',
+              carte_identite_rejection_notes: ""
+            }
+          : { 
+              kbis_url: fileUrl,
+              kbis_status: 'pending',
+              kbis_rejection_notes: ""
+            })
+      }));
+
+      // Réinitialiser le fichier sélectionné
+      if (type === 'carte') {
+        setCarteIdentiteFile(null);
+      } else {
+        setKbisFile(null);
+      }
+
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "Erreur lors de l'upload");
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleDeleteDocument = async (type: 'carte' | 'kbis') => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) {
+      return;
+    }
+
+    setUploadingDoc(true);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Utilisateur non connecté");
+
+      // Supprimer le fichier du storage
+      const documentType = type === 'carte' ? 'carte-identite' : 'kbis';
+      const fileUrl = type === 'carte' ? formData.carte_identite_url : formData.kbis_url;
+      
+      if (fileUrl) {
+        // Extraire le chemin du fichier depuis l'URL
+        const urlParts = fileUrl.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        const filePath = `${user.id}/${fileName}`;
+        
+        await supabase.storage.from('user-documents').remove([filePath]);
+      }
+
+      // Déterminer le nouveau statut du compte
+      // Si on supprime un document alors que le compte est approuvé, on le repasse en "documents_submitted"
+      let newAccountStatus = formData.account_status;
+      if (formData.account_status === 'approved') {
+        newAccountStatus = 'documents_submitted';
+      }
+
+      // Mettre à jour le profil pour retirer l'URL, le statut du document, et potentiellement le statut du compte
+      const updateData = type === 'carte' 
+        ? { 
+            carte_identite_url: null,
+            carte_identite_status: null,
+            carte_identite_rejection_notes: null,
+            account_status: newAccountStatus
+          }
+        : { 
+            kbis_url: null,
+            kbis_status: null,
+            kbis_rejection_notes: null,
+            account_status: newAccountStatus
+          };
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      // Mettre à jour l'état local
+      setFormData(prev => ({
+        ...prev,
+        account_status: newAccountStatus,
+        ...(type === 'carte' 
+          ? { 
+              carte_identite_url: "",
+              carte_identite_status: null,
+              carte_identite_rejection_notes: ""
+            }
+          : { 
+              kbis_url: "",
+              kbis_status: null,
+              kbis_rejection_notes: ""
+            })
+      }));
+
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "Erreur lors de la suppression");
+    } finally {
+      setUploadingDoc(false);
+    }
   };
 
   const handleUploadDocument = async (type: 'carte' | 'kbis') => {
@@ -221,11 +367,9 @@ export default function ProfilPage() {
     
     if (!user) throw new Error("Utilisateur non connecté");
 
-    const fileExt = file.name.split('.').pop();
-    const filePath = `${user.id}/${documentType}.${fileExt}`;
-
-    // Supprime l'ancien fichier s'il existe
-    await supabase.storage.from('user-documents').remove([filePath]);
+    // Garder le nom original du fichier avec un préfixe pour le type
+    const timestamp = Date.now();
+    const filePath = `${user.id}/${documentType}-${timestamp}-${file.name}`;
 
     // Upload le nouveau fichier
     const { error: uploadError } = await supabase.storage
@@ -581,39 +725,54 @@ export default function ProfilPage() {
               </label>
               {formData.carte_identite_url ? (
                 <div className="mt-2">
-                  <div className="flex items-center gap-3 mb-2">
-                    {formData.carte_identite_status === 'pending' && (
-                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                        ⏳ Document en attente de validation
-                      </span>
-                    )}
-                    {formData.carte_identite_status === 'approved' && (
-                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                        ✓ Document validé
-                      </span>
-                    )}
-                    {formData.carte_identite_status === 'rejected' && (
-                      <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
-                        ✗ Document refusé
-                      </span>
-                    )}
-                  </div>
                   {formData.carte_identite_rejection_notes && formData.carte_identite_status === 'rejected' && (
                     <div className="bg-red-50 border border-red-200 rounded p-3 mb-3 text-sm text-red-800">
                       <strong>Raison du refus :</strong> {formData.carte_identite_rejection_notes}
                     </div>
                   )}
-                  {formData.carte_identite_status !== 'approved' && (
-                    <label className="cursor-pointer bg-[#D4A373] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#c49363] inline-block">
-                      {formData.carte_identite_status === 'rejected' ? 'Remplacer le fichier' : 'Modifier le fichier'}
-                      <input
-                        type="file"
-                        onChange={(e) => handleFileChange(e, 'carte')}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        className="hidden"
-                      />
-                    </label>
-                  )}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <a
+                      href={formData.carte_identite_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-800 underline font-medium"
+                    >
+                      {(() => {
+                        const urlParts = formData.carte_identite_url.split('/');
+                        const fileNameWithParams = urlParts[urlParts.length - 1];
+                        const fileName = fileNameWithParams.split('?')[0];
+                        // Extraire le nom après le timestamp
+                        const parts = fileName.split('-');
+                        if (parts.length >= 3) {
+                          return parts.slice(2).join('-'); // Enlève "carte-identite-timestamp-"
+                        }
+                        return fileName;
+                      })()}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDocument('carte')}
+                      className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
+                      title="Supprimer le document"
+                    >
+                      X
+                    </button>
+                    {formData.carte_identite_status === 'pending' && (
+                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 text-sm font-medium">
+                        Document en attente de validation
+                      </span>
+                    )}
+                    {formData.carte_identite_status === 'approved' && (
+                      <span className="bg-green-100 text-green-800 px-3 py-1  text-sm font-medium">
+                        Document validé
+                      </span>
+                    )}
+                    {formData.carte_identite_status === 'rejected' && (
+                      <span className="bg-red-100 text-red-800 px-3 py-1 text-sm font-medium">
+                        X Document refusé
+                      </span>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="mt-2 flex items-center gap-4">
@@ -657,39 +816,54 @@ export default function ProfilPage() {
               </label>
               {formData.kbis_url ? (
                 <div className="mt-2">
-                  <div className="flex items-center gap-3 mb-2">
-                    {formData.kbis_status === 'pending' && (
-                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                        ⏳ Document en attente de validation
-                      </span>
-                    )}
-                    {formData.kbis_status === 'approved' && (
-                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                        ✓ Document validé
-                      </span>
-                    )}
-                    {formData.kbis_status === 'rejected' && (
-                      <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
-                        ✗ Document refusé
-                      </span>
-                    )}
-                  </div>
                   {formData.kbis_rejection_notes && formData.kbis_status === 'rejected' && (
                     <div className="bg-red-50 border border-red-200 rounded p-3 mb-3 text-sm text-red-800">
                       <strong>Raison du refus :</strong> {formData.kbis_rejection_notes}
                     </div>
                   )}
-                  {formData.kbis_status !== 'approved' && (
-                    <label className="cursor-pointer bg-[#D4A373] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#c49363] inline-block">
-                      {formData.kbis_status === 'rejected' ? 'Remplacer le fichier' : 'Modifier le fichier'}
-                      <input
-                        type="file"
-                        onChange={(e) => handleFileChange(e, 'kbis')}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        className="hidden"
-                      />
-                    </label>
-                  )}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <a
+                      href={formData.kbis_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-800 underline font-medium"
+                    >
+                      {(() => {
+                        const urlParts = formData.kbis_url.split('/');
+                        const fileNameWithParams = urlParts[urlParts.length - 1];
+                        const fileName = fileNameWithParams.split('?')[0];
+                        // Extraire le nom après le timestamp
+                        const parts = fileName.split('-');
+                        if (parts.length >= 2) {
+                          return parts.slice(2).join('-'); // Enlève "kbis-timestamp-"
+                        }
+                        return fileName;
+                      })()}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDocument('kbis')}
+                      className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
+                      title="Supprimer le document"
+                    >
+                      X
+                    </button>
+                    {formData.kbis_status === 'pending' && (
+                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 text-sm font-medium">
+                        Document en attente de validation
+                      </span>
+                    )}
+                    {formData.kbis_status === 'approved' && (
+                      <span className="bg-green-100 text-green-800 px-3 py-1 text-sm font-medium">
+                        Document validé
+                      </span>
+                    )}
+                    {formData.kbis_status === 'rejected' && (
+                      <span className="bg-red-100 text-red-800 px-3 py-1 text-sm font-medium">
+                        X Document refusé
+                      </span>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="mt-2 flex items-center gap-4">

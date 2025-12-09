@@ -149,6 +149,11 @@ export default function AdminDashboard() {
       if (result.members) {
         // Filtrer les comptes qui ont des documents à valider
         const pending = result.members.filter((m: PendingValidation) => {
+          // Exclure les comptes rejetés ou complètement approuvés
+          if (m.account_status === 'rejected' || m.account_status === 'approved') {
+            return false;
+          }
+          
           // Vérifier si au moins un document est en attente de validation
           const hasDocumentsToValidate = 
             m.carte_identite_status === 'pending' || 
@@ -422,8 +427,8 @@ export default function AdminDashboard() {
       const result = await response.json();
 
       if (response.ok) {
-        // Envoyer l'email d'approbation au user
-        const user = pendingValidations.find(v => v.id === userId);
+        // TODO: Réactiver l'envoi d'email une fois Resend configuré
+        /* const user = pendingValidations.find(v => v.id === userId);
         if (user && user.email) {
           try {
             await fetch('/api/emails/account-approved', {
@@ -436,9 +441,8 @@ export default function AdminDashboard() {
             });
           } catch (emailError) {
             console.error('Erreur lors de l\'envoi de l\'email:', emailError);
-            // Ne pas bloquer le processus si l'email échoue
           }
-        }
+        } */
 
         alert('Compte approuvé avec succès !');
         fetchPendingValidations();
@@ -472,8 +476,8 @@ export default function AdminDashboard() {
       const result = await response.json();
 
       if (response.ok) {
-        // Envoyer l'email de rejet au user
-        const user = pendingValidations.find(v => v.id === userId);
+        // TODO: Réactiver l'envoi d'email une fois Resend configuré
+        /* const user = pendingValidations.find(v => v.id === userId);
         if (user && user.email) {
           try {
             await fetch('/api/emails/account-rejected', {
@@ -487,9 +491,8 @@ export default function AdminDashboard() {
             });
           } catch (emailError) {
             console.error('Erreur lors de l\'envoi de l\'email:', emailError);
-            // Ne pas bloquer le processus si l'email échoue
           }
-        }
+        } */
 
         alert('Compte rejeté');
         setShowValidationModal(false);
@@ -841,7 +844,7 @@ export default function AdminDashboard() {
               ▸ Comptes en attente de validation
             </h2>
             {pendingValidations.length > 0 && (
-              <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-semibold">
+              <span className="bg-orange-100 text-orange-800 px-3 py-1 text-sm font-semibold">
                 {pendingValidations.length} en attente
               </span>
             )}
@@ -858,12 +861,10 @@ export default function AdminDashboard() {
               <table className="w-full">
                 <thead className="bg-[#FAEDCD]">
                   <tr>
+                    <th className="px-2 py-3 text-left font-semibold text-slate-700">Statut</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Prénom</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Nom</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Email</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Téléphone</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Activité</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Statut</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Documents</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Actions</th>
                   </tr>
@@ -871,18 +872,16 @@ export default function AdminDashboard() {
                 <tbody>
                   {pendingValidations.map((validation) => (
                     <tr key={validation.id} className="border-b border-slate-200 hover:bg-slate-50">
-                      <td className="px-4 py-3">{validation.prenom}</td>
-                      <td className="px-4 py-3">{validation.nom}</td>
-                      <td className="px-4 py-3">{validation.email || '-'}</td>
-                      <td className="px-4 py-3">{validation.telephone || '-'}</td>
-                      <td className="px-4 py-3">{validation.activite_exercee || '-'}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-1 py-3">
                         {validation.account_status === 'pending' ? (
-                          <span className="text-yellow-600 text-sm">Documents manquants</span>
+                          <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-medium">Documents manquants</span>
                         ) : (
-                          <span className="text-blue-600 text-sm">Documents soumis</span>
+                          <span className="bg-[#D4A373] text-white px-2 py-1 rounded text-xs font-medium">En cours de validation</span>
                         )}
                       </td>
+                      <td className="px-4 py-3">{validation.prenom}</td>
+                      <td className="px-4 py-3">{validation.nom}</td>
+                      <td className="px-4 py-3">{validation.activite_exercee || '-'}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-2">
                           {/* Carte d'identité */}
@@ -901,25 +900,25 @@ export default function AdminDashboard() {
                                   <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">En attente</span>
                                   <button
                                     onClick={() => handleValidateDocument(validation.id, 'carte', 'approve')}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-2 py-0.5 text-xs rounded"
+                                    className="bg-green-600 hover:bg-green-700 text-white px-2 py-0.5 text-xs rounded cursor-pointer"
                                     title="Valider"
                                   >
-                                    ✓
+                                    OK
                                   </button>
                                   <button
                                     onClick={() => handleValidateDocument(validation.id, 'carte', 'reject')}
-                                    className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 text-xs rounded"
+                                    className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 text-xs rounded cursor-pointer"
                                     title="Rejeter"
                                   >
-                                    ✗
+                                    X
                                   </button>
                                 </>
                               )}
                               {validation.carte_identite_status === 'approved' && (
-                                <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs">✓ Validé</span>
+                                <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs">Validé</span>
                               )}
                               {validation.carte_identite_status === 'rejected' && (
-                                <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs">✗ Refusé</span>
+                                <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs">X Refusé</span>
                               )}
                             </div>
                           ) : (
@@ -942,25 +941,25 @@ export default function AdminDashboard() {
                                   <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">En attente</span>
                                   <button
                                     onClick={() => handleValidateDocument(validation.id, 'kbis', 'approve')}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-2 py-0.5 text-xs rounded"
+                                    className="bg-green-600 hover:bg-green-700 text-white px-2 py-0.5 text-xs rounded cursor-pointer"
                                     title="Valider"
                                   >
-                                    ✓
+                                    OK
                                   </button>
                                   <button
                                     onClick={() => handleValidateDocument(validation.id, 'kbis', 'reject')}
-                                    className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 text-xs rounded"
+                                    className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 text-xs rounded cursor-pointer"
                                     title="Rejeter"
                                   >
-                                    ✗
+                                    X
                                   </button>
                                 </>
                               )}
                               {validation.kbis_status === 'approved' && (
-                                <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs">✓ Validé</span>
+                                <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs">Validé</span>
                               )}
                               {validation.kbis_status === 'rejected' && (
-                                <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs">✗ Refusé</span>
+                                <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs">X Refusé</span>
                               )}
                             </div>
                           ) : (
@@ -969,22 +968,13 @@ export default function AdminDashboard() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleApproveAccount(validation.id)}
-                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 text-sm font-medium rounded cursor-pointer"
-                            title="Approuver"
-                          >
-                            Approuver
-                          </button>
-                          <button
-                            onClick={() => openValidationModal(validation)}
-                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 text-sm font-medium rounded cursor-pointer"
-                            title="Rejeter"
-                          >
-                            Rejeter
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => openValidationModal(validation)}
+                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 text-sm font-medium rounded cursor-pointer"
+                          title="Rejeter le compte"
+                        >
+                          Rejeter
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1016,6 +1006,7 @@ export default function AdminDashboard() {
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Nom</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Email</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Téléphone</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Statut</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Date d&apos;inscription</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Actions</th>
                   </tr>
@@ -1027,6 +1018,20 @@ export default function AdminDashboard() {
                       <td className="px-4 py-3">{member.nom}</td>
                       <td className="px-4 py-3">{member.email || '-'}</td>
                       <td className="px-4 py-3">{member.telephone || '-'}</td>
+                      <td className="px-4 py-3">
+                        {member.account_status === 'approved' && (
+                          <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-medium">Validé</span>
+                        )}
+                        {member.account_status === 'pending' && (
+                          <span className="bg-yellow-500 text-white px-2 py-1 rounded text-xs font-medium">En attente</span>
+                        )}
+                        {member.account_status === 'documents_submitted' && (
+                          <span className="bg-[#D4A373] text-white px-2 py-1 rounded text-xs font-medium">À valider</span>
+                        )}
+                        {member.account_status === 'rejected' && (
+                          <span className="bg-red-600 text-white px-2 py-1 rounded text-xs font-medium">Rejeté</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         {new Date(member.created_at).toLocaleDateString('fr-FR')}
                       </td>
