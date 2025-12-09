@@ -29,7 +29,7 @@ export default function ComptePage() {
     const nom = formData.get("nom") as string;
     const prenom = formData.get("prenom") as string;
     const telephone = formData.get("telephone") as string;
-    const therapie = formData.get("therapie") as string;
+    const activite_exercee = formData.get("activite_exercee") as string;
 
     // Vérification que les mots de passe correspondent
     if (password !== confirmPassword) {
@@ -57,7 +57,7 @@ export default function ComptePage() {
             nom,
             prenom,
             telephone,
-            therapie,
+            activite_exercee,
           },
         },
       });
@@ -187,15 +187,15 @@ export default function ComptePage() {
               />
             </div>
 
-            {/* Type de thérapie */}
+            {/* Activité exercée */}
             <div>
-              <label htmlFor="therapie" className="block text-sm font-semibold text-slate-900">
-                Type de thérapie pratiquée <span className="text-red-500">*</span>
+              <label htmlFor="activite_exercee" className="block text-sm font-semibold text-slate-900">
+                Activité exercée <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                id="therapie"
-                name="therapie"
+                id="activite_exercee"
+                name="activite_exercee"
                 required
                 className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
                 placeholder="Ex: Hypnothérapie, Sophrologie..."

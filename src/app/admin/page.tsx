@@ -42,6 +42,10 @@ interface PendingValidation extends Member {
   activite_exercee?: string;
   carte_identite_url?: string;
   kbis_url?: string;
+  carte_identite_status?: string | null;
+  kbis_status?: string | null;
+  carte_identite_rejection_notes?: string;
+  kbis_rejection_notes?: string;
   documents_submitted_at?: string;
   validation_notes?: string;
 }
@@ -130,11 +134,30 @@ export default function AdminDashboard() {
       const response = await fetch('/api/admin/members');
       const result = await response.json();
       
+      console.log('📋 Tous les membres récupérés:', result.members);
+      
+      // Log détaillé pour chaque membre
+      result.members.forEach((m: PendingValidation, index: number) => {
+        console.log(`👤 Membre ${index + 1}: ${m.prenom} ${m.nom}`);
+        console.log(`   - account_status: "${m.account_status}"`);
+        console.log(`   - carte_identite_url: ${m.carte_identite_url || 'null'}`);
+        console.log(`   - kbis_url: ${m.kbis_url || 'null'}`);
+        console.log(`   - carte_identite_status: ${m.carte_identite_status || 'null'}`);
+        console.log(`   - kbis_status: ${m.kbis_status || 'null'}`);
+      });
+      
       if (result.members) {
-        // Filtrer uniquement les comptes en attente de validation
-        const pending = result.members.filter((m: PendingValidation) => 
-          m.account_status === 'documents_submitted' || m.account_status === 'pending'
-        );
+        // Filtrer les comptes qui ont des documents à valider
+        const pending = result.members.filter((m: PendingValidation) => {
+          // Vérifier si au moins un document est en attente de validation
+          const hasDocumentsToValidate = 
+            m.carte_identite_status === 'pending' || 
+            m.kbis_status === 'pending' ||
+            m.account_status === 'documents_submitted' || 
+            m.account_status === 'pending';
+          return hasDocumentsToValidate;
+        });
+        console.log('⏳ Comptes en attente:', pending);
         setPendingValidations(pending);
       }
     } catch (error) {
@@ -362,29 +385,25 @@ export default function AdminDashboard() {
       return;
     }
 
-    const supabase = createClient();
-    
-    // Vérifier si le membre a des réservations
-    const { data: memberBookings } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('user_id', memberId);
+    try {
+      const response = await fetch('/api/admin/members', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId }),
+      });
 
-    if (memberBookings && memberBookings.length > 0) {
-      alert('Impossible de supprimer ce membre car il a des réservations associées.');
-      return;
-    }
+      const data = await response.json();
 
-    const { error } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', memberId);
+      if (!response.ok) {
+        alert(data.error || 'Erreur lors de la suppression');
+        return;
+      }
 
-    if (error) {
-      alert('Erreur lors de la suppression : ' + error.message);
-    } else {
       alert('Membre supprimé avec succès');
       fetchMembers();
+    } catch (error) {
+      console.error('Error deleting member:', error);
+      alert('Erreur lors de la suppression du membre');
     }
   };
 
@@ -489,6 +508,68 @@ export default function AdminDashboard() {
   const openValidationModal = (validation: PendingValidation) => {
     setSelectedValidation(validation);
     setShowValidationModal(true);
+  };
+
+  const handleValidateDocument = async (userId: string, documentType: 'carte' | 'kbis', action: 'approve' | 'reject') => {
+    const docName = documentType === 'carte' ? 'Carte d\'identité' : 'KBIS';
+    
+    if (action === 'reject') {
+      const notes = prompt(`Raison du refus du ${docName} :`);
+      if (!notes || !notes.trim()) {
+        alert('Veuillez indiquer la raison du refus');
+        return;
+      }
+      
+      if (!confirm(`Êtes-vous sûr de vouloir rejeter ce ${docName} ?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/admin/validate-document', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, documentType, action, notes }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          alert(`${docName} rejeté avec succès`);
+          fetchPendingValidations();
+          fetchMembers();
+        } else {
+          alert('Erreur : ' + result.error);
+        }
+      } catch (error) {
+        alert('Erreur lors du rejet du document');
+        console.error(error);
+      }
+    } else {
+      if (!confirm(`Êtes-vous sûr de vouloir valider ce ${docName} ?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/admin/validate-document', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, documentType, action }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          alert(`${docName} validé avec succès`);
+          fetchPendingValidations();
+          fetchMembers();
+        } else {
+          alert('Erreur : ' + result.error);
+        }
+      } catch (error) {
+        alert('Erreur lors de la validation du document');
+        console.error(error);
+      }
+    }
   };
 
   const handleAddBooking = async () => {
@@ -803,28 +884,85 @@ export default function AdminDashboard() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-2">
+                          {/* Carte d'identité */}
                           {validation.carte_identite_url ? (
-                            <a
-                              href={`/api/admin/view-document?userId=${validation.id}&fileType=carte`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[#D4A373] hover:text-[#c49363] text-sm underline"
-                            >
-                              Carte d&apos;identité
-                            </a>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={`/api/admin/view-document?userId=${validation.id}&fileType=carte`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#D4A373] hover:text-[#c49363] text-sm underline"
+                              >
+                                Carte ID
+                              </a>
+                              {validation.carte_identite_status === 'pending' && (
+                                <>
+                                  <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">En attente</span>
+                                  <button
+                                    onClick={() => handleValidateDocument(validation.id, 'carte', 'approve')}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-2 py-0.5 text-xs rounded"
+                                    title="Valider"
+                                  >
+                                    ✓
+                                  </button>
+                                  <button
+                                    onClick={() => handleValidateDocument(validation.id, 'carte', 'reject')}
+                                    className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 text-xs rounded"
+                                    title="Rejeter"
+                                  >
+                                    ✗
+                                  </button>
+                                </>
+                              )}
+                              {validation.carte_identite_status === 'approved' && (
+                                <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs">✓ Validé</span>
+                              )}
+                              {validation.carte_identite_status === 'rejected' && (
+                                <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs">✗ Refusé</span>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-slate-400 text-sm">Pas de carte ID</span>
                           )}
+
+                          {/* KBIS */}
                           {validation.kbis_url ? (
-                            <a
-                              href={`/api/admin/view-document?userId=${validation.id}&fileType=kbis`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[#D4A373] hover:text-[#c49363] text-sm underline"
-                            >
-                              KBIS
-                            </a>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={`/api/admin/view-document?userId=${validation.id}&fileType=kbis`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#D4A373] hover:text-[#c49363] text-sm underline"
+                              >
+                                KBIS
+                              </a>
+                              {validation.kbis_status === 'pending' && (
+                                <>
+                                  <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">En attente</span>
+                                  <button
+                                    onClick={() => handleValidateDocument(validation.id, 'kbis', 'approve')}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-2 py-0.5 text-xs rounded"
+                                    title="Valider"
+                                  >
+                                    ✓
+                                  </button>
+                                  <button
+                                    onClick={() => handleValidateDocument(validation.id, 'kbis', 'reject')}
+                                    className="bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 text-xs rounded"
+                                    title="Rejeter"
+                                  >
+                                    ✗
+                                  </button>
+                                </>
+                              )}
+                              {validation.kbis_status === 'approved' && (
+                                <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs">✓ Validé</span>
+                              )}
+                              {validation.kbis_status === 'rejected' && (
+                                <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs">✗ Refusé</span>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-slate-400 text-sm">Pas de KBIS</span>
                           )}

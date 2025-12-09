@@ -56,6 +56,10 @@ export default function ProfilPage() {
     account_status: "pending" as AccountStatus,
     carte_identite_url: "",
     kbis_url: "",
+    carte_identite_status: null as string | null,
+    kbis_status: null as string | null,
+    carte_identite_rejection_notes: "",
+    kbis_rejection_notes: "",
     validation_notes: "",
   });
 
@@ -91,6 +95,10 @@ export default function ProfilPage() {
           account_status: profile.account_status || "pending",
           carte_identite_url: profile.carte_identite_url || "",
           kbis_url: profile.kbis_url || "",
+          carte_identite_status: profile.carte_identite_status || null,
+          kbis_status: profile.kbis_status || null,
+          carte_identite_rejection_notes: profile.carte_identite_rejection_notes || "",
+          kbis_rejection_notes: profile.kbis_rejection_notes || "",
           validation_notes: profile.validation_notes || "",
         });
       } else {
@@ -138,6 +146,75 @@ export default function ProfilPage() {
     setError(null);
   };
 
+  const handleUploadDocument = async (type: 'carte' | 'kbis') => {
+    const file = type === 'carte' ? carteIdentiteFile : kbisFile;
+    if (!file) return;
+
+    setUploadingDoc(true);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Utilisateur non connecté");
+
+      const documentType = type === 'carte' ? 'carte-identite' : 'kbis';
+      const fileUrl = await uploadDocument(file, documentType);
+
+      // Mettre à jour le profil avec la nouvelle URL ET le statut 'pending'
+      const updateData = type === 'carte' 
+        ? { 
+            carte_identite_url: fileUrl,
+            carte_identite_status: 'pending',
+            carte_identite_rejection_notes: null
+          }
+        : { 
+            kbis_url: fileUrl,
+            kbis_status: 'pending',
+            kbis_rejection_notes: null
+          };
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      // Mettre à jour l'état local
+      setFormData(prev => ({
+        ...prev,
+        ...(type === 'carte' 
+          ? { 
+              carte_identite_url: fileUrl,
+              carte_identite_status: 'pending',
+              carte_identite_rejection_notes: ""
+            }
+          : { 
+              kbis_url: fileUrl,
+              kbis_status: 'pending',
+              kbis_rejection_notes: ""
+            })
+      }));
+
+      // Réinitialiser le fichier sélectionné
+      if (type === 'carte') {
+        setCarteIdentiteFile(null);
+      } else {
+        setKbisFile(null);
+      }
+
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "Erreur lors de l'upload");
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
   const uploadDocument = async (file: File, documentType: 'carte-identite' | 'kbis'): Promise<string> => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -166,6 +243,12 @@ export default function ProfilPage() {
   };
 
   const handleSubmitDocuments = async () => {
+    console.log('🚀 handleSubmitDocuments appelé !', {
+      carteIdentiteFile: carteIdentiteFile?.name,
+      kbisFile: kbisFile?.name,
+      activite_exercee: formData.activite_exercee
+    });
+
     if (!carteIdentiteFile && !kbisFile && !formData.activite_exercee) {
       setError("Veuillez remplir au moins un champ");
       return;
@@ -194,8 +277,15 @@ export default function ProfilPage() {
       const hasAllDocuments = (carteUrl && kbisUrl && formData.activite_exercee);
       const newStatus: AccountStatus = hasAllDocuments ? 'documents_submitted' : 'pending';
 
+      console.log('📤 Données AVANT UPDATE:', {
+        activite_exercee: formData.activite_exercee,
+        userId: user.id,
+        hasAllDocuments,
+        newStatus
+      });
+
       // Mise à jour du profil
-      const { error: updateError } = await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from('profiles')
         .update({
           activite_exercee: formData.activite_exercee,
@@ -204,26 +294,31 @@ export default function ProfilPage() {
           account_status: newStatus,
           documents_submitted_at: hasAllDocuments ? new Date().toISOString() : null,
         })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-
-      // Rafraîchir les données
-      const { data: updatedProfile } = await supabase
-        .from('profiles')
-        .select('*')
         .eq('id', user.id)
-        .single();
+        .select();
 
-      if (updatedProfile) {
-        setFormData(prev => ({
-          ...prev,
-          activite_exercee: updatedProfile.activite_exercee || "",
-          account_status: updatedProfile.account_status || "pending",
-          carte_identite_url: updatedProfile.carte_identite_url || "",
-          kbis_url: updatedProfile.kbis_url || "",
-        }));
+      console.log('🔍 UPDATE result:', { data: updateData, error: updateError });
+
+      if (updateError) {
+        console.error('❌ Erreur RLS détectée:', updateError);
+        throw new Error(`Erreur de mise à jour: ${updateError.message}`);
       }
+
+      if (!updateData || updateData.length === 0) {
+        console.error('❌ Aucune ligne mise à jour - RLS bloque probablement');
+        throw new Error('La mise à jour a été bloquée par les règles de sécurité');
+      }
+
+      console.log('✅ Profil mis à jour avec succès:', updateData);
+
+      // Mettre à jour l'état local avec les nouvelles valeurs
+      setFormData(prev => ({
+        ...prev,
+        activite_exercee: formData.activite_exercee,
+        account_status: newStatus,
+        carte_identite_url: carteUrl || "",
+        kbis_url: kbisUrl || "",
+      }));
 
       setCarteIdentiteFile(null);
       setKbisFile(null);
@@ -271,16 +366,21 @@ export default function ProfilPage() {
       }
 
       // Met à jour le profil dans la table profiles
-      const { error: updateError } = await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from('profiles')
         .update({
           nom: formData.nom,
           prenom: formData.prenom,
           telephone: formData.telephone,
+          activite_exercee: formData.activite_exercee,
         })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select();
+
+      console.log('✅ Profil mis à jour:', updateData);
 
       if (updateError) {
+        console.error('❌ Erreur:', updateError);
         throw updateError;
       }
 
@@ -480,11 +580,32 @@ export default function ProfilPage() {
                 Carte d&apos;identité <span className="text-red-500">*</span>
               </label>
               {formData.carte_identite_url ? (
-                <div className="mt-2 flex items-center gap-4">
-                  <span className="text-green-600 text-sm font-medium">✓ Document envoyé</span>
-                  {formData.account_status !== 'approved' && (
-                    <label className="cursor-pointer bg-[#D4A373] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#c49363]">
-                      Modifier le fichier
+                <div className="mt-2">
+                  <div className="flex items-center gap-3 mb-2">
+                    {formData.carte_identite_status === 'pending' && (
+                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                        ⏳ Document en attente de validation
+                      </span>
+                    )}
+                    {formData.carte_identite_status === 'approved' && (
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                        ✓ Document validé
+                      </span>
+                    )}
+                    {formData.carte_identite_status === 'rejected' && (
+                      <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                        ✗ Document refusé
+                      </span>
+                    )}
+                  </div>
+                  {formData.carte_identite_rejection_notes && formData.carte_identite_status === 'rejected' && (
+                    <div className="bg-red-50 border border-red-200 rounded p-3 mb-3 text-sm text-red-800">
+                      <strong>Raison du refus :</strong> {formData.carte_identite_rejection_notes}
+                    </div>
+                  )}
+                  {formData.carte_identite_status !== 'approved' && (
+                    <label className="cursor-pointer bg-[#D4A373] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#c49363] inline-block">
+                      {formData.carte_identite_status === 'rejected' ? 'Remplacer le fichier' : 'Modifier le fichier'}
                       <input
                         type="file"
                         onChange={(e) => handleFileChange(e, 'carte')}
@@ -510,9 +631,19 @@ export default function ProfilPage() {
                     Ajouter un fichier
                   </label>
                   {carteIdentiteFile && (
-                    <span className="text-sm text-green-600 font-medium">
-                      ✓ {carteIdentiteFile.name}
-                    </span>
+                    <>
+                      <span className="text-sm text-green-600 font-medium">
+                        ✓ {carteIdentiteFile.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleUploadDocument('carte')}
+                        disabled={uploadingDoc}
+                        className="cursor-pointer bg-green-600 px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {uploadingDoc ? 'Upload...' : 'Upload'}
+                      </button>
+                    </>
                   )}
                 </div>
               )}
@@ -525,11 +656,32 @@ export default function ProfilPage() {
                 KBIS ou justificatif professionnel <span className="text-red-500">*</span>
               </label>
               {formData.kbis_url ? (
-                <div className="mt-2 flex items-center gap-4">
-                  <span className="text-green-600 text-sm font-medium">✓ Document envoyé</span>
-                  {formData.account_status !== 'approved' && (
-                    <label className="cursor-pointer bg-[#D4A373] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#c49363]">
-                      Modifier le fichier
+                <div className="mt-2">
+                  <div className="flex items-center gap-3 mb-2">
+                    {formData.kbis_status === 'pending' && (
+                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                        ⏳ Document en attente de validation
+                      </span>
+                    )}
+                    {formData.kbis_status === 'approved' && (
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                        ✓ Document validé
+                      </span>
+                    )}
+                    {formData.kbis_status === 'rejected' && (
+                      <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                        ✗ Document refusé
+                      </span>
+                    )}
+                  </div>
+                  {formData.kbis_rejection_notes && formData.kbis_status === 'rejected' && (
+                    <div className="bg-red-50 border border-red-200 rounded p-3 mb-3 text-sm text-red-800">
+                      <strong>Raison du refus :</strong> {formData.kbis_rejection_notes}
+                    </div>
+                  )}
+                  {formData.kbis_status !== 'approved' && (
+                    <label className="cursor-pointer bg-[#D4A373] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#c49363] inline-block">
+                      {formData.kbis_status === 'rejected' ? 'Remplacer le fichier' : 'Modifier le fichier'}
                       <input
                         type="file"
                         onChange={(e) => handleFileChange(e, 'kbis')}
@@ -555,17 +707,27 @@ export default function ProfilPage() {
                     Ajouter un fichier
                   </label>
                   {kbisFile && (
-                    <span className="text-sm text-green-600 font-medium">
-                      ✓ {kbisFile.name}
-                    </span>
+                    <>
+                      <span className="text-sm text-green-600 font-medium">
+                        ✓ {kbisFile.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleUploadDocument('kbis')}
+                        disabled={uploadingDoc}
+                        className="cursor-pointer bg-green-600 px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {uploadingDoc ? 'Upload...' : 'Upload'}
+                      </button>
+                    </>
                   )}
                 </div>
               )}
               <p className="text-xs text-slate-500 mt-1">Format accepté : PDF, JPG, PNG (max 5 MB)</p>
             </div>
 
-            {/* Bouton pour enregistrer les documents - toujours visible si fichiers sélectionnés */}
-            {(carteIdentiteFile || kbisFile) && formData.account_status !== 'approved' && (
+            {/* Bouton pour enregistrer les documents - visible si fichiers OU activité modifiée */}
+            {(carteIdentiteFile || kbisFile || formData.activite_exercee) && formData.account_status !== 'approved' && (
               <div className="flex justify-center pt-6">
                 <button
                   type="button"
