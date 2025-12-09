@@ -136,18 +136,6 @@ export default function AdminDashboard() {
       const response = await fetch('/api/admin/members');
       const result = await response.json();
       
-      console.log('📋 Tous les membres récupérés:', result.members);
-      
-      // Log détaillé pour chaque membre
-      result.members.forEach((m: PendingValidation, index: number) => {
-        console.log(`👤 Membre ${index + 1}: ${m.prenom} ${m.nom}`);
-        console.log(`   - account_status: "${m.account_status}"`);
-        console.log(`   - carte_identite_url: ${m.carte_identite_url || 'null'}`);
-        console.log(`   - kbis_url: ${m.kbis_url || 'null'}`);
-        console.log(`   - carte_identite_status: ${m.carte_identite_status || 'null'}`);
-        console.log(`   - kbis_status: ${m.kbis_status || 'null'}`);
-      });
-      
       if (result.members) {
         // Filtrer les comptes qui ont des documents à valider
         const pending = result.members.filter((m: PendingValidation) => {
@@ -164,7 +152,6 @@ export default function AdminDashboard() {
             m.account_status === 'pending';
           return hasDocumentsToValidate;
         });
-        console.log('⏳ Comptes en attente:', pending);
         setPendingValidations(pending);
       }
     } catch (error) {
@@ -221,7 +208,6 @@ export default function AdminDashboard() {
         }
       })) || [];
 
-      console.log('Bookings récupérées:', bookingsWithProfiles.length);
       setBookings(bookingsWithProfiles as Booking[]);
       calculateStats(bookingsWithProfiles as Booking[]);
     } catch (error) {
@@ -305,16 +291,12 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteBooking = async (bookingId: string) => {
-    console.log('Tentative de suppression de:', bookingId);
-    
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette réservation ?')) {
-      console.log('Suppression annulée par l\'utilisateur');
       return;
     }
 
     try {
       const supabase = createClient();
-      console.log('Envoi de la requête de suppression...');
       
       const { data, error } = await supabase
         .from('bookings')
@@ -322,10 +304,7 @@ export default function AdminDashboard() {
         .eq('id', bookingId)
         .select();
 
-      console.log('Résultat:', { data, error });
-
       if (error) {
-        console.error('Erreur Supabase:', error);
         alert('Erreur lors de la suppression : ' + error.message);
       } else {
         // Suppression immédiate de la liste locale pour feedback instantané
@@ -346,12 +325,8 @@ export default function AdminDashboard() {
       const response = await fetch('/api/admin/members');
       const result = await response.json();
       
-      console.log('Users fetched:', { count: result.members?.length });
-      
       if (result.members) {
         setUsers(result.members);
-      } else {
-        console.error('Error fetching users:', result.error);
       }
     } catch (error) {
       console.error('Error fetching users:', error);

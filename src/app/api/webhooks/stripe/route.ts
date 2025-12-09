@@ -5,7 +5,6 @@ import Stripe from 'stripe';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
-  console.log('Webhook received');
   try {
     if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
       console.error('Stripe keys not configured');
@@ -40,14 +39,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    console.log('Event type:', event.type);
-
     // Traite l'événement de paiement réussi
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
-      
-      console.log('Payment successful:', session.id);
-      console.log('Metadata:', session.metadata);
 
       // Récupère les métadonnées de la réservation
       const { userId, dates: datesJson, date: singleDate, slot, room, price, nom, prenom } = session.metadata || {};
@@ -63,8 +57,6 @@ export async function POST(request: NextRequest) {
       } else if (singleDate) {
         dates = [singleDate];
       }
-
-      console.log('Parsed dates:', dates);
 
       if (!userId || dates.length === 0 || !slot || !room || !price) {
         console.error('Missing metadata in session:', session.id);
@@ -82,7 +74,6 @@ export async function POST(request: NextRequest) {
       const results = [];
 
       for (const date of dates) {
-        console.log(`Processing date: ${date}`);
         // Vérifie les réservations existantes pour cette date
         const { data: existingBookings, error: checkError } = await supabase
           .from('bookings')
@@ -153,7 +144,6 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        console.log(`Booking created for ${date}:`, bookingData.id);
         results.push({ date, status: 'success', id: bookingData.id });
 
         // Envoie l'email de confirmation (un par date pour l'instant)

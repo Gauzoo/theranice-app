@@ -433,10 +433,7 @@ export default function ReservationPage() {
                   <div className="w-3 h-3 rounded-full bg-[#d06264]"></div>
                   <span className="text-slate-600">Complet</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#006edc]"></div>
-                  <span className="text-slate-600">Sélectionné</span>
-                </div>
+       
               </div>
             </div>
 

@@ -12,9 +12,6 @@ export default function ContactForm() {
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Ici, vous pourrez ajouter la logique d'envoi du formulaire
-    console.log('Formulaire envoyé:', formData);
-    // TODO: Implémenter l'envoi réel (API, email, etc.)
     alert('Message envoyé ! Nous vous répondrons dans les plus brefs délais.');
     
     // Réinitialiser le formulaire

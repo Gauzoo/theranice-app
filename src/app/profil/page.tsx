@@ -387,12 +387,6 @@ export default function ProfilPage() {
   };
 
   const handleSubmitDocuments = async () => {
-    console.log('🚀 handleSubmitDocuments appelé !', {
-      carteIdentiteFile: carteIdentiteFile?.name,
-      kbisFile: kbisFile?.name,
-      activite_exercee: formData.activite_exercee
-    });
-
     if (!carteIdentiteFile && !kbisFile && !formData.activite_exercee) {
       setError("Veuillez remplir au moins un champ");
       return;
@@ -441,19 +435,13 @@ export default function ProfilPage() {
         .eq('id', user.id)
         .select();
 
-      console.log('🔍 UPDATE result:', { data: updateData, error: updateError });
-
       if (updateError) {
-        console.error('❌ Erreur RLS détectée:', updateError);
         throw new Error(`Erreur de mise à jour: ${updateError.message}`);
       }
 
       if (!updateData || updateData.length === 0) {
-        console.error('❌ Aucune ligne mise à jour - RLS bloque probablement');
         throw new Error('La mise à jour a été bloquée par les règles de sécurité');
       }
-
-      console.log('✅ Profil mis à jour avec succès:', updateData);
 
       // Mettre à jour l'état local avec les nouvelles valeurs
       setFormData(prev => ({
@@ -521,10 +509,7 @@ export default function ProfilPage() {
         .eq('id', user.id)
         .select();
 
-      console.log('✅ Profil mis à jour:', updateData);
-
       if (updateError) {
-        console.error('❌ Erreur:', updateError);
         throw updateError;
       }
 
