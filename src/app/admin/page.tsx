@@ -681,11 +681,11 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-white p-6 shadow-md">
             <p className="text-sm text-slate-600 mb-1">Réservations totales</p>
-            <p className="text-3xl font-bold text-slate-900">{stats.totalBookings}</p>
+            <p className="text-3xl font-bold text-[#333333]">{stats.totalBookings}</p>
           </div>
           <div className="bg-white p-6 shadow-md">
             <p className="text-sm text-slate-600 mb-1">À venir</p>
-            <p className="text-3xl font-bold text-blue-600">{stats.upcomingBookings}</p>
+            <p className="text-3xl font-bold text-[#B12F2E]">{stats.upcomingBookings}</p>
           </div>
         </div>
 
