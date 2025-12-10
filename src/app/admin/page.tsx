@@ -875,10 +875,13 @@ export default function AdminDashboard() {
                     <tr key={validation.id} className="border-b border-slate-200 hover:bg-slate-50">
                       <td className="px-1 py-3">
                         {validation.account_status === 'pending' ? (
-                          <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-medium">Documents manquants</span>
+                          <span className="bg-orange-100 text-orange-800 px-2 py-1 text-sm font-semibold">Documents manquants</span>
                         ) : (
-                          <span className="bg-[#D4A373] text-white px-2 py-1 rounded text-xs font-medium">En cours de validation</span>
+                          <span className="bg-[#D4A373] text-white px-2 py-1 text-xs font-medium">En cours de validation</span>
                         )}
+
+
+
                       </td>
                       <td className="px-4 py-3">{validation.prenom}</td>
                       <td className="px-4 py-3">{validation.nom}</td>
@@ -898,17 +901,17 @@ export default function AdminDashboard() {
                               </a>
                               {validation.carte_identite_status === 'pending' && (
                                 <>
-                                  <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">En attente</span>
+                                  <span className="bg-orange-100 text-orange-800 px-2 py-1 text-xs font-semibold">En attente</span>
                                   <button
                                     onClick={() => handleValidateDocument(validation.id, 'carte', 'approve')}
-                                    className="bg-[#56862F] hover:bg-[#456d25] text-white px-2 py-0.5 text-xs rounded cursor-pointer"
+                                    className="bg-[#56862F] hover:bg-[#456d25] text-white px-2 py-0.5 text-xs cursor-pointer"
                                     title="Valider"
                                   >
                                     OK
                                   </button>
                                   <button
                                     onClick={() => handleValidateDocument(validation.id, 'carte', 'reject')}
-                                    className="bg-[#B12F2E] hover:bg-[#8e2424] text-white px-2 py-0.5 text-xs rounded cursor-pointer"
+                                    className="bg-[#B12F2E] hover:bg-[#8e2424] text-white px-2 py-0.5 text-xs cursor-pointer"
                                     title="Rejeter"
                                   >
                                     X
@@ -916,10 +919,10 @@ export default function AdminDashboard() {
                                 </>
                               )}
                               {validation.carte_identite_status === 'approved' && (
-                                <span className="bg-[#56862F] text-white px-2 py-0.5 rounded text-xs">Validé</span>
+                                <span className="bg-[#56862F] text-white px-2 py-0.5 text-xs">Validé</span>
                               )}
                               {validation.carte_identite_status === 'rejected' && (
-                                <span className="bg-[#B12F2E] text-white px-2 py-0.5 rounded text-xs">X Refusé</span>
+                                <span className="bg-[#B12F2E] text-white px-2 py-0.5 text-xs">X Refusé</span>
                               )}
                             </div>
                           ) : (
@@ -939,17 +942,17 @@ export default function AdminDashboard() {
                               </a>
                               {validation.kbis_status === 'pending' && (
                                 <>
-                                  <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">En attente</span>
+                                  <span className="bg-orange-100 text-orange-800 px-2 py-1 text-xs font-semibold">En attente</span>
                                   <button
                                     onClick={() => handleValidateDocument(validation.id, 'kbis', 'approve')}
-                                    className="bg-[#56862F] hover:bg-[#456d25] text-white px-2 py-0.5 text-xs rounded cursor-pointer"
+                                    className="bg-[#56862F] hover:bg-[#456d25] text-white px-2 py-0.5 text-xs cursor-pointer"
                                     title="Valider"
                                   >
                                     OK
                                   </button>
                                   <button
                                     onClick={() => handleValidateDocument(validation.id, 'kbis', 'reject')}
-                                    className="bg-[#B12F2E] hover:bg-[#8e2424] text-white px-2 py-0.5 text-xs rounded cursor-pointer"
+                                    className="bg-[#B12F2E] hover:bg-[#8e2424] text-white px-2 py-0.5 text-xs cursor-pointer"
                                     title="Rejeter"
                                   >
                                     X
@@ -957,10 +960,10 @@ export default function AdminDashboard() {
                                 </>
                               )}
                               {validation.kbis_status === 'approved' && (
-                                <span className="bg-[#56862F] text-white px-2 py-0.5 rounded text-xs">Validé</span>
+                                <span className="bg-[#56862F] text-white px-2 py-0.5 text-xs">Validé</span>
                               )}
                               {validation.kbis_status === 'rejected' && (
-                                <span className="bg-[#B12F2E] text-white px-2 py-0.5 rounded text-xs">X Refusé</span>
+                                <span className="bg-[#B12F2E] text-white px-2 py-0.5 text-xs">X Refusé</span>
                               )}
                             </div>
                           ) : (
@@ -971,7 +974,7 @@ export default function AdminDashboard() {
                       <td className="px-4 py-3">
                         <button
                           onClick={() => openValidationModal(validation)}
-                          className="bg-[#B12F2E] hover:bg-[#8e2424] text-white px-3 py-1 text-sm font-medium rounded cursor-pointer"
+                          className="bg-[#B12F2E] hover:bg-[#8e2424] text-white px-3 py-1 text-sm font-medium cursor-pointer"
                           title="Rejeter le compte"
                         >
                           Rejeter

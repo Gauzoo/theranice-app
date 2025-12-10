@@ -354,6 +354,19 @@ export default function SiteHeader() {
                     >
                       Mon profil
                     </Link>
+                    {user?.email === 'gauthier.guerin@gmail.com' && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className={`block w-full px-4 py-2.5 text-1xl font-semibold transition-colors ${
+                          pathname === "/admin" 
+                            ? "text-[#D4A373] bg-[#FAEDCD]" 
+                            : "text-[#333333] hover:bg-[#FAEDCD]"
+                        }`}
+                      >
+                        Administration
+                      </Link>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2.5 text-1xl font-semibold text-[#333333] hover:bg-[#FAEDCD] transition-colors cursor-pointer"
@@ -478,6 +491,17 @@ export default function SiteHeader() {
                 >
                   Mon profil
                 </Link>
+                {user?.email === 'gauthier.guerin@gmail.com' && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`text-lg font-medium uppercase tracking-wide transition-colors duration-200 ${
+                      pathname === "/admin" ? "text-[#D4A373]" : "text-[#333333] hover:text-[#D4A373]"
+                    }`}
+                  >
+                    Administration
+                  </Link>
+                )}
                 
                 <button
                   onClick={() => {
