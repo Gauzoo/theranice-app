@@ -17,7 +17,7 @@ type AccountStatus = 'pending' | 'documents_submitted' | 'approved' | 'rejected'
 const STATUS_LABELS: Record<AccountStatus, { label: string; color: string; description: string }> = {
   pending: {
     label: "En attente de documents",
-    color: "bg-yellow-100 text-yellow-800 border-yellow-300",
+    color: "bg-[#FEFAE0] text-[#333333] border-[#cad5e2]",
     description: "Merci de compléter vos documents pour pouvoir réserver."
   },
   documents_submitted: {
@@ -27,12 +27,12 @@ const STATUS_LABELS: Record<AccountStatus, { label: string; color: string; descr
   },
   approved: {
     label: "Validé",
-    color: "bg-green-100 text-green-800 border-green-300",
+    color: "bg-[#56862F] text-white border-[#56862F]",
     description: "Votre compte est validé, vous pouvez réserver."
   },
   rejected: {
     label: "Compte rejeté",
-    color: "bg-red-100 text-red-800 border-red-300",
+    color: "bg-[#B12F2E] text-white border-[#B12F2E]",
     description: "Votre compte a été rejeté. Veuillez contacter l'administrateur."
   }
 };
@@ -602,13 +602,13 @@ export default function ProfilPage() {
 
           {/* Messages d'erreur et de succès */}
           {error && (
-            <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded mb-6">
+            <div className="bg-[#B12F2E] border border-[#B12F2E] text-white px-4 py-3 rounded mb-6">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded mb-6">
+            <div className="bg-[#56862F] border border-[#56862F] text-white px-4 py-3 rounded mb-6">
               Profil mis à jour avec succès !
             </div>
           )}
@@ -711,7 +711,7 @@ export default function ProfilPage() {
               {formData.carte_identite_url ? (
                 <div className="mt-2">
                   {formData.carte_identite_rejection_notes && formData.carte_identite_status === 'rejected' && (
-                    <div className="bg-red-50 border border-red-200 rounded p-3 mb-3 text-sm text-red-800">
+                    <div className="bg-[#B12F2E] border border-[#B12F2E] rounded p-3 mb-3 text-sm text-white">
                       <strong>Raison du refus :</strong> {formData.carte_identite_rejection_notes}
                     </div>
                   )}
@@ -750,12 +750,12 @@ export default function ProfilPage() {
                       </span>
                     )}
                     {formData.carte_identite_status === 'approved' && (
-                      <span className="bg-green-100 text-green-800 px-3 py-1  text-sm font-medium">
+                      <span className="bg-[#56862F] text-white px-3 py-1  text-sm font-medium">
                         Document validé
                       </span>
                     )}
                     {formData.carte_identite_status === 'rejected' && (
-                      <span className="bg-red-100 text-red-800 px-3 py-1 text-sm font-medium">
+                      <span className="bg-[#B12F2E] text-white px-3 py-1 text-sm font-medium">
                         X Document refusé
                       </span>
                     )}
@@ -778,14 +778,14 @@ export default function ProfilPage() {
                   </label>
                   {carteIdentiteFile && (
                     <>
-                      <span className="text-sm text-green-600 font-medium">
+                      <span className="text-sm text-[#56862F] font-medium">
                         ✓ {carteIdentiteFile.name}
                       </span>
                       <button
                         type="button"
                         onClick={() => handleUploadDocument('carte')}
                         disabled={uploadingDoc}
-                        className="cursor-pointer bg-green-600 px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="cursor-pointer bg-[#56862F] px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#456d25] disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {uploadingDoc ? 'Upload...' : 'Upload'}
                       </button>
@@ -804,7 +804,7 @@ export default function ProfilPage() {
               {formData.kbis_url ? (
                 <div className="mt-2">
                   {formData.kbis_rejection_notes && formData.kbis_status === 'rejected' && (
-                    <div className="bg-red-50 border border-red-200 rounded p-3 mb-3 text-sm text-red-800">
+                    <div className="bg-[#B12F2E] border border-[#B12F2E] rounded p-3 mb-3 text-sm text-white">
                       <strong>Raison du refus :</strong> {formData.kbis_rejection_notes}
                     </div>
                   )}
@@ -843,12 +843,12 @@ export default function ProfilPage() {
                       </span>
                     )}
                     {formData.kbis_status === 'approved' && (
-                      <span className="bg-green-100 text-green-800 px-3 py-1 text-sm font-medium">
+                      <span className="bg-[#56862F] text-white px-3 py-1 text-sm font-medium">
                         Document validé
                       </span>
                     )}
                     {formData.kbis_status === 'rejected' && (
-                      <span className="bg-red-100 text-red-800 px-3 py-1 text-sm font-medium">
+                      <span className="bg-[#B12F2E] text-white px-3 py-1 text-sm font-medium">
                         X Document refusé
                       </span>
                     )}
@@ -871,14 +871,14 @@ export default function ProfilPage() {
                   </label>
                   {kbisFile && (
                     <>
-                      <span className="text-sm text-green-600 font-medium">
+                      <span className="text-sm text-[#56862F] font-medium">
                         ✓ {kbisFile.name}
                       </span>
                       <button
                         type="button"
                         onClick={() => handleUploadDocument('kbis')}
                         disabled={uploadingDoc}
-                        className="cursor-pointer bg-green-600 px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="cursor-pointer bg-[#56862F] px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#456d25] disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {uploadingDoc ? 'Upload...' : 'Upload'}
                       </button>

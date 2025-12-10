@@ -112,13 +112,13 @@ export default function ComptePage() {
 
           {/* Messages d'erreur et de succès */}
           {error && (
-            <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded">
+            <div className="bg-[#B12F2E] border border-[#B12F2E] text-white px-4 py-3 rounded mb-6">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="bg-green-50 border border-green-300 text-green-800 px-4 py-3 rounded">
+            <div className="bg-[#56862F] border border-[#56862F] text-white px-4 py-3 rounded mb-6">
               Compte créé avec succès ! Vérifiez votre email pour confirmer votre inscription.
             </div>
           )}
