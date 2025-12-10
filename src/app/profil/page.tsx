@@ -889,20 +889,6 @@ export default function ProfilPage() {
               <p className="text-xs text-slate-500 mt-1">Format accepté : PDF, JPG, PNG (max 5 MB)</p>
             </div>
 
-            {/* Bouton pour enregistrer les documents - visible si fichiers OU activité modifiée */}
-            {(carteIdentiteFile || kbisFile || formData.activite_exercee) && formData.account_status !== 'approved' && (
-              <div className="flex justify-center pt-6">
-                <button
-                  type="button"
-                  onClick={handleSubmitDocuments}
-                  disabled={uploadingDoc}
-                  className="cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {uploadingDoc ? "Envoi en cours..." : "Enregistrer les documents"}
-                </button>
-              </div>
-            )}
-
             {/* Boutons pour les informations personnelles - visible uniquement en mode édition */}
             {isEditing && (
               <div className="flex justify-center gap-4 pt-4">
