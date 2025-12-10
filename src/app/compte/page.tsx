@@ -66,6 +66,13 @@ export default function ComptePage() {
         throw signUpError;
       }
 
+      // Vérifier si l'utilisateur existe déjà (Supabase retourne un user mais avec identities vide)
+      if (data.user && !data.user.identities?.length) {
+        setError("Un compte existe déjà avec cet email. Veuillez vous connecter.");
+        setLoading(false);
+        return;
+      }
+
       if (data.user) {
         setSuccess(true);
         // Rediriger vers la page d'accueil après 2 secondes

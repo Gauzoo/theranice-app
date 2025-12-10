@@ -13,29 +13,7 @@ export default function SiteFooter() {
             </p>
           </div>
 
-          {/* Colonne 2 : Liens rapides */}
-          <div>
-            <h3 className="text-lg font-semibold text-[#D4A373] mb-4">Liens rapides</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="/#nos-espaces" className="hover:text-[#D4A373] transition-colors">
-                  Nos espaces
-                </Link>
-              </li>
-              <li>
-                <Link href="/#forfait" className="hover:text-[#D4A373] transition-colors">
-                  Forfait
-                </Link>
-              </li>
-              <li>
-                <Link href="/#contact" className="hover:text-[#D4A373] transition-colors">
-                  Contact
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Colonne 3 : Contact */}
+          {/* Colonne 2 : Contact */}
           <div>
             <h3 className="text-lg font-semibold text-[#D4A373] mb-4">Contact</h3>
             <ul className="space-y-2 text-sm">
@@ -51,6 +29,28 @@ export default function SiteFooter() {
               </li>
               <li className="text-[#D4A373]">
                 Nice, France
+              </li>
+            </ul>
+          </div>
+
+          {/* Colonne 3 : Mentions et conformité */}
+          <div>
+            <h3 className="text-lg font-semibold text-[#D4A373] mb-4">Mentions et conformité</h3>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/mentions-legales" className="hover:text-[#D4A373] transition-colors">
+                  Mentions légales
+                </Link>
+              </li>
+              <li>
+                <Link href="/politique-confidentialite" className="hover:text-[#D4A373] transition-colors">
+                  Politique de confidentialité
+                </Link>
+              </li>
+              <li>
+                <Link href="/conditions-generales" className="hover:text-[#D4A373] transition-colors">
+                  Conditions générales
+                </Link>
               </li>
             </ul>
           </div>
