@@ -306,12 +306,12 @@ export default function MesReservationsPage() {
                           {ROOM_LABELS[booking.room]}
                         </h3>
                         <span
-                          className={`px-3 py-1  text-sm font-medium ${
+                          className={`px-3 py-1 rounded text-sm font-medium ${
                             isCancelled
-                              ? 'bg-red-100 text-red-700'
+                              ? 'bg-[#B12F2E] text-white'
                               : isPast
                               ? 'bg-slate-100 text-slate-700'
-                              : 'bg-green-100 text-green-700'
+                              : 'bg-[#56862F] text-white'
                           }`}
                         >
                           {isCancelled ? 'Annulée' : isPast ? 'Terminée' : 'Confirmée'}
