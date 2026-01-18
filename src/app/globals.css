@@ -195,3 +195,13 @@ body {
 .calendar-container .react-calendar__tile--active.has-full-booking::after {
   background: #d06264 !important;
 }
+
+/* Jours désactivés (passés) */
+.calendar-container .react-calendar__tile:disabled {
+  background-color: #f8fafc !important;
+  color: #cbd5e1 !important;
+  cursor: not-allowed !important;
+  background-image: linear-gradient(45deg, #f1f5f9 25%, transparent 25%, transparent 50%, #f1f5f9 50%, #f1f5f9 75%, transparent 75%, transparent);
+  background-size: 10px 10px !important;
+}
+

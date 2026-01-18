@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,35 +10,98 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payment service not configured' }, { status: 500 });
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-    const { userId, dates, slot, room, price, email, nom, prenom } = await request.json();
-
-    // Validation basique
-    if (!dates || !Array.isArray(dates) || dates.length === 0) {
-      return NextResponse.json({ error: 'Aucune date sélectionnée' }, { status: 400 });
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY not configured');
+      return NextResponse.json({ error: 'Database configuration error' }, { status: 500 });
     }
 
-    // Labels pour l'affichage
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { cart, email, nom, prenom, userId } = await request.json();
+
+    // Validation du panier
+    if (!cart || !Array.isArray(cart) || cart.length === 0) {
+      return NextResponse.json({ error: 'Le panier est vide' }, { status: 400 });
+    }
+
+    // 1. Vérification de la disponibilité pour tous les items du panier
+    for (const item of cart) {
+      const { date, slot, room } = item;
+      
+      const { data: existingBookings } = await supabase
+        .from('bookings')
+        .select('slot, room')
+        .eq('date', date)
+        .eq('status', 'confirmed');
+
+      if (existingBookings) {
+        let isAvailable = true;
+        const bookings = existingBookings as any[];
+
+        if (slot === 'fullday') {
+          if (room === 'large') {
+            isAvailable = bookings.length === 0;
+          } else {
+            const roomBooked = bookings.some(b => b.room === room);
+            const largeBooked = bookings.some(b => b.room === 'large');
+            isAvailable = !roomBooked && !largeBooked;
+          }
+        } else {
+          // Matin ou après-midi
+          const fulldayBooked = bookings.some(b => b.slot === 'fullday' && b.room === room);
+          const largeFulldayBooked = bookings.some(b => b.slot === 'fullday' && b.room === 'large');
+          
+          if (fulldayBooked || largeFulldayBooked) {
+            isAvailable = false;
+          } else {
+            const bookingsForSlot = bookings.filter(b => b.slot === slot);
+            if (room === 'large') {
+              isAvailable = bookingsForSlot.length === 0;
+            } else {
+              const roomBooked = bookingsForSlot.some(b => b.room === room);
+              const largeBooked = bookingsForSlot.some(b => b.room === 'large');
+              isAvailable = !roomBooked && !largeBooked;
+            }
+          }
+        }
+
+        if (!isAvailable) {
+          return NextResponse.json({ 
+            error: `Le créneau ${slot} du ${date} pour la salle ${room} n'est plus disponible.` 
+          }, { status: 409 });
+        }
+      }
+    }
+
+    // Préparation des paramètres
     const slotLabels: Record<string, string> = {
       morning: 'Matin (8h-12h)',
       afternoon: 'Après-midi (13h-17h)',
       fullday: 'Journée complète (8h-17h)'
     };
-    const slotLabel = slotLabels[slot] || slot;
+    
     const roomLabels: Record<string, string> = {
       room1: 'Salle 1 (35m²)',
       room2: 'Salle 2 (35m²)',
       large: 'Grande salle (70m²)'
     };
-    const roomLabel = roomLabels[room] || room;
 
-    // Formatage de la description
-    const datesCount = dates.length;
-    // Limite la longueur de la description pour éviter les erreurs Stripe
-    const datesStr = dates.join(', ');
-    const truncatedDates = datesStr.length > 100 ? datesStr.substring(0, 97) + '...' : datesStr;
-    const description = `${datesCount} date${datesCount > 1 ? 's' : ''} : ${truncatedDates} - ${slotLabel}`;
+    // Construction de la description du panier pour Stripe
+    // Comme on a potentiellement beaucoup d'items, on fait un résumé
+    const itemCount = cart.length;
+    let description = `${itemCount} créneau${itemCount > 1 ? 'x' : ''} de réservation`;
+    if (itemCount <= 3) {
+      description = cart.map((item: any) => 
+        `${item.date} (${slotLabels[item.slot]})`
+      ).join(', ');
+    }
+
+    // Calcul du prix total
+    const totalPrice = cart.reduce((sum: number, item: any) => sum + item.price, 0);
 
     // Crée une session de checkout Stripe
     const session = await stripe.checkout.sessions.create({
@@ -47,10 +111,10 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: 'eur',
             product_data: {
-              name: `Réservation ${roomLabel}`,
+              name: 'Réservation Theranice',
               description: description,
             },
-            unit_amount: Math.round(price * 100), // Stripe attend le montant en centimes
+            unit_amount: Math.round(totalPrice * 100), // Stripe attend le montant en centimes
           },
           quantity: 1,
         },
@@ -61,15 +125,34 @@ export async function POST(request: NextRequest) {
       customer_email: email,
       metadata: {
         userId,
-        dates: JSON.stringify(dates), // Stocke le tableau de dates en JSON
-        date: dates[0], // BACKWARD COMPATIBILITY: Pour les webhooks existants qui attendent 'date'
-        slot,
-        room,
-        price: price.toString(),
+        type: 'cart_checkout',
         nom,
         prenom,
+        // On ne met pas les détails du panier ici pour éviter de dépasser la limite
+        // On se fiera aux réservations en base
       },
     });
+
+    // 2. Insérer les réservations en statut 'pending_payment'
+    const bookingsToInsert = cart.map((item: any) => ({
+      user_id: userId,
+      date: item.date,
+      slot: item.slot,
+      room: item.room,
+      price: item.price,
+      status: 'pending_payment',
+      stripe_session_id: session.id,
+    }));
+
+    const { error: insertError } = await supabase
+      .from('bookings')
+      .insert(bookingsToInsert);
+
+    if (insertError) {
+      console.error('Error creating pending bookings:', insertError);
+      // On pourrait annuler la session Stripe ici, mais c'est complexe
+      return NextResponse.json({ error: 'Erreur lors de la création des réservations' }, { status: 500 });
+    }
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (err) {

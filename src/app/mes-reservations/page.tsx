@@ -12,7 +12,7 @@ const garamond = EB_Garamond({
   weight: ["400", "500", "600", "700"],
 });
 
-type BookingStatus = "confirmed" | "cancelled";
+type BookingStatus = "confirmed" | "cancelled" | "pending_payment" | "conflict" | "conflict_paid";
 type Room = "room1" | "room2" | "large";
 type Slot = "morning" | "afternoon" | "fullday";
 
@@ -153,17 +153,21 @@ export default function MesReservationsPage() {
       case "upcoming":
         return bookings.filter(b => {
           const bookingDate = new Date(b.date + 'T00:00:00');
-          return b.status === 'confirmed' && bookingDate >= now;
+          // Inclut confirmé et en attente de paiement
+          return (b.status === 'confirmed' || b.status === 'pending_payment') && bookingDate >= now;
         });
       case "past":
         return bookings.filter(b => {
           const bookingDate = new Date(b.date + 'T00:00:00');
-          return bookingDate < now;
+          // Les réservations passées ou annulées ou en conflit sont ignorées ici ? 
+          // Généralement on veut voir l'historique des confirmées passées
+          return b.status === 'confirmed' && bookingDate < now;
         });
       case "cancelled":
-        return bookings.filter(b => b.status === 'cancelled');
+        return bookings.filter(b => b.status === 'cancelled' || b.status === 'conflict' || b.status === 'conflict_paid');
       default:
-        return bookings;
+        // Trie par ordre décroissant de date pour 'all'
+        return bookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
   };
 
@@ -288,8 +292,9 @@ export default function MesReservationsPage() {
           <div className="space-y-4">
             {filteredBookings.map((booking) => {
               const isPast = new Date(booking.date + 'T00:00:00') < new Date();
-              const isCancelled = booking.status === 'cancelled';
-              const canCancel = canCancelBooking(booking);
+              const isCancelled = booking.status === 'cancelled' || booking.status === 'conflict' || booking.status === 'conflict_paid';
+              const isPending = booking.status === 'pending_payment';
+              const canCancel = canCancelBooking(booking) && !isPending;
 
               return (
                 <div
@@ -309,12 +314,14 @@ export default function MesReservationsPage() {
                           className={`px-3 py-1 rounded text-sm font-medium ${
                             isCancelled
                               ? 'bg-[#B12F2E] text-white'
+                              : isPending
+                              ? 'bg-yellow-100 text-yellow-800'
                               : isPast
                               ? 'bg-slate-100 text-slate-700'
                               : 'bg-[#56862F] text-white'
                           }`}
                         >
-                          {isCancelled ? 'Annulée' : isPast ? 'Terminée' : 'Confirmée'}
+                          {isCancelled ? 'Annulée' : isPending ? 'Paiement en attente' : isPast ? 'Terminée' : 'Confirmée'}
                         </span>
                       </div>
 

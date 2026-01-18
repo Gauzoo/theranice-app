@@ -263,20 +263,21 @@ export default function AdminDashboard() {
       case "today":
         return bookings.filter(b => {
           const bookingDate = new Date(b.date + 'T00:00:00');
-          return bookingDate.getTime() === today.getTime() && b.status === 'confirmed';
+          return bookingDate.getTime() === today.getTime() && (b.status === 'confirmed' || b.status === 'pending_payment');
         });
       case "upcoming":
         return bookings.filter(b => {
           const bookingDate = new Date(b.date + 'T00:00:00');
-          return bookingDate >= now && b.status === 'confirmed';
+          return bookingDate >= now && (b.status === 'confirmed' || b.status === 'pending_payment');
         });
       case "past":
         return bookings.filter(b => {
           const bookingDate = new Date(b.date + 'T00:00:00');
-          return bookingDate < now;
+          return bookingDate < now && b.status === 'confirmed';
         });
       default:
-        return bookings;
+        // Trie par ordre décroissant de date pour 'all'
+        return bookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
   };
 
@@ -799,12 +800,19 @@ export default function AdminDashboard() {
                         {booking.price}€
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-1 text-xs font-medium ${
+                        <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${
                           booking.status === 'confirmed' 
                             ? 'bg-[#56862F] text-white'
+                            : booking.status === 'pending_payment'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : booking.status === 'conflict' || booking.status === 'conflict_paid'
+                            ? 'bg-red-100 text-red-800'
                             : 'bg-[#B12F2E] text-white'
                         }`}>
-                          {booking.status === 'confirmed' ? 'Validé' : 'Annulée'}
+                          {booking.status === 'confirmed' ? 'Validé' : 
+                           booking.status === 'pending_payment' ? 'En attente' :
+                           booking.status === 'conflict' || booking.status === 'conflict_paid' ? 'Conflit' :
+                           'Annulée'}
                         </span>
                       </td>
                       <td className="px-4 py-3">

@@ -23,6 +23,15 @@ interface Booking {
   room: Room;
 }
 
+interface CartItem {
+  id: string;
+  date: Date;
+  dateStr: string;
+  slot: Slot;
+  room: Room;
+  price: number;
+}
+
 const ROOM_PRICES = {
   room1: 50,
   room2: 50,
@@ -48,6 +57,7 @@ export default function ReservationPage() {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,8 +144,8 @@ export default function ReservationPage() {
     
     // Pour chaque date sélectionnée, au moins un créneau doit être disponible
     return selectedDates.every(date => {
-      const morningAvailable = isSlotAvailable(date, 'morning', room);
-      const afternoonAvailable = isSlotAvailable(date, 'afternoon', room);
+      const morningAvailable = isSlotAvailable(date, 'morning', room) && !isSelectionInCart(date, 'morning', room);
+      const afternoonAvailable = isSlotAvailable(date, 'afternoon', room) && !isSelectionInCart(date, 'afternoon', room);
       return morningAvailable || afternoonAvailable;
     });
   };
@@ -163,13 +173,56 @@ export default function ReservationPage() {
       
       // Si une salle est sélectionnée, vérifie uniquement cette salle
       if (selectedRoom) {
-        return isSlotAvailable(date, slot, selectedRoom);
+        return isSlotAvailable(date, slot, selectedRoom) && !isSelectionInCart(date, slot, selectedRoom);
       }
       
       // Si aucune salle n'est sélectionnée, vérifie s'il existe AU MOINS UNE salle disponible pour ce créneau
       const allRooms: Room[] = ['room1', 'room2', 'large'];
-      return allRooms.some(room => isSlotAvailable(date, slot, room));
+      return allRooms.some(room => isSlotAvailable(date, slot, room) && !isSelectionInCart(date, slot, room));
     });
+  };
+
+  // Vérifie si la sélection est en conflit avec le panier
+  const isSelectionInCart = (date: Date, slot: Slot, room: Room): boolean => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    // On vérifie les conflits avec le panier actuel
+    const cartItemsForDate = cart.filter(item => item.dateStr === dateStr);
+    
+    // Si pas d'item dans le panier pour cette date, pas de conflit
+    if (cartItemsForDate.length === 0) return false;
+
+    // Logique de conflit identique à isSlotAvailable mais sur le panier
+    if (slot === 'fullday') {
+      if (room === 'large') {
+        return cartItemsForDate.length > 0;
+      } else {
+        const roomBooked = cartItemsForDate.some(item => item.room === room);
+        const largeBooked = cartItemsForDate.some(item => item.room === 'large');
+        return roomBooked || largeBooked;
+      }
+    }
+
+    // Si on veut réserver matin ou après-midi
+    const fulldayBooked = cartItemsForDate.some(item => item.slot === 'fullday' && item.room === room);
+    if (fulldayBooked) return true;
+
+    const largeFulldayBooked = cartItemsForDate.some(item => item.slot === 'fullday' && item.room === 'large');
+    if (largeFulldayBooked) return true;
+    
+    const itemsForSlot = cartItemsForDate.filter(item => item.slot === slot);
+
+    if (room === 'large') {
+      return itemsForSlot.length > 0;
+    }
+
+    const roomBooked = itemsForSlot.some(item => item.room === room);
+    const largeBooked = itemsForSlot.some(item => item.room === 'large');
+    
+    return roomBooked || largeBooked;
   };
 
   const handleDateClick = (value: Date) => {
@@ -187,21 +240,62 @@ export default function ReservationPage() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!user) {
-      router.push('/connexion');
-      return;
-    }
-
+  const addToCart = () => {
     if (selectedDates.length === 0 || !selectedRoom || !selectedSlot) {
       setError("Veuillez sélectionner au moins une date, une salle et un créneau");
       return;
     }
 
-    // Vérifie la disponibilité pour toutes les dates
-    const unavailableDate = selectedDates.find(date => !isSlotAvailable(date, selectedSlot, selectedRoom));
+    // Vérifie la disponibilité (DB + Panier)
+    const unavailableDate = selectedDates.find(date => {
+      // 1. Vérifie DB
+      if (!isSlotAvailable(date, selectedSlot, selectedRoom)) return true;
+      // 2. Vérifie Panier
+      if (isSelectionInCart(date, selectedSlot, selectedRoom)) return true;
+      return false;
+    });
+
     if (unavailableDate) {
-      setError(`Le créneau n'est plus disponible pour le ${unavailableDate.toLocaleDateString()}`);
+      setError(`Le créneau n'est plus disponible pour le ${unavailableDate.toLocaleDateString()} (déjà réservé ou dans votre panier)`);
+      return;
+    }
+
+    const newItems: CartItem[] = selectedDates.map(date => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
+      return {
+        id: Math.random().toString(36).substring(7),
+        date: date,
+        dateStr: dateStr,
+        slot: selectedSlot,
+        room: selectedRoom,
+        price: selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom]
+      };
+    });
+
+    setCart([...cart, ...newItems]);
+    // Reset selection
+    setSelectedDates([]);
+    setSelectedRoom(null);
+    setSelectedSlot(null);
+    setError(null);
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(cart.filter(item => item.id !== id));
+  };
+
+  const handleCheckout = async () => {
+    if (!user) {
+      router.push('/connexion');
+      return;
+    }
+
+    if (cart.length === 0) {
+      setError("Votre panier est vide");
       return;
     }
 
@@ -209,23 +303,14 @@ export default function ReservationPage() {
     setError(null);
 
     try {
-      const supabase = createClient();
-      
-      // Prépare les dates au format string YYYY-MM-DD
-      const datesStr = selectedDates.map(date => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      });
-
-      // Récupère les infos utilisateur pour le paiement
-      // Le profil est déjà chargé dans le contexte
-      
-      // Calcule le prix unitaire en fonction du créneau
-      const unitPrice = selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom];
-      // Prix total = prix unitaire * nombre de dates
-      const totalPrice = unitPrice * selectedDates.length;
+      // Prépare le panier pour l'API
+      // On envoie un tableau d'objets simples
+      const cartPayload = cart.map(item => ({
+        date: item.dateStr,
+        slot: item.slot,
+        room: item.room,
+        price: item.price
+      }));
 
       // Crée une session de paiement Stripe
       const response = await fetch('/api/create-checkout-session', {
@@ -233,10 +318,7 @@ export default function ReservationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user.id,
-          dates: datesStr, // Envoie le tableau de dates
-          slot: selectedSlot,
-          room: selectedRoom,
-          price: totalPrice, // Envoie le prix total
+          cart: cartPayload,
           email: user.email,
           nom: profile?.nom || '',
           prenom: profile?.prenom || '',
@@ -249,7 +331,7 @@ export default function ReservationPage() {
         throw new Error(data.error);
       }
 
-      // Redirige vers Stripe Checkout (même fenêtre)
+      // Redirige vers Stripe Checkout
       if (data.url) {
         window.location.href = data.url;
       }
@@ -584,34 +666,103 @@ export default function ReservationPage() {
                 </div>
               </div>
 
-              {/* Total et bouton */}
-              {selectedRoom && (
-                <div className="border-t-2 border-[#333333] pt-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex flex-col">
-                      <span className="text-xl font-semibold text-[#333333]">Total :</span>
-                      {selectedDates.length > 1 && (
-                        <span className="text-sm text-slate-500">
-                          ({selectedDates.length} dates x {selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom]}€)
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-3xl font-bold text-[#D4A373]">
-                      {(selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom]) * (selectedDates.length || 0)}€
+              {/* Bouton Ajouter au panier */}
+              <div className="border-t-2 border-[#333333] pt-6">
+                <button
+                  onClick={addToCart}
+                  disabled={selectedDates.length === 0 || !selectedRoom || !selectedSlot}
+                  className="w-full cursor-pointer bg-[#333333] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+                >
+                  Ajouter à ma sélection
+                </button>
+                {selectedDates.length === 0 ? (
+                  <p className="text-center text-sm text-slate-500">
+                    Sélectionnez d'abord une ou plusieurs dates
+                  </p>
+                ) : !selectedRoom || !selectedSlot ? (
+                  <p className="text-center text-sm text-slate-500">
+                    Sélectionnez une salle et un créneau
+                  </p>
+                ) : (
+                  <div className="flex justify-between items-center text-sm px-2">
+                    <span className="text-slate-600">
+                      {selectedDates.length} date{selectedDates.length > 1 ? 's' : ''} sélectionnée{selectedDates.length > 1 ? 's' : ''}
+                    </span>
+                    <span className="font-semibold text-[#D4A373]">
+                      {(selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom]) * selectedDates.length}€
                     </span>
                   </div>
-
-                  <button
-                    onClick={handleSubmit}
-                    disabled={loading || selectedDates.length === 0 || !selectedRoom || !selectedSlot || selectedDates.some(date => !isSlotAvailable(date, selectedSlot, selectedRoom))}
-                    className="w-full cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? "Réservation en cours..." : user ? "Réserver" : "Se connecter pour réserver"}
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Panier */}
+          {cart.length > 0 && (
+            <div className="mt-16 border-t-2 border-slate-200 pt-8" id="panier">
+              <h3 className="text-2xl font-semibold text-[#333333] mb-6 flex items-center gap-3">
+                <span>Votre panier</span>
+                <span className="bg-[#D4A373] text-white text-sm font-bold px-3 py-1 rounded-full">
+                  {cart.length}
+                </span>
+              </h3>
+              
+              <div className="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden">
+                <div className="divide-y divide-slate-100">
+                  {cart.map((item) => (
+                    <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-6 hover:bg-slate-50 transition-colors">
+                      <div className="flex gap-4 items-center mb-4 sm:mb-0">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-lg text-[#333333] capitalize">
+                            {item.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                          </span>
+                          <span className="text-slate-600 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[#D4A373]"></span>
+                            {ROOM_LABELS[item.room]}
+                            <span className="text-slate-300">|</span>
+                            {item.slot === 'morning' ? 'Matin (8h-12h)' : item.slot === 'afternoon' ? 'Après-midi (13h-17h)' : 'Journée (8h-17h)'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
+                        <span className="font-bold text-[#D4A373] text-xl">
+                          {item.price}€
+                        </span>
+                        <button
+                           onClick={() => removeFromCart(item.id)}
+                           className="text-red-500 hover:text-red-700 font-medium px-4 py-2 bg-white border border-red-100 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2"
+                           title="Retirer du panier"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                          <span className="sm:hidden">Retirer</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-slate-50 p-6 border-t border-slate-100">
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                     <div className="flex flex-col">
+                       <span className="text-slate-500 text-sm">Total à payer</span>
+                       <span className="text-3xl font-bold text-[#333333]">
+                         {cart.reduce((sum, item) => sum + item.price, 0)}€
+                       </span>
+                     </div>
+                     
+                     <button
+                        onClick={handleCheckout}
+                        disabled={loading}
+                        className="w-full sm:w-auto cursor-pointer bg-[#D4A373] px-10 py-4 font-semibold text-lg uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-md hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
+                      >
+                        {loading ? "Chargement..." : "Valider la réservation"}
+                      </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           </>
           )}
         </div>

@@ -42,9 +42,117 @@ export async function POST(request: NextRequest) {
     // Traite l'événement de paiement réussi
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
+      const { type } = session.metadata || {};
 
-      // Récupère les métadonnées de la réservation
+      // VÉRIFICATION CRITIQUE : vérifie la disponibilité côté serveur
+      const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+      const supabase = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      // --- NOUVELLE LOGIQUE PANIER ---
+      if (type === 'cart_checkout') {
+        // 1. Récupérer les réservations en attente
+        const { data: pendingBookings, error: fetchError } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('stripe_session_id', session.id)
+          .eq('status', 'pending_payment');
+
+        if (fetchError || !pendingBookings || pendingBookings.length === 0) {
+          console.error('No pending bookings found for checkout session:', session.id);
+          return NextResponse.json({ error: 'Bookings not found' }, { status: 404 });
+        }
+
+        const results = [];
+
+        // 2. Pour chaque réservation, vérifier qu'elle est toujours libre (Race condition check)
+        for (const booking of pendingBookings) {
+          const { date, slot, room } = booking;
+
+          // Récupère les réservations CONFIRMÉES pour ce jour
+          const { data: confirmedBookings } = await supabase
+            .from('bookings')
+            .select('slot, room')
+            .eq('date', date)
+            .eq('status', 'confirmed');
+
+          let isAvailable = true;
+          const bookings = confirmedBookings || [];
+
+          // Logique de vérification stricte
+          if (slot === 'fullday') {
+            if (room === 'large') {
+              isAvailable = bookings.length === 0;
+            } else {
+              isAvailable = !bookings.some(b => b.room === room || b.room === 'large');
+            }
+          } else {
+            const fulldayBooked = bookings.some(b => b.slot === 'fullday' && (b.room === room || b.room === 'large'));
+            if (fulldayBooked) isAvailable = false;
+            else {
+               const slotBookings = bookings.filter(b => b.slot === slot);
+               if (room === 'large') {
+                 isAvailable = slotBookings.length === 0;
+               } else {
+                 isAvailable = !slotBookings.some(b => b.room === room || b.room === 'large');
+               }
+            }
+          }
+
+          if (isAvailable) {
+            // Confirmer la réservation
+            const { error: updateError } = await supabase
+              .from('bookings')
+              .update({ 
+                status: 'confirmed', 
+                payment_intent_id: session.payment_intent as string 
+              })
+              .eq('id', booking.id);
+
+            if (!updateError) {
+              results.push({ id: booking.id, status: 'confirmed' });
+              
+              // Envoi email confirmation
+              try {
+                await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-confirmation`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    email: session.customer_email,
+                    nom: session.metadata?.nom,
+                    prenom: session.metadata?.prenom,
+                    date,
+                    slot,
+                    room,
+                    price: booking.price,
+                    bookingId: booking.id,
+                  }),
+                });
+              } catch (e) { console.error('Email error', e); }
+
+            } else {
+              results.push({ id: booking.id, status: 'error', error: updateError });
+            }
+          } else {
+            // Conflit détecté
+            console.error('CONFLIT: Réservation payée mais créneau plus disponible', booking);
+            const { error: failError } = await supabase
+              .from('bookings')
+              .update({ status: 'conflict_paid' }) // Statut spécial pour gestion manuelle/remboursement
+              .eq('id', booking.id);
+            
+            results.push({ id: booking.id, status: 'conflict' });
+          }
+        }
+
+        return NextResponse.json({ received: true, results });
+      }
+
+      // --- ANCIENNE LOGIQUE (Fallback) ---
       const { userId, dates: datesJson, date: singleDate, slot, room, price, nom, prenom } = session.metadata || {};
+
 
       let dates: string[] = [];
       if (datesJson) {
