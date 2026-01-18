@@ -172,11 +172,7 @@ export async function POST(request: NextRequest) {
       }
 
       // VÉRIFICATION CRITIQUE : vérifie la disponibilité côté serveur
-      const { createClient: createServiceClient } = await import('@supabase/supabase-js');
-      const supabase = createServiceClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      );
+      // (Supabase client déjà initialisé plus haut)
 
       const unitPrice = parseFloat(price) / dates.length;
       const results = [];
