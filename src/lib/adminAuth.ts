@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 const ADMIN_EMAILS = ['gauthier.guerin@gmail.com'];
 
 export async function checkAdminPermission() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user || !user.email) {
