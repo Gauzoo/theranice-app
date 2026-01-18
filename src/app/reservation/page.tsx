@@ -69,7 +69,7 @@ export default function ReservationPage() {
     const { data } = await supabase
       .from('bookings')
       .select('date, slot, room')
-      .eq('status', 'confirmed');
+      .in('status', ['confirmed', 'pending_payment']);
     
     if (data) {
       setExistingBookings(data);
@@ -476,9 +476,10 @@ export default function ReservationPage() {
                   minDate={new Date()}
                   locale="fr-FR"
                   tileClassName={({ date }) => {
+                    let classes = [];
                     // Vérifie si la date est sélectionnée
                     const isSelected = selectedDates.some(d => d.toDateString() === date.toDateString());
-                    if (isSelected) return 'react-calendar__tile--active';
+                    if (isSelected) classes.push('react-calendar__tile--active');
 
                     // Utilise la date locale au lieu de UTC
                     const year = date.getFullYear();
@@ -487,27 +488,30 @@ export default function ReservationPage() {
                     const dateStr = `${year}-${month}-${day}`;
                     const bookingsForDate = existingBookings.filter(b => b.date === dateStr);
                     
-                    if (bookingsForDate.length === 0) return null;
-                    
-                    // Vérifie si tous les créneaux/salles sont complets
-                    // Pour chaque créneau, vérifie si toutes les salles sont indisponibles
-                    const allRooms: Room[] = ['room1', 'room2', 'large'];
-                    const allSlots: Slot[] = ['morning', 'afternoon'];
-                    
-                    let availableCount = 0;
-                    for (const slot of allSlots) {
-                      for (const room of allRooms) {
-                        if (isSlotAvailable(date, slot, room)) {
-                          availableCount++;
+                    if (bookingsForDate.length > 0) {
+                      // Vérifie si tous les créneaux/salles sont complets
+                      const allRooms: Room[] = ['room1', 'room2', 'large'];
+                      const allSlots: Slot[] = ['morning', 'afternoon'];
+                      
+                      let availableCount = 0;
+                      for (const slot of allSlots) {
+                        for (const room of allRooms) {
+                          if (isSlotAvailable(date, slot, room)) {
+                            availableCount++;
+                          }
                         }
+                      }
+                      
+                      const isFull = availableCount === 0;
+                      
+                      if (isFull) {
+                        classes.push('has-full-booking');
+                      } else {
+                        classes.push('has-booking');
                       }
                     }
                     
-                    // Complet = aucun créneau/salle n'est disponible
-                    const isFull = availableCount === 0;
-                    
-                    if (isFull) return 'has-full-booking';
-                    return 'has-booking';
+                    return classes.length > 0 ? classes.join(' ') : null;
                   }}
                 />
               </div>
@@ -730,11 +734,11 @@ export default function ReservationPage() {
                         </span>
                         <button
                            onClick={() => removeFromCart(item.id)}
-                           className="text-red-500 hover:text-red-700 font-medium px-4 py-2 bg-white border border-red-100 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2"
+                           className="text-[#B12F2E] hover:text-[#8e2524] cursor-pointer transition-colors"
                            title="Retirer du panier"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                          <span className="sm:hidden">Retirer</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                          <span className="sr-only">Retirer</span>
                         </button>
                       </div>
                     </div>
@@ -753,7 +757,7 @@ export default function ReservationPage() {
                      <button
                         onClick={handleCheckout}
                         disabled={loading}
-                        className="w-full sm:w-auto cursor-pointer bg-[#D4A373] px-10 py-4 font-semibold text-lg uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-md hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
+                        className="w-full sm:w-auto cursor-pointer bg-[#D4A373] px-10 py-4 font-semibold text-lg uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-50 disabled:cursor-not-allowed  shadow-md hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
                       >
                         {loading ? "Chargement..." : "Valider la réservation"}
                       </button>

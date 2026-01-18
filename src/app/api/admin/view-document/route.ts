@@ -1,8 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAdminPermission } from '@/lib/adminAuth';
 
 export async function GET(request: NextRequest) {
   try {
+    // Vérification de sécurité CRITIQUE
+    const isAdmin = await checkAdminPermission();
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get('userId');
     const fileType = searchParams.get('fileType'); // 'carte' ou 'kbis'

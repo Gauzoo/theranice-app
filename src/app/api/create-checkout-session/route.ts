@@ -100,8 +100,27 @@ export async function POST(request: NextRequest) {
       ).join(', ');
     }
 
-    // Calcul du prix total
-    const totalPrice = cart.reduce((sum: number, item: any) => sum + item.price, 0);
+
+    const ROOM_PRICES: Record<string, number> = {
+      room1: 50,
+      room2: 50,
+      large: 80,
+    };
+    
+    const FULLDAY_PRICES: Record<string, number> = {
+      room1: 90,
+      room2: 90,
+      large: 140,
+    };
+
+    // Calcul du prix total et validation côté serveur
+    const totalPrice = cart.reduce((sum: number, item: any) => {
+      // Recalcule le prix pour chaque item au lieu de faire confiance au client
+      const expectedPrice = item.slot === 'fullday' 
+        ? FULLDAY_PRICES[item.room] 
+        : ROOM_PRICES[item.room];
+      return sum + (expectedPrice || 0);
+    }, 0);
 
     // Crée une session de checkout Stripe
     const session = await stripe.checkout.sessions.create({
@@ -134,15 +153,21 @@ export async function POST(request: NextRequest) {
     });
 
     // 2. Insérer les réservations en statut 'pending_payment'
-    const bookingsToInsert = cart.map((item: any) => ({
-      user_id: userId,
-      date: item.date,
-      slot: item.slot,
-      room: item.room,
-      price: item.price,
-      status: 'pending_payment',
-      stripe_session_id: session.id,
-    }));
+    const bookingsToInsert = cart.map((item: any) => {
+      const expectedPrice = item.slot === 'fullday' 
+        ? FULLDAY_PRICES[item.room] 
+        : ROOM_PRICES[item.room];
+
+      return {
+        user_id: userId,
+        date: item.date,
+        slot: item.slot,
+        room: item.room,
+        price: expectedPrice, // Utilise le prix sécurisé
+        status: 'pending_payment',
+        stripe_session_id: session.id,
+      };
+    });
 
     const { error: insertError } = await supabase
       .from('bookings')

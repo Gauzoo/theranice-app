@@ -1,8 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { checkAdminPermission } from '@/lib/adminAuth';
 
 export async function POST(request: NextRequest) {
   try {
+    // Vérification de sécurité CRITIQUE
+    const isAdmin = await checkAdminPermission();
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const { userId, documentType, action, notes } = await request.json();
 
     if (!userId || !documentType || !action) {

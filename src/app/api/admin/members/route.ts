@@ -1,8 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { checkAdminPermission } from '@/lib/adminAuth';
 
 export async function GET() {
   try {
+    // Vérification de sécurité CRITIQUE
+    const isAdmin = await checkAdminPermission();
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     // Utilise la service_role_key pour bypasser RLS
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
