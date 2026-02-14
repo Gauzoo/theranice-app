@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
+import { formatPinCode } from '@/lib/nuki';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const { email, nom, prenom, date, slot, room, price, bookingId } = await request.json();
+    const { email, nom, prenom, date, slot, room, price, accessCode } = await request.json();
 
     // Formatage de la date
     const bookingDate = new Date(date + 'T00:00:00');
@@ -35,8 +36,9 @@ export async function POST(request: NextRequest) {
     };
     const roomLabel = roomLabels[room] || room;
 
-    // Code d'accès (simple pour l'instant, on l'améliorera)
-    const accessCode = generateAccessCode(bookingId);
+    // Utilise le code réel Nuki passé par le webhook, ou fallback
+    const displayCode = accessCode ? formatPinCode(accessCode) : 'Code non disponible';
+    const codeAvailable = !!accessCode;
 
     const { data, error } = await resend.emails.send({
       from: 'Theranice <onboarding@resend.dev>', // Domaine de test Resend (gratuit)
@@ -152,15 +154,23 @@ export async function POST(request: NextRequest) {
               </div>
               
               <h3 style="color: #D4A373; margin-top: 30px;">🔐 Votre code d'accès</h3>
-              <p>Utilisez ce code pour accéder à la salle le jour de votre réservation :</p>
+              ${codeAvailable ? `
+              <p>Utilisez ce code sur le clavier à l'entrée pour accéder à la salle le jour de votre réservation :</p>
               
               <div class="access-code">
-                ${accessCode}
+                ${displayCode}
               </div>
               
               <p style="color: #666; font-size: 14px; text-align: center;">
-                ⚠️ Ce code sera actif uniquement le ${formattedDate}
+                ⚠️ Ce code sera actif uniquement le ${formattedDate} pendant votre créneau réservé.
+                <br>Tapez ce code sur le clavier Nuki à l'entrée du local.
               </p>
+              ` : `
+              <p style="color: #B12F2E; text-align: center;">
+                ⚠️ Le code d'accès n'a pas pu être généré automatiquement. 
+                Nous vous contacterons pour vous le communiquer.
+              </p>
+              `}
               
               <div style="text-align: center; margin-top: 30px;">
                 <a href="${process.env.NEXT_PUBLIC_SITE_URL}/mes-reservations" class="button">
@@ -200,11 +210,4 @@ export async function POST(request: NextRequest) {
     console.error('Send email error:', err);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
-}
-
-// Génère un code d'accès unique
-function generateAccessCode(bookingId: string): string {
-  // Prend les 6 premiers caractères de l'ID et les formate
-  const code = bookingId.substring(0, 6).toUpperCase();
-  return code;
 }

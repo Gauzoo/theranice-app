@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { generateUniquePinCode, createNukiKeypadCode, formatPinCode } from '@/lib/nuki';
 
 // Désactive le body parser de Next.js pour Stripe webhooks
 export const dynamic = 'force-dynamic';
@@ -102,19 +103,54 @@ export async function POST(request: NextRequest) {
           }
 
           if (isAvailable) {
-            // Confirmer la réservation
+            // Générer le code PIN Nuki AVANT de confirmer
+            let accessCode: string | null = null;
+            let nukiAuthId: string | null = null;
+            let nukiCodeStatus = 'none';
+
+            try {
+              const pinCode = await generateUniquePinCode(supabase);
+              const authName = `Resa ${booking.id.substring(0, 8)} ${session.metadata?.prenom || ''}`.trim();
+              
+              const nukiResult = await createNukiKeypadCode(
+                authName,
+                pinCode,
+                date,
+                slot
+              );
+
+              if (nukiResult.success) {
+                accessCode = String(pinCode);
+                nukiAuthId = nukiResult.authId || null;
+                nukiCodeStatus = 'active';
+                console.log(`[Nuki] Code ${formatPinCode(pinCode)} created for booking ${booking.id}`);
+              } else {
+                console.error(`[Nuki] Failed to create code for booking ${booking.id}:`, nukiResult.error);
+                // On sauvegarde quand même le code pour référence, statut = error
+                accessCode = String(pinCode);
+                nukiCodeStatus = 'error';
+              }
+            } catch (nukiError) {
+              console.error('[Nuki] Unexpected error:', nukiError);
+              nukiCodeStatus = 'error';
+            }
+
+            // Confirmer la réservation avec le code d'accès
             const { error: updateError } = await supabase
               .from('bookings')
               .update({ 
                 status: 'confirmed', 
-                payment_intent_id: session.payment_intent as string 
+                payment_intent_id: session.payment_intent as string,
+                access_code: accessCode,
+                nuki_auth_id: nukiAuthId,
+                nuki_code_status: nukiCodeStatus,
               })
               .eq('id', booking.id);
 
             if (!updateError) {
-              results.push({ id: booking.id, status: 'confirmed' });
+              results.push({ id: booking.id, status: 'confirmed', accessCode });
               
-              // Envoi email confirmation
+              // Envoi email confirmation avec le vrai code
               try {
                 await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-confirmation`, {
                   method: 'POST',
@@ -128,6 +164,7 @@ export async function POST(request: NextRequest) {
                     room,
                     price: booking.price,
                     bookingId: booking.id,
+                    accessCode: accessCode,
                   }),
                 });
               } catch (e) { console.error('Email error', e); }
@@ -228,6 +265,30 @@ export async function POST(request: NextRequest) {
         }
         
         // Crée la réservation dans Supabase avec service_role (bypass RLS)
+        // Générer le code PIN Nuki
+        let accessCode: string | null = null;
+        let nukiAuthId: string | null = null;
+        let nukiCodeStatus = 'none';
+
+        try {
+          const pinCode = await generateUniquePinCode(supabase);
+          const authName = `Resa ${nom || ''} ${prenom || ''}`.trim().substring(0, 32);
+          
+          const nukiResult = await createNukiKeypadCode(authName, pinCode, date, slot);
+
+          if (nukiResult.success) {
+            accessCode = String(pinCode);
+            nukiAuthId = nukiResult.authId || null;
+            nukiCodeStatus = 'active';
+          } else {
+            accessCode = String(pinCode);
+            nukiCodeStatus = 'error';
+          }
+        } catch (nukiError) {
+          console.error('[Nuki] Error in legacy flow:', nukiError);
+          nukiCodeStatus = 'error';
+        }
+
         const { data: bookingData, error: bookingError } = await supabase
           .from('bookings')
           .insert({
@@ -238,6 +299,9 @@ export async function POST(request: NextRequest) {
             price: unitPrice,
             status: 'confirmed',
             payment_intent_id: session.payment_intent as string,
+            access_code: accessCode,
+            nuki_auth_id: nukiAuthId,
+            nuki_code_status: nukiCodeStatus,
           })
           .select()
           .single();
@@ -264,6 +328,7 @@ export async function POST(request: NextRequest) {
               room,
               price: unitPrice,
               bookingId: bookingData.id,
+              accessCode: accessCode,
             }),
           });
         } catch (emailError) {

@@ -24,6 +24,8 @@ interface Booking {
   price: number;
   status: BookingStatus;
   created_at: string;
+  access_code: string | null;
+  nuki_code_status: string | null;
 }
 
 const ROOM_LABELS = {
@@ -82,53 +84,54 @@ export default function MesReservationsPage() {
     }
 
     setCancellingId(bookingId);
-    const supabase = createClient();
     
-    // Récupère les infos de la réservation avant de l'annuler
-    const { data: booking } = await supabase
-      .from('bookings')
-      .select('date, slot, room')
-      .eq('id', bookingId)
-      .single();
-    
-    const { error } = await supabase
-      .from('bookings')
-      .update({ status: 'cancelled' })
-      .eq('id', bookingId);
-    
-    if (error) {
-      console.error('Error cancelling booking:', error);
+    try {
+      // Appelle l'API serveur qui gère l'annulation + révocation du code Nuki
+      const response = await fetch('/api/cancel-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result.error || "Erreur lors de l'annulation");
+      } else {
+        // Récupère les infos pour l'email d'annulation
+        const supabase = createClient();
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('nom, prenom')
+          .eq('id', user?.id)
+          .single();
+
+        // Envoie l'email d'annulation
+        try {
+          await fetch('/api/send-cancellation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: user?.email,
+              nom: profile?.nom || '',
+              prenom: profile?.prenom || '',
+              date: result.booking?.date,
+              slot: result.booking?.slot,
+              room: result.booking?.room,
+            })
+          });
+        } catch (emailError) {
+          console.error('Erreur envoi email:', emailError);
+        }
+
+        // Rafraîchir la liste
+        if (user) {
+          fetchBookings(user.id);
+        }
+      }
+    } catch (err) {
+      console.error('Error cancelling booking:', err);
       alert("Erreur lors de l'annulation de la réservation");
-    } else {
-      // Récupère les infos utilisateur pour l'email
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('nom, prenom')
-        .eq('id', user?.id)
-        .single();
-
-      // Envoie l'email d'annulation
-      try {
-        await fetch('/api/send-cancellation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: user?.email,
-            nom: profile?.nom || '',
-            prenom: profile?.prenom || '',
-            date: booking?.date,
-            slot: booking?.slot,
-            room: booking?.room
-          })
-        });
-      } catch (emailError) {
-        console.error('Erreur envoi email:', emailError);
-      }
-
-      // Rafraîchir la liste
-      if (user) {
-        fetchBookings(user.id);
-      }
     }
     
     setCancellingId(null);
@@ -339,6 +342,29 @@ export default function MesReservationsPage() {
                           <span>{booking.price}€</span>
                         </div>
                       </div>
+
+                      {/* Code d'accès Nuki */}
+                      {booking.status === 'confirmed' && !isPast && booking.access_code && booking.nuki_code_status === 'active' && (
+                        <div className="mt-4 bg-[#FEFAE0] border border-[#D4A373] rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg">🔐</span>
+                            <span className="font-semibold text-[#333333]">Code d&apos;accès</span>
+                          </div>
+                          <div className="text-2xl font-bold tracking-[0.2em] text-[#D4A373] text-center py-2">
+                            {`${booking.access_code.slice(0, 3)} ${booking.access_code.slice(3)}`}
+                          </div>
+                          <p className="text-xs text-slate-500 text-center mt-1">
+                            Tapez ce code sur le clavier à l&apos;entrée du local
+                          </p>
+                        </div>
+                      )}
+                      {booking.status === 'confirmed' && !isPast && booking.nuki_code_status === 'error' && (
+                        <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                          <p className="text-sm text-red-700">
+                            ⚠️ Le code d&apos;accès n&apos;a pas pu être généré. Veuillez nous contacter.
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Actions */}

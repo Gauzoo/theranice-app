@@ -20,6 +20,9 @@ interface Booking {
   price: number;
   status: string;
   created_at: string;
+  access_code: string | null;
+  nuki_code_status: string | null;
+  nuki_auth_id: string | null;
   profiles?: {
     nom: string;
     prenom: string;
@@ -297,16 +300,17 @@ export default function AdminDashboard() {
     }
 
     try {
-      const supabase = createClient();
-      
-      const { data, error } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('id', bookingId)
-        .select();
+      // Appelle l'API serveur qui gère la suppression + révocation du code Nuki
+      const response = await fetch('/api/admin/delete-booking', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId }),
+      });
 
-      if (error) {
-        alert('Erreur lors de la suppression : ' + error.message);
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert('Erreur lors de la suppression : ' + (result.error || 'Erreur inconnue'));
       } else {
         // Suppression immédiate de la liste locale pour feedback instantané
         setBookings(prev => prev.filter(b => b.id !== bookingId));
@@ -773,6 +777,7 @@ export default function AdminDashboard() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Client</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Contact</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Prix</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Code</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Statut</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Actions</th>
                   </tr>
@@ -798,6 +803,17 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-4 py-3 text-sm font-semibold text-[#D4A373]">
                         {booking.price}€
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {booking.access_code && booking.nuki_code_status === 'active' ? (
+                          <span className="font-mono font-semibold text-[#56862F]" title={`Auth ID: ${booking.nuki_auth_id || 'N/A'}`}>
+                            {`${booking.access_code.slice(0, 3)} ${booking.access_code.slice(3)}`}
+                          </span>
+                        ) : booking.nuki_code_status === 'error' ? (
+                          <span className="text-[#B12F2E]" title="Erreur lors de la création du code Nuki">⚠️ Erreur</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${
