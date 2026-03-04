@@ -25,7 +25,7 @@ export async function GET() {
     // Récupère tous les membres avec les champs de validation
     const { data: members, error } = await supabaseAdmin
       .from('profiles')
-      .select('id, nom, prenom, telephone, created_at, account_status, activite_exercee, carte_identite_url, kbis_url, carte_identite_status, kbis_status, carte_identite_rejection_notes, kbis_rejection_notes, documents_submitted_at, validation_notes')
+      .select('id, nom, prenom, telephone, created_at, account_status, activite_exercee, carte_identite_url, kbis_url, rc_pro_url, carte_identite_status, kbis_status, rc_pro_status, carte_identite_rejection_notes, kbis_rejection_notes, rc_pro_rejection_notes, documents_submitted_at, validation_notes')
       .order('created_at', { ascending: false });
 
     if (error) {

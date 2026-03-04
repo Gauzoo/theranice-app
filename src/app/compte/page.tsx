@@ -15,6 +15,7 @@ export default function ComptePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -41,6 +42,13 @@ export default function ComptePage() {
     // Vérification de la longueur du mot de passe
     if (password.length < 6) {
       setError("Le mot de passe doit contenir au moins 6 caractères");
+      setLoading(false);
+      return;
+    }
+
+    // Vérification de l'acceptation des CGU
+    if (!acceptedTerms) {
+      setError("Vous devez accepter les Conditions Générales et le Règlement Intérieur pour vous inscrire.");
       setLoading(false);
       return;
     }
@@ -75,10 +83,11 @@ export default function ComptePage() {
 
       if (data.user) {
         setSuccess(true);
-        // Rediriger vers la page d'accueil après 2 secondes
+        // Rediriger vers la page profil pour compléter les documents
         setTimeout(() => {
-          router.push("/");
-        }, 2000);
+          router.push("/profil");
+          router.refresh();
+        }, 3000);
       }
     } catch (err) {
       const error = err as Error;
@@ -126,7 +135,7 @@ export default function ComptePage() {
 
           {success && (
             <div className="bg-[#56862F] border border-[#56862F] text-white px-4 py-3 rounded mb-6">
-              Compte créé avec succès ! Vérifiez votre email pour confirmer votre inscription.
+              Compte créé avec succès ! Vous allez être redirigé vers votre profil pour compléter vos documents.
             </div>
           )}
           
@@ -240,11 +249,38 @@ export default function ComptePage() {
               </div>
             </div>
 
+            {/* Acceptation des CGU */}
+            <div className="border border-slate-200 rounded p-4 bg-slate-50">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-1 h-5 w-5 rounded border-slate-300 text-[#D4A373] focus:ring-[#D4A373] cursor-pointer accent-[#D4A373]"
+                />
+                <span className="text-sm text-slate-700 leading-relaxed">
+                  J&apos;ai lu et j&apos;accepte les{" "}
+                  <a href="/conditions-generales" target="_blank" className="text-[#D4A373] underline hover:text-[#c49363] font-medium">
+                    Conditions Générales de Mise à Disposition
+                  </a>
+                  , le{" "}
+                  <a href="/reglement-interieur" target="_blank" className="text-[#D4A373] underline hover:text-[#c49363] font-medium">
+                    Règlement Intérieur
+                  </a>
+                  {" "}et la{" "}
+                  <a href="/politique-confidentialite" target="_blank" className="text-[#D4A373] underline hover:text-[#c49363] font-medium">
+                    Politique de Confidentialité
+                  </a>
+                  . <span className="text-red-500">*</span>
+                </span>
+              </label>
+            </div>
+
             {/* Bouton Créer mon compte */}
             <div className="flex justify-center pt-4">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !acceptedTerms}
                 className="cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? "Création en cours..." : "Créer mon compte"}

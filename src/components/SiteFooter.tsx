@@ -52,6 +52,11 @@ export default function SiteFooter() {
                   Conditions générales
                 </Link>
               </li>
+              <li>
+                <Link href="/reglement-interieur" className="hover:text-[#D4A373] transition-colors">
+                  Règlement intérieur
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

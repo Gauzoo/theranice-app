@@ -19,9 +19,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!['carte', 'kbis'].includes(documentType)) {
+    if (!['carte', 'kbis', 'rc_pro'].includes(documentType)) {
       return NextResponse.json(
-        { error: 'documentType doit être "carte" ou "kbis"' },
+        { error: 'documentType doit être "carte", "kbis" ou "rc_pro"' },
         { status: 400 }
       );
     }
@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    const statusField = documentType === 'carte' ? 'carte_identite_status' : 'kbis_status';
-    const notesField = documentType === 'carte' ? 'carte_identite_rejection_notes' : 'kbis_rejection_notes';
+    const statusField = documentType === 'carte' ? 'carte_identite_status' : documentType === 'kbis' ? 'kbis_status' : 'rc_pro_status';
+    const notesField = documentType === 'carte' ? 'carte_identite_rejection_notes' : documentType === 'kbis' ? 'kbis_rejection_notes' : 'rc_pro_rejection_notes';
     const newStatus = action === 'approve' ? 'approved' : 'rejected';
 
     const updateData: Record<string, string | null> = {
@@ -73,19 +73,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier si les deux documents sont approuvés pour mettre à jour account_status
+    // Vérifier si les trois documents sont approuvés pour mettre à jour account_status
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('carte_identite_status, kbis_status')
+      .select('carte_identite_status, kbis_status, rc_pro_status')
       .eq('id', userId)
       .single();
 
     if (profile) {
-      const bothApproved = profile.carte_identite_status === 'approved' && profile.kbis_status === 'approved';
-      const anyRejected = profile.carte_identite_status === 'rejected' || profile.kbis_status === 'rejected';
+      const allApproved = profile.carte_identite_status === 'approved' && profile.kbis_status === 'approved' && profile.rc_pro_status === 'approved';
+      const anyRejected = profile.carte_identite_status === 'rejected' || profile.kbis_status === 'rejected' || profile.rc_pro_status === 'rejected';
 
       let accountStatus = 'documents_submitted';
-      if (bothApproved) {
+      if (allApproved) {
         accountStatus = 'approved';
       } else if (anyRejected) {
         accountStatus = 'rejected';
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
         .from('profiles')
         .update({ 
           account_status: accountStatus,
-          validated_at: bothApproved ? new Date().toISOString() : null
+          validated_at: allApproved ? new Date().toISOString() : null
         })
         .eq('id', userId);
     }

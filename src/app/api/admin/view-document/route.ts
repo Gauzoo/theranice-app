@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!['carte', 'kbis'].includes(fileType)) {
+    if (!['carte', 'kbis', 'rc_pro'].includes(fileType)) {
       return NextResponse.json(
-        { error: 'fileType doit être "carte" ou "kbis"' },
+        { error: 'fileType doit être "carte", "kbis" ou "rc_pro"' },
         { status: 400 }
       );
     }
@@ -61,8 +61,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Trouve le fichier correspondant (carte-identite.* ou kbis.*)
-    const prefix = fileType === 'carte' ? 'carte-identite' : 'kbis';
+    // Trouve le fichier correspondant (carte-identite.* ou kbis.* ou rc-pro.*)
+    const prefix = fileType === 'carte' ? 'carte-identite' : fileType === 'kbis' ? 'kbis' : 'rc-pro';
     const file = files.find(f => f.name.startsWith(prefix));
 
     if (!file) {

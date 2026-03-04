@@ -47,10 +47,13 @@ interface PendingValidation extends Member {
   activite_exercee?: string;
   carte_identite_url?: string;
   kbis_url?: string;
+  rc_pro_url?: string;
   carte_identite_status?: string | null;
   kbis_status?: string | null;
+  rc_pro_status?: string | null;
   carte_identite_rejection_notes?: string;
   kbis_rejection_notes?: string;
+  rc_pro_rejection_notes?: string;
   documents_submitted_at?: string;
   validation_notes?: string;
 }
@@ -151,6 +154,7 @@ export default function AdminDashboard() {
           const hasDocumentsToValidate = 
             m.carte_identite_status === 'pending' || 
             m.kbis_status === 'pending' ||
+            m.rc_pro_status === 'pending' ||
             m.account_status === 'documents_submitted' || 
             m.account_status === 'pending';
           return hasDocumentsToValidate;
@@ -495,8 +499,8 @@ export default function AdminDashboard() {
     setShowValidationModal(true);
   };
 
-  const handleValidateDocument = async (userId: string, documentType: 'carte' | 'kbis', action: 'approve' | 'reject') => {
-    const docName = documentType === 'carte' ? 'Carte d\'identité' : 'KBIS';
+  const handleValidateDocument = async (userId: string, documentType: 'carte' | 'kbis' | 'rc_pro', action: 'approve' | 'reject') => {
+    const docName = documentType === 'carte' ? 'Carte d\'identité' : documentType === 'kbis' ? 'KBIS' : 'RC Pro';
     
     if (action === 'reject') {
       const notes = prompt(`Raison du refus du ${docName} :`);
@@ -992,6 +996,47 @@ export default function AdminDashboard() {
                             </div>
                           ) : (
                             <span className="text-slate-400 text-sm">Pas de KBIS</span>
+                          )}
+
+                          {/* RC Pro */}
+                          {validation.rc_pro_url ? (
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={`/api/admin/view-document?userId=${validation.id}&fileType=rc_pro`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#D4A373] hover:text-[#c49363] text-sm underline"
+                              >
+                                RC Pro
+                              </a>
+                              {validation.rc_pro_status === 'pending' && (
+                                <>
+                                  <span className="bg-orange-100 text-orange-800 px-2 py-1 text-xs font-semibold">En attente</span>
+                                  <button
+                                    onClick={() => handleValidateDocument(validation.id, 'rc_pro', 'approve')}
+                                    className="bg-[#56862F] hover:bg-[#456d25] text-white px-2 py-0.5 text-xs cursor-pointer"
+                                    title="Valider"
+                                  >
+                                    OK
+                                  </button>
+                                  <button
+                                    onClick={() => handleValidateDocument(validation.id, 'rc_pro', 'reject')}
+                                    className="bg-[#B12F2E] hover:bg-[#8e2424] text-white px-2 py-0.5 text-xs cursor-pointer"
+                                    title="Rejeter"
+                                  >
+                                    X
+                                  </button>
+                                </>
+                              )}
+                              {validation.rc_pro_status === 'approved' && (
+                                <span className="bg-[#56862F] text-white px-2 py-0.5 text-xs">Validé</span>
+                              )}
+                              {validation.rc_pro_status === 'rejected' && (
+                                <span className="bg-[#B12F2E] text-white px-2 py-0.5 text-xs">X Refusé</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-sm">Pas de RC Pro</span>
                           )}
                         </div>
                       </td>

@@ -56,15 +56,19 @@ export default function ProfilPage() {
     account_status: "pending" as AccountStatus,
     carte_identite_url: "",
     kbis_url: "",
+    rc_pro_url: "",
     carte_identite_status: null as string | null,
     kbis_status: null as string | null,
+    rc_pro_status: null as string | null,
     carte_identite_rejection_notes: "",
     kbis_rejection_notes: "",
+    rc_pro_rejection_notes: "",
     validation_notes: "",
   });
 
   const [carteIdentiteFile, setCarteIdentiteFile] = useState<File | null>(null);
   const [kbisFile, setKbisFile] = useState<File | null>(null);
+  const [rcProFile, setRcProFile] = useState<File | null>(null);
 
   // Récupère les données de l'utilisateur au chargement
   useEffect(() => {
@@ -95,10 +99,13 @@ export default function ProfilPage() {
           account_status: profile.account_status || "pending",
           carte_identite_url: profile.carte_identite_url || "",
           kbis_url: profile.kbis_url || "",
+          rc_pro_url: profile.rc_pro_url || "",
           carte_identite_status: profile.carte_identite_status || null,
           kbis_status: profile.kbis_status || null,
+          rc_pro_status: profile.rc_pro_status || null,
           carte_identite_rejection_notes: profile.carte_identite_rejection_notes || "",
           kbis_rejection_notes: profile.kbis_rejection_notes || "",
+          rc_pro_rejection_notes: profile.rc_pro_rejection_notes || "",
           validation_notes: profile.validation_notes || "",
         });
       } else {
@@ -121,7 +128,7 @@ export default function ProfilPage() {
     });
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'carte' | 'kbis') => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'carte' | 'kbis' | 'rc_pro') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -140,8 +147,10 @@ export default function ProfilPage() {
 
     if (type === 'carte') {
       setCarteIdentiteFile(file);
-    } else {
+    } else if (type === 'kbis') {
       setKbisFile(file);
+    } else {
+      setRcProFile(file);
     }
     setError(null);
 
@@ -152,7 +161,7 @@ export default function ProfilPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Utilisateur non connecté");
 
-      const documentType = type === 'carte' ? 'carte-identite' : 'kbis';
+      const documentType = type === 'carte' ? 'carte-identite' : type === 'kbis' ? 'kbis' : 'rc-pro';
       const fileUrl = await uploadDocument(file, documentType);
 
       // Mettre à jour le profil avec la nouvelle URL ET le statut 'pending'
@@ -162,10 +171,16 @@ export default function ProfilPage() {
             carte_identite_status: 'pending',
             carte_identite_rejection_notes: null
           }
-        : { 
+        : type === 'kbis'
+        ? { 
             kbis_url: fileUrl,
             kbis_status: 'pending',
             kbis_rejection_notes: null
+          }
+        : {
+            rc_pro_url: fileUrl,
+            rc_pro_status: 'pending',
+            rc_pro_rejection_notes: null
           };
 
       const { error: updateError } = await supabase
@@ -184,18 +199,26 @@ export default function ProfilPage() {
               carte_identite_status: 'pending',
               carte_identite_rejection_notes: ""
             }
-          : { 
+          : type === 'kbis'
+          ? { 
               kbis_url: fileUrl,
               kbis_status: 'pending',
               kbis_rejection_notes: ""
+            }
+          : {
+              rc_pro_url: fileUrl,
+              rc_pro_status: 'pending',
+              rc_pro_rejection_notes: ""
             })
       }));
 
       // Réinitialiser le fichier sélectionné
       if (type === 'carte') {
         setCarteIdentiteFile(null);
-      } else {
+      } else if (type === 'kbis') {
         setKbisFile(null);
+      } else {
+        setRcProFile(null);
       }
 
       setSuccess(true);
@@ -292,8 +315,8 @@ export default function ProfilPage() {
     }
   };
 
-  const handleUploadDocument = async (type: 'carte' | 'kbis') => {
-    const file = type === 'carte' ? carteIdentiteFile : kbisFile;
+  const handleUploadDocument = async (type: 'carte' | 'kbis' | 'rc_pro') => {
+    const file = type === 'carte' ? carteIdentiteFile : type === 'kbis' ? kbisFile : rcProFile;
     if (!file) return;
 
     setUploadingDoc(true);
@@ -304,7 +327,7 @@ export default function ProfilPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Utilisateur non connecté");
 
-      const documentType = type === 'carte' ? 'carte-identite' : 'kbis';
+      const documentType = type === 'carte' ? 'carte-identite' : type === 'kbis' ? 'kbis' : 'rc-pro';
       const fileUrl = await uploadDocument(file, documentType);
 
       // Mettre à jour le profil avec la nouvelle URL ET le statut 'pending'
@@ -314,10 +337,16 @@ export default function ProfilPage() {
             carte_identite_status: 'pending',
             carte_identite_rejection_notes: null
           }
-        : { 
+        : type === 'kbis'
+        ? { 
             kbis_url: fileUrl,
             kbis_status: 'pending',
             kbis_rejection_notes: null
+          }
+        : {
+            rc_pro_url: fileUrl,
+            rc_pro_status: 'pending',
+            rc_pro_rejection_notes: null
           };
 
       const { error: updateError } = await supabase
@@ -336,18 +365,26 @@ export default function ProfilPage() {
               carte_identite_status: 'pending',
               carte_identite_rejection_notes: ""
             }
-          : { 
+          : type === 'kbis'
+          ? { 
               kbis_url: fileUrl,
               kbis_status: 'pending',
               kbis_rejection_notes: ""
+            }
+          : {
+              rc_pro_url: fileUrl,
+              rc_pro_status: 'pending',
+              rc_pro_rejection_notes: ""
             })
       }));
 
       // Réinitialiser le fichier sélectionné
       if (type === 'carte') {
         setCarteIdentiteFile(null);
-      } else {
+      } else if (type === 'kbis') {
         setKbisFile(null);
+      } else {
+        setRcProFile(null);
       }
 
       setSuccess(true);
@@ -361,7 +398,7 @@ export default function ProfilPage() {
     }
   };
 
-  const uploadDocument = async (file: File, documentType: 'carte-identite' | 'kbis'): Promise<string> => {
+  const uploadDocument = async (file: File, documentType: 'carte-identite' | 'kbis' | 'rc-pro'): Promise<string> => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -387,7 +424,7 @@ export default function ProfilPage() {
   };
 
   const handleSubmitDocuments = async () => {
-    if (!carteIdentiteFile && !kbisFile && !formData.activite_exercee) {
+    if (!carteIdentiteFile && !kbisFile && !rcProFile && !formData.activite_exercee) {
       setError("Veuillez remplir au moins un champ");
       return;
     }
@@ -402,6 +439,7 @@ export default function ProfilPage() {
 
       let carteUrl = formData.carte_identite_url;
       let kbisUrl = formData.kbis_url;
+      let rcProUrl = formData.rc_pro_url;
 
       // Upload des fichiers si présents
       if (carteIdentiteFile) {
@@ -410,9 +448,12 @@ export default function ProfilPage() {
       if (kbisFile) {
         kbisUrl = await uploadDocument(kbisFile, 'kbis');
       }
+      if (rcProFile) {
+        rcProUrl = await uploadDocument(rcProFile, 'rc-pro');
+      }
 
       // Déterminer le nouveau statut
-      const hasAllDocuments = (carteUrl && kbisUrl && formData.activite_exercee);
+      const hasAllDocuments = (carteUrl && kbisUrl && rcProUrl && formData.activite_exercee);
       const newStatus: AccountStatus = hasAllDocuments ? 'documents_submitted' : 'pending';
 
       console.log('📤 Données AVANT UPDATE:', {
@@ -429,6 +470,7 @@ export default function ProfilPage() {
           activite_exercee: formData.activite_exercee,
           carte_identite_url: carteUrl,
           kbis_url: kbisUrl,
+          rc_pro_url: rcProUrl,
           account_status: newStatus,
           documents_submitted_at: hasAllDocuments ? new Date().toISOString() : null,
         })
@@ -450,10 +492,12 @@ export default function ProfilPage() {
         account_status: newStatus,
         carte_identite_url: carteUrl || "",
         kbis_url: kbisUrl || "",
+        rc_pro_url: rcProUrl || "",
       }));
 
       setCarteIdentiteFile(null);
       setKbisFile(null);
+      setRcProFile(null);
       setSuccess(true);
 
       // Envoyer l'email à l'admin si tous les documents sont soumis
@@ -471,7 +515,6 @@ export default function ProfilPage() {
           });
         } catch (emailError) {
           console.error('Erreur lors de l\'envoi de l\'email admin:', emailError);
-          // Ne pas bloquer le processus si l'email échoue
         }
       }
 
@@ -889,6 +932,98 @@ export default function ProfilPage() {
               <p className="text-xs text-slate-500 mt-1">Format accepté : PDF, JPG, PNG (max 5 MB)</p>
             </div>
 
+            {/* Responsabilité Civile Professionnelle */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-900">
+                Attestation RC Professionnelle <span className="text-red-500">*</span>
+              </label>
+              {formData.rc_pro_url ? (
+                <div className="mt-2">
+                  {formData.rc_pro_rejection_notes && formData.rc_pro_status === 'rejected' && (
+                    <div className="bg-[#B12F2E] border border-[#B12F2E] rounded p-3 mb-3 text-sm text-white">
+                      <strong>Raison du refus :</strong> {formData.rc_pro_rejection_notes}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <a
+                      href={formData.rc_pro_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-800 underline font-medium"
+                    >
+                      {(() => {
+                        const urlParts = formData.rc_pro_url.split('/');
+                        const fileNameWithParams = urlParts[urlParts.length - 1];
+                        const fileName = fileNameWithParams.split('?')[0];
+                        const parts = fileName.split('-');
+                        if (parts.length >= 3) {
+                          return parts.slice(2).join('-');
+                        }
+                        return fileName;
+                      })()}
+                    </a>
+                    {formData.rc_pro_status !== 'approved' && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteDocument('rc_pro')}
+                        className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
+                        title="Supprimer le document"
+                      >
+                        X
+                      </button>
+                    )}
+                    {formData.rc_pro_status === 'pending' && (
+                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 text-sm font-medium">
+                        Document en attente de validation
+                      </span>
+                    )}
+                    {formData.rc_pro_status === 'approved' && (
+                      <span className="bg-[#56862F] text-white px-3 py-1 text-sm font-medium">
+                        Document validé
+                      </span>
+                    )}
+                    {formData.rc_pro_status === 'rejected' && (
+                      <span className="bg-[#B12F2E] text-white px-3 py-1 text-sm font-medium">
+                        X Document refusé
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2 flex items-center gap-4">
+                  <input
+                    type="file"
+                    id="rc-pro-input"
+                    onChange={(e) => handleFileChange(e, 'rc_pro')}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="rc-pro-input"
+                    className="cursor-pointer bg-[#D4A373] px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363]"
+                  >
+                    Ajouter un fichier
+                  </label>
+                  {rcProFile && (
+                    <>
+                      <span className="text-sm text-[#56862F] font-medium">
+                        ✓ {rcProFile.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleUploadDocument('rc_pro')}
+                        disabled={uploadingDoc}
+                        className="cursor-pointer bg-[#56862F] px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#456d25] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {uploadingDoc ? 'Upload...' : 'Upload'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+              <p className="text-xs text-slate-500 mt-1">Format accepté : PDF, JPG, PNG (max 5 MB)</p>
+            </div>
+
             {/* Boutons pour les informations personnelles - visible uniquement en mode édition */}
             {isEditing && (
               <div className="flex justify-center gap-4 pt-4">
@@ -898,6 +1033,7 @@ export default function ProfilPage() {
                     setIsEditing(false);
                     setCarteIdentiteFile(null);
                     setKbisFile(null);
+                    setRcProFile(null);
                   }}
                   className="cursor-pointer bg-slate-300 px-8 py-3 font-semibold uppercase tracking-wide text-slate-700 transition-colors hover:bg-slate-400"
                 >

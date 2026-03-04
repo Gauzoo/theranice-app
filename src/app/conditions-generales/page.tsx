@@ -257,7 +257,23 @@ export default function ConditionsGeneralesPage() {
 
             {/* Article 13 */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ Article 13 – Suspension / Résiliation
+              ▸ Article 13 – Engagements du professionnel
+            </h2>
+            <p className="mb-4">
+              En validant son inscription et en procédant à une réservation, le professionnel reconnaît et accepte expressément les engagements suivants :
+            </p>
+            <ul className="list-disc pl-6 mb-6 space-y-3">
+              <li>Il reconnaît que la réservation ne constitue pas un bail au sens de la législation sur les baux commerciaux, professionnels ou d&apos;habitation.</li>
+              <li>Il certifie être assuré(e) en responsabilité civile professionnelle pour l&apos;activité exercée dans les locaux.</li>
+              <li>Il reconnaît avoir pris connaissance et accepter les présentes Conditions de Mise à Disposition.</li>
+              <li>Il reconnaît avoir pris connaissance et accepter le Règlement Intérieur THÉRANICE.</li>
+              <li>Il reconnaît avoir pris connaissance de la Politique de Confidentialité.</li>
+              <li>Il s&apos;engage à indemniser toute dégradation causée aux locaux, mobilier ou équipements pendant sa période d&apos;occupation.</li>
+            </ul>
+
+            {/* Article 14 */}
+            <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
+              ▸ Article 14 – Suspension / Résiliation
             </h2>
             <p className="mb-4">
               Tout manquement aux présentes conditions ou au Règlement Intérieur pourra entraîner :
