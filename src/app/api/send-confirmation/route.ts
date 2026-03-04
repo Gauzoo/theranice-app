@@ -36,6 +36,14 @@ export async function POST(request: NextRequest) {
     };
     const roomLabel = roomLabels[room] || room;
 
+    // Horaires d'accès par créneau (avec 30 min de marge)
+    const slotAccessTimes: Record<string, string> = {
+      morning: '7h30 – 12h30',
+      afternoon: '12h30 – 17h30',
+      fullday: '7h30 – 17h30',
+    };
+    const accessTimeLabel = slotAccessTimes[slot] || '';
+
     // Utilise le code réel Nuki passé par le webhook, ou fallback
     const displayCode = accessCode ? formatPinCode(accessCode) : 'Code non disponible';
     const codeAvailable = !!accessCode;
@@ -162,8 +170,10 @@ export async function POST(request: NextRequest) {
               </div>
               
               <p style="color: #666; font-size: 14px; text-align: center;">
-                ⚠️ Ce code sera actif uniquement le ${formattedDate} pendant votre créneau réservé.
-                <br>Tapez ce code sur le clavier Nuki à l'entrée du local.
+                ⏰ <strong>Code valide le ${formattedDate} de ${accessTimeLabel}</strong>
+                <br><br>
+                Tapez ce code à 6 chiffres sur le clavier Nuki à l'entrée du local.
+                <br>Le code sera automatiquement désactivé après votre créneau.
               </p>
               ` : `
               <p style="color: #B12F2E; text-align: center;">

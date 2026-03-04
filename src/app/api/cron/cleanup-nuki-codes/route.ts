@@ -2,11 +2,20 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { deleteNukiKeypadCode } from '@/lib/nuki';
 
-// Cette route peut être appelée par un cron job (ex: Vercel Cron)
-// pour révoquer les codes Nuki des réservations expirées.
-// Protégée par un secret dans l'en-tête Authorization.
+// Cette route est appelée par Vercel Cron toutes les heures.
+// Elle révoque les codes Nuki des réservations dont le créneau est terminé.
+// Puisque l'abonnement Nuki B2C INACTIVE ne supporte pas les restrictions
+// temporelles natives (allowedFromDate, allowedUntilDate, etc. sont ignorés),
+// cette suppression logicielle est le seul moyen de limiter la validité des codes.
 
-export async function POST(request: Request) {
+// Heure de fin par créneau (avec 30 min de marge)
+const SLOT_END_HOURS: Record<string, number> = {
+  morning: 13,    // matin finit à 12h → on révoque à 13h
+  afternoon: 18,  // après-midi finit à 17h → on révoque à 18h
+  fullday: 18,    // journée finit à 17h → on révoque à 18h
+};
+
+export async function GET(request: Request) {
   try {
     // Vérifie le secret d'authentification pour le cron
     const authHeader = request.headers.get('authorization');
@@ -26,26 +35,49 @@ export async function POST(request: Request) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Récupère toutes les réservations avec un code Nuki actif dont la date est passée
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    
-    const { data: expiredBookings, error: fetchError } = await supabase
+    // Heure actuelle en France (Europe/Paris)
+    const now = new Date();
+    const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const todayStr = parisTime.toISOString().split('T')[0]; // YYYY-MM-DD
+    const currentHour = parisTime.getHours();
+
+    // Récupère TOUTES les réservations avec un code Nuki actif
+    // qui sont potentiellement expirées
+    const { data: activeBookings, error: fetchError } = await supabase
       .from('bookings')
-      .select('id, date, nuki_auth_id, nuki_code_status, access_code')
+      .select('id, date, slot, nuki_auth_id, nuki_code_status, access_code')
       .eq('nuki_code_status', 'active')
-      .lt('date', today) // date strictement antérieure à aujourd'hui
+      .lte('date', todayStr) // date ≤ aujourd'hui
       .not('nuki_auth_id', 'is', null);
 
     if (fetchError) {
-      console.error('Erreur récupération réservations expirées:', fetchError);
+      console.error('Erreur récupération réservations:', fetchError);
       return NextResponse.json({ error: 'Erreur base de données' }, { status: 500 });
     }
 
-    if (!expiredBookings || expiredBookings.length === 0) {
+    if (!activeBookings || activeBookings.length === 0) {
       return NextResponse.json({ message: 'Aucun code à révoquer', revoked: 0 });
     }
 
-    console.log(`${expiredBookings.length} code(s) Nuki à révoquer`);
+    // Filtre les réservations dont le créneau est expiré
+    const expiredBookings = activeBookings.filter(booking => {
+      // Si la date est avant aujourd'hui → le créneau est forcément terminé
+      if (booking.date < todayStr) return true;
+      
+      // Si c'est aujourd'hui, vérifie l'heure de fin du créneau
+      if (booking.date === todayStr) {
+        const slotEndHour = SLOT_END_HOURS[booking.slot] || 18;
+        return currentHour >= slotEndHour;
+      }
+      
+      return false;
+    });
+
+    if (expiredBookings.length === 0) {
+      return NextResponse.json({ message: 'Aucun code expiré à révoquer', revoked: 0 });
+    }
+
+    console.log(`[Cron Nuki] ${expiredBookings.length} code(s) à révoquer (heure Paris: ${currentHour}h)`);
 
     const results: Array<{ id: string; success: boolean; error?: string }> = [];
 
@@ -60,9 +92,9 @@ export async function POST(request: Request) {
           .eq('id', booking.id);
 
         results.push({ id: booking.id, success: true });
-        console.log(`Code Nuki révoqué pour réservation ${booking.id} (date: ${booking.date})`);
+        console.log(`[Cron Nuki] Code révoqué: réservation ${booking.id} (date: ${booking.date}, slot: ${booking.slot})`);
       } catch (err) {
-        console.error(`Erreur révocation code pour réservation ${booking.id}:`, err);
+        console.error(`[Cron Nuki] Erreur révocation ${booking.id}:`, err);
         
         // Marque l'échec mais ne bloque pas les autres
         await supabase

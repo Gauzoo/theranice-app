@@ -40,6 +40,12 @@ const SLOT_LABELS = {
   fullday: "Journée complète (8h-17h)",
 };
 
+const SLOT_ACCESS_TIMES = {
+  morning: "7h30 – 12h30",
+  afternoon: "12h30 – 17h30",
+  fullday: "7h30 – 17h30",
+};
+
 export default function MesReservationsPage() {
   const { user, loading: authLoading } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -353,6 +359,9 @@ export default function MesReservationsPage() {
                           <div className="text-2xl font-bold tracking-[0.2em] text-[#D4A373] text-center py-2">
                             {`${booking.access_code.slice(0, 3)} ${booking.access_code.slice(3)}`}
                           </div>
+                          <p className="text-sm text-[#333333] text-center mt-2 font-medium">
+                            ⏰ Valide le {formatDate(booking.date)} de {SLOT_ACCESS_TIMES[booking.slot]}
+                          </p>
                           <p className="text-xs text-slate-500 text-center mt-1">
                             Tapez ce code sur le clavier à l&apos;entrée du local
                           </p>
