@@ -91,13 +91,15 @@ export async function createNukiKeypadCode(
     name: name.substring(0, 32), // Max 32 chars pour Nuki
     type: 13,                    // 13 = keypad code
     code: code,
-    remoteAllowed: false,
+    remoteAllowed: true,
     enabled: true,
     allowedFromDate,
     allowedUntilDate,
     allowedFromTime: slotTime.from,
     allowedUntilTime: slotTime.until,
-    allowedWeekDays: 127, // Tous les jours (on limite par date)
+    // NOTE: Ne PAS envoyer allowedWeekDays - provoque un échec silencieux
+    // avec les comptes B2C (subscription INACTIVE). Les dates from/until
+    // suffisent pour limiter la validité du code.
   };
 
   try {
@@ -129,6 +131,8 @@ export async function createNukiKeypadCode(
     // Ou si la réponse contient des données, on les utilise
     if (response.status === 204) {
       // Pas de body retourné - on doit retrouver l'auth qu'on vient de créer
+      // Attendre que la synchro WiFi -> serrure -> keypad se termine
+      await new Promise(resolve => setTimeout(resolve, 15000));
       const authId = await findAuthByCode(code);
       console.log(`[Nuki] Keypad code created successfully, authId: ${authId}`);
       return { success: true, authId: authId || undefined, code };
