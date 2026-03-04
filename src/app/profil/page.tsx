@@ -232,7 +232,7 @@ export default function ProfilPage() {
     }
   };
 
-  const handleDeleteDocument = async (type: 'carte' | 'kbis') => {
+  const handleDeleteDocument = async (type: 'carte' | 'kbis' | 'rc_pro') => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) {
       return;
     }
@@ -246,8 +246,11 @@ export default function ProfilPage() {
       if (!user) throw new Error("Utilisateur non connecté");
 
       // Supprimer le fichier du storage
-      const documentType = type === 'carte' ? 'carte-identite' : 'kbis';
-      const fileUrl = type === 'carte' ? formData.carte_identite_url : formData.kbis_url;
+      const fileUrl = type === 'carte'
+        ? formData.carte_identite_url
+        : type === 'kbis'
+          ? formData.kbis_url
+          : formData.rc_pro_url;
       
       if (fileUrl) {
         // Extraire le chemin du fichier depuis l'URL
@@ -266,19 +269,26 @@ export default function ProfilPage() {
       }
 
       // Mettre à jour le profil pour retirer l'URL, le statut du document, et potentiellement le statut du compte
-      const updateData = type === 'carte' 
-        ? { 
+      const updateData = type === 'carte'
+        ? {
             carte_identite_url: null,
             carte_identite_status: null,
             carte_identite_rejection_notes: null,
             account_status: newAccountStatus
           }
-        : { 
-            kbis_url: null,
-            kbis_status: null,
-            kbis_rejection_notes: null,
-            account_status: newAccountStatus
-          };
+        : type === 'kbis'
+          ? {
+              kbis_url: null,
+              kbis_status: null,
+              kbis_rejection_notes: null,
+              account_status: newAccountStatus
+            }
+          : {
+              rc_pro_url: null,
+              rc_pro_status: null,
+              rc_pro_rejection_notes: null,
+              account_status: newAccountStatus
+            };
 
       const { error: updateError } = await supabase
         .from('profiles')
@@ -291,17 +301,23 @@ export default function ProfilPage() {
       setFormData(prev => ({
         ...prev,
         account_status: newAccountStatus,
-        ...(type === 'carte' 
-          ? { 
+        ...(type === 'carte'
+          ? {
               carte_identite_url: "",
               carte_identite_status: null,
               carte_identite_rejection_notes: ""
             }
-          : { 
-              kbis_url: "",
-              kbis_status: null,
-              kbis_rejection_notes: ""
-            })
+          : type === 'kbis'
+            ? {
+                kbis_url: "",
+                kbis_status: null,
+                kbis_rejection_notes: ""
+              }
+            : {
+                rc_pro_url: "",
+                rc_pro_status: null,
+                rc_pro_rejection_notes: ""
+              })
       }));
 
       setSuccess(true);
