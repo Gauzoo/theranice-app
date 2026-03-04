@@ -77,6 +77,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Vérification que les créneaux n'ont pas déjà commencé (sécurité côté serveur)
+    const SLOT_START_HOURS: Record<string, number> = { morning: 8, afternoon: 13, fullday: 8 };
+    const now = new Date();
+    const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const todayStr = `${parisTime.getFullYear()}-${String(parisTime.getMonth() + 1).padStart(2, '0')}-${String(parisTime.getDate()).padStart(2, '0')}`;
+    const currentHour = parisTime.getHours();
+
+    for (const item of cart) {
+      if (item.date === todayStr && currentHour >= (SLOT_START_HOURS[item.slot] ?? 0)) {
+        const slotName = item.slot === 'morning' ? 'Matin (8h-12h)' 
+          : item.slot === 'afternoon' ? 'Après-midi (13h-17h)' 
+          : 'Journée complète (8h-17h)';
+        return NextResponse.json({ 
+          error: `Le créneau "${slotName}" du ${item.date} a déjà commencé et ne peut plus être réservé.` 
+        }, { status: 400 });
+      }
+    }
+
     // Préparation des paramètres
     const slotLabels: Record<string, string> = {
       morning: 'Matin (8h-12h)',

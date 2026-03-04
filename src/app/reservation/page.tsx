@@ -155,18 +155,22 @@ export default function ReservationPage() {
     if (selectedDates.length === 0) return true;
     
     return selectedDates.every(date => {
-      // Vérifie si le créneau est dans le passé (pour aujourd'hui uniquement)
+      // Vérifie si le créneau a déjà commencé (pour aujourd'hui uniquement)
       const now = new Date();
       const isToday = date.toDateString() === now.toDateString();
       
       if (isToday) {
         const currentHour = now.getHours();
-        // Bloque le matin si on est après 12h
-        if (slot === 'morning' && currentHour >= 12) {
+        // Bloque le matin si le créneau a déjà commencé (8h)
+        if (slot === 'morning' && currentHour >= 8) {
           return false;
         }
-        // Bloque l'après-midi si on est après 17h
-        if (slot === 'afternoon' && currentHour >= 17) {
+        // Bloque l'après-midi si le créneau a déjà commencé (13h)
+        if (slot === 'afternoon' && currentHour >= 13) {
+          return false;
+        }
+        // Bloque la journée complète si le créneau a déjà commencé (8h)
+        if (slot === 'fullday' && currentHour >= 8) {
           return false;
         }
       }
@@ -246,6 +250,20 @@ export default function ReservationPage() {
       return;
     }
 
+    // Vérifie si le créneau a déjà commencé (pour aujourd'hui)
+    const SLOT_START: Record<Slot, number> = { morning: 8, afternoon: 13, fullday: 8 };
+    const now = new Date();
+    const pastDate = selectedDates.find(date => {
+      const isToday = date.toDateString() === now.toDateString();
+      if (!isToday) return false;
+      return now.getHours() >= SLOT_START[selectedSlot];
+    });
+
+    if (pastDate) {
+      setError("Ce créneau a déjà commencé et ne peut plus être réservé aujourd'hui.");
+      return;
+    }
+
     // Vérifie la disponibilité (DB + Panier)
     const unavailableDate = selectedDates.find(date => {
       // 1. Vérifie DB
@@ -296,6 +314,20 @@ export default function ReservationPage() {
 
     if (cart.length === 0) {
       setError("Votre panier est vide");
+      return;
+    }
+
+    // Vérifie si un créneau du panier a déjà commencé entre-temps
+    const CHECKOUT_SLOT_START: Record<Slot, number> = { morning: 8, afternoon: 13, fullday: 8 };
+    const checkoutNow = new Date();
+    const pastItem = cart.find(item => {
+      const isToday = item.date.toDateString() === checkoutNow.toDateString();
+      if (!isToday) return false;
+      return checkoutNow.getHours() >= CHECKOUT_SLOT_START[item.slot];
+    });
+
+    if (pastItem) {
+      setError("Un créneau de votre panier a déjà commencé. Veuillez le retirer avant de valider.");
       return;
     }
 
