@@ -7,8 +7,8 @@ const garamond = EB_Garamond({
 });
 
 export const metadata = {
-  title: "Conditions Générales d'Utilisation | Theranice",
-  description: "Conditions générales d'utilisation du service de réservation Theranice",
+  title: "Conditions Générales de Mise à Disposition | Théranice",
+  description: "Conditions générales de mise à disposition des espaces professionnels Théranice",
 };
 
 export default function ConditionsGeneralesPage() {
@@ -18,7 +18,7 @@ export default function ConditionsGeneralesPage() {
       <section className="relative isolate flex min-h-[40vh] items-center justify-center overflow-hidden pt-24 text-white">
         <Image
           src="/photos/covers1.jpg"
-          alt="Theranice"
+          alt="Théranice"
           fill
           className="absolute inset-0 object-cover"
           priority
@@ -26,7 +26,7 @@ export default function ConditionsGeneralesPage() {
         <div className="absolute inset-0 bg-slate-900/40" aria-hidden="true" />
         <div className="relative mx-auto flex max-w-4xl flex-col gap-4 px-6 py-16 text-center">
           <h1 className="text-4xl font-semibold sm:text-5xl">
-            Conditions Générales d&apos;Utilisation
+            Conditions Générales de Mise à Disposition
           </h1>
         </div>
       </section>
@@ -35,282 +35,238 @@ export default function ConditionsGeneralesPage() {
       <section className="bg-white py-16">
         <div className="mx-auto max-w-4xl px-6">
           <div className="prose prose-slate max-w-none">
-            
-            <p className="text-lg mb-8">
-              Les présentes Conditions Générales d'Utilisation (CGU) définissent les règles d'accès et d'utilisation 
-              du service de réservation de salles thérapeutiques proposé par Theranice.
+
+            <p className="text-lg font-semibold mb-2">THÉRANICE</p>
+            <p className="mb-8 text-slate-600">
+              Exploité par SCI THERA NICE<br />
+              19 rue Michelet – 06100 Nice
             </p>
 
+            {/* Article 1 */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373]`}>
-              ▸ 1. Objet
+              ▸ Article 1 – Identification de l&apos;exploitant
             </h2>
             <p className="mb-6">
-              Les présentes CGU ont pour objet de définir les conditions d'accès et d'utilisation de la plateforme de réservation 
-              en ligne de salles thérapeutiques exploitée par Theranice, accessible à l'adresse [URL du site].
+              Les espaces professionnels commercialisés sous le nom THÉRANICE sont exploités par :
+            </p>
+            <p className="mb-6 pl-4 border-l-4 border-[#D4A373]/30">
+              <strong>SCI THERA NICE</strong><br />
+              19 rue Michelet<br />
+              06100 Nice – France
             </p>
             <p className="mb-6">
-              L'utilisation du service implique l'acceptation pleine et entière des présentes CGU. 
-              Si vous n'acceptez pas ces conditions, vous ne devez pas utiliser le service.
+              Ci-après dénommée « l&apos;Exploitant ».
             </p>
 
+            {/* Article 2 */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 2. Accès au service
+              ▸ Article 2 – Objet
             </h2>
-            
-            <h3 className="text-xl font-semibold mb-3 mt-6">2.1. Public concerné</h3>
             <p className="mb-6">
-              Le service est exclusivement réservé aux professionnels du bien-être et de la thérapie 
-              (thérapeutes, sophrologues, hypnothérapeutes, coachs, etc.) exerçant leur activité de manière légale.
+              Les présentes Conditions Générales de Mise à Disposition (CGMD) ont pour objet de définir les modalités
+              de réservation et d&apos;utilisation ponctuelle des espaces professionnels équipés situés au 19 rue Michelet – 06100 Nice.
+            </p>
+            <p className="mb-6">
+              Toute réservation implique l&apos;acceptation pleine et entière des présentes conditions ainsi que du Règlement Intérieur.
             </p>
 
-            <h3 className="text-xl font-semibold mb-3 mt-6">2.2. Inscription</h3>
-            <p className="mb-4">Pour accéder au service de réservation, vous devez :</p>
-            <ul className="list-disc pl-6 mb-6 space-y-2">
-              <li>Créer un compte utilisateur en fournissant des informations exactes et à jour</li>
-              <li>Être majeur et avoir la capacité juridique de contracter</li>
-              <li>Fournir les documents justificatifs demandés (carte d'identité, KBIS ou équivalent)</li>
-              <li>Attendre la validation de votre compte par l'administrateur</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold mb-3 mt-6">2.3. Validation du compte</h3>
-            <p className="mb-6">
-              Theranice se réserve le droit de valider ou refuser toute demande de création de compte, 
-              sans avoir à justifier sa décision. La validation peut prendre jusqu'à 48 heures ouvrées.
-            </p>
-
-            <h3 className="text-xl font-semibold mb-3 mt-6">2.4. Identifiants</h3>
-            <p className="mb-6">
-              Vous êtes responsable de la confidentialité de vos identifiants de connexion. 
-              Toute utilisation de votre compte est présumée avoir été effectuée par vous-même.
-            </p>
-
+            {/* Article 3 */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 3. Description du service
+              ▸ Article 3 – Nature juridique
             </h2>
-            
-            <h3 className="text-xl font-semibold mb-3 mt-6">3.1. Salles disponibles</h3>
-            <p className="mb-4">Theranice met à disposition trois types de salles :</p>
+            <p className="mb-4">
+              La réservation donne lieu à une mise à disposition ponctuelle et précaire d&apos;un espace professionnel équipé.
+            </p>
+            <p className="mb-4">Elle ne constitue en aucun cas :</p>
             <ul className="list-disc pl-6 mb-6 space-y-2">
-              <li><strong>Salle 1 (35m²) :</strong> 50€ le demi-créneau, 90€ la journée complète</li>
-              <li><strong>Salle 2 (35m²) :</strong> 50€ le demi-créneau, 90€ la journée complète</li>
-              <li><strong>Grande salle (70m²) :</strong> 80€ le demi-créneau, 140€ la journée complète</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold mb-3 mt-6">3.2. Créneaux horaires</h3>
-            <ul className="list-disc pl-6 mb-6 space-y-2">
-              <li><strong>Matin :</strong> 8h00 - 12h00</li>
-              <li><strong>Après-midi :</strong> 13h00 - 17h00</li>
-              <li><strong>Journée complète :</strong> 8h00 - 17h00</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold mb-3 mt-6">3.3. Équipements</h3>
-            <p className="mb-6">
-              Les salles sont équipées de [décrire l'équipement de base]. 
-              Tout équipement supplémentaire doit être apporté par le professionnel.
-            </p>
-
-            <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 4. Réservations
-            </h2>
-            
-            <h3 className="text-xl font-semibold mb-3 mt-6">4.1. Processus de réservation</h3>
-            <p className="mb-4">Pour effectuer une réservation, vous devez :</p>
-            <ul className="list-disc pl-6 mb-6 space-y-2">
-              <li>Sélectionner une ou plusieurs dates disponibles</li>
-              <li>Choisir un créneau horaire et une salle</li>
-              <li>Procéder au paiement en ligne via notre prestataire Stripe</li>
-              <li>Recevoir une confirmation par email</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold mb-3 mt-6">4.2. Confirmation</h3>
-            <p className="mb-6">
-              La réservation n'est définitive qu'après validation du paiement. 
-              Vous recevrez un email de confirmation contenant les détails de votre réservation et le code d'accès aux locaux.
-            </p>
-
-            <h3 className="text-xl font-semibold mb-3 mt-6">4.3. Disponibilité</h3>
-            <p className="mb-6">
-              Les disponibilités affichées sont mises à jour en temps réel. Toutefois, en cas de réservation simultanée, 
-              seule la première validation de paiement sera prise en compte. 
-              Dans ce cas rare, vous serez remboursé intégralement dans les 5 jours ouvrés.
-            </p>
-
-            <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 5. Paiement
-            </h2>
-            
-            <h3 className="text-xl font-semibold mb-3 mt-6">5.1. Tarifs</h3>
-            <p className="mb-6">
-              Les tarifs affichés sur le site sont exprimés en euros TTC. 
-              Theranice se réserve le droit de modifier ses tarifs à tout moment, 
-              mais les réservations déjà confirmées ne seront pas affectées.
-            </p>
-
-            <h3 className="text-xl font-semibold mb-3 mt-6">5.2. Modalités de paiement</h3>
-            <p className="mb-6">
-              Le paiement s'effectue en ligne par carte bancaire via la plateforme sécurisée Stripe. 
-              Theranice ne conserve aucune donnée bancaire. 
-              Le paiement est exigible immédiatement lors de la réservation.
-            </p>
-
-            <h3 className="text-xl font-semibold mb-3 mt-6">5.3. Facturation</h3>
-            <p className="mb-6">
-              Une facture vous sera envoyée par email après confirmation du paiement. 
-              Vous pouvez également télécharger vos factures depuis votre espace client.
-            </p>
-
-            <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 6. Annulation et remboursement
-            </h2>
-            
-            <h3 className="text-xl font-semibold mb-3 mt-6">6.1. Annulation par le client</h3>
-            <p className="mb-4">Vous pouvez annuler votre réservation selon les conditions suivantes :</p>
-            <ul className="list-disc pl-6 mb-6 space-y-2">
-              <li><strong>Plus de 7 jours avant la date :</strong> Remboursement intégral</li>
-              <li><strong>Entre 7 jours et 48 heures avant :</strong> Remboursement à hauteur de 50%</li>
-              <li><strong>Moins de 48 heures avant :</strong> Aucun remboursement</li>
+              <li>Un bail commercial</li>
+              <li>Un bail professionnel</li>
+              <li>Un bail d&apos;habitation</li>
+              <li>Un droit au maintien dans les lieux</li>
             </ul>
             <p className="mb-6">
-              L'annulation s'effectue depuis votre espace "Mes réservations". 
-              Le remboursement sera effectué sur le moyen de paiement utilisé sous 7 à 14 jours ouvrés.
+              Aucun droit au renouvellement ou à l&apos;occupation permanente ne pourra être revendiqué.
             </p>
 
-            <h3 className="text-xl font-semibold mb-3 mt-6">6.2. Annulation par Theranice</h3>
-            <p className="mb-6">
-              En cas de force majeure ou d'indisponibilité exceptionnelle de la salle, 
-              Theranice se réserve le droit d'annuler votre réservation. 
-              Vous serez alors remboursé intégralement et informé dans les meilleurs délais. 
-              Theranice ne saurait être tenu responsable des éventuels préjudices subis.
-            </p>
-
+            {/* Article 4 */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 7. Utilisation des locaux
+              ▸ Article 4 – Conditions d&apos;accès
             </h2>
-            
-            <h3 className="text-xl font-semibold mb-3 mt-6">7.1. Obligations du professionnel</h3>
-            <p className="mb-4">En utilisant les locaux, vous vous engagez à :</p>
+            <p className="mb-4">
+              La mise à disposition est exclusivement réservée aux professionnels exerçant une activité de consultation,
+              d&apos;accompagnement ou de thérapie non invasive.
+            </p>
+            <p className="mb-4">Le professionnel doit :</p>
             <ul className="list-disc pl-6 mb-6 space-y-2">
-              <li>Respecter les horaires réservés</li>
-              <li>Laisser les lieux propres et en bon état</li>
-              <li>Ne pas troubler le calme des autres utilisateurs</li>
-              <li>Respecter le règlement intérieur affiché dans les locaux</li>
-              <li>Ne pas sous-louer ou céder votre créneau à un tiers</li>
-              <li>Disposer d'une assurance responsabilité civile professionnelle</li>
+              <li>Disposer d&apos;un numéro SIRET valide</li>
+              <li>Être titulaire d&apos;une assurance Responsabilité Civile Professionnelle en cours de validité</li>
+              <li>Avoir transmis les justificatifs requis</li>
+            </ul>
+            <p className="mb-4">
+              L&apos;Exploitant se réserve le droit discrétionnaire d&apos;accepter ou de refuser toute demande de réservation
+              ou d&apos;inscription sans obligation de motivation, dès lors que l&apos;activité déclarée n&apos;est pas compatible
+              avec la destination des lieux.
+            </p>
+            <p className="mb-4">Sont notamment exclues :</p>
+            <ul className="list-disc pl-6 mb-6 space-y-2">
+              <li>Activités de tatouage</li>
+              <li>Actes esthétiques invasifs</li>
+              <li>Activités médicales nécessitant un équipement technique lourd</li>
+              <li>Toute activité générant nuisances ou risques spécifiques</li>
             </ul>
 
-            <h3 className="text-xl font-semibold mb-3 mt-6">7.2. Accès aux locaux</h3>
-            <p className="mb-6">
-              Un code d'accès vous sera communiqué par email après confirmation de votre réservation. 
-              Ce code est personnel et ne doit pas être communiqué à des tiers.
-            </p>
-
-            <h3 className="text-xl font-semibold mb-3 mt-6">7.3. Dégradations</h3>
-            <p className="mb-6">
-              En cas de dégradation ou de vol de matériel, vous serez tenu financièrement responsable. 
-              Le coût des réparations ou du remplacement vous sera facturé.
-            </p>
-
+            {/* Article 5 */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 8. Responsabilité
+              ▸ Article 5 – Description des espaces
             </h2>
-            
-            <h3 className="text-xl font-semibold mb-3 mt-6">8.1. Responsabilité de Theranice</h3>
+            <p className="mb-4">Les espaces comprennent :</p>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">Salle 1</h3>
+            <ul className="list-disc pl-6 mb-6 space-y-2">
+              <li>Deux fauteuils de consultation</li>
+              <li>Un bureau</li>
+              <li>Des chaises</li>
+              <li>Un plaid</li>
+              <li>Accès à un ampli Bluetooth</li>
+              <li>Table de massage sur demande</li>
+            </ul>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">Salle 2</h3>
+            <ul className="list-disc pl-6 mb-6 space-y-2">
+              <li>Un bureau</li>
+              <li>Des chaises</li>
+              <li>Un tabouret roulant</li>
+              <li>Un plaid</li>
+              <li>Un lave-mains</li>
+              <li>Essuie-mains</li>
+            </ul>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6">Grande salle</h3>
             <p className="mb-6">
-              Theranice met tout en œuvre pour assurer l'accès et le bon fonctionnement du service 24h/24 et 7j/7. 
-              Toutefois, Theranice ne saurait être tenu responsable en cas d'interruption temporaire pour maintenance, 
-              mise à jour ou panne technique.
-            </p>
-            <p className="mb-6">
-              Theranice ne saurait être tenu responsable des dommages directs ou indirects résultant de l'utilisation du service 
-              ou de l'impossibilité de l'utiliser.
+              Possibilité d&apos;ouverture de la porte coulissante entre les deux salles selon réservation.
             </p>
 
-            <h3 className="text-xl font-semibold mb-3 mt-6">8.2. Responsabilité du professionnel</h3>
-            <p className="mb-6">
-              Vous êtes seul responsable de votre activité professionnelle exercée dans les locaux. 
-              Vous devez disposer de toutes les autorisations et assurances nécessaires à l'exercice de votre profession. 
-              Theranice ne saurait être tenu responsable des litiges entre vous et vos clients.
-            </p>
+            <h3 className="text-xl font-semibold mb-3 mt-6">Espaces communs</h3>
+            <ul className="list-disc pl-6 mb-6 space-y-2">
+              <li>Salle d&apos;attente</li>
+              <li>Cuisine (café, tisane)</li>
+              <li>Sanitaires accessibles PMR</li>
+            </ul>
 
-            <h3 className="text-xl font-semibold mb-3 mt-6">8.3. Assurance</h3>
-            <p className="mb-6">
-              Vous devez disposer d'une assurance responsabilité civile professionnelle couvrant votre activité. 
-              Une attestation pourra vous être demandée.
-            </p>
-
+            {/* Article 6 */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 9. Propriété intellectuelle
+              ▸ Article 6 – Réservation et paiement
             </h2>
+            <p className="mb-4">
+              Le paiement est exigible en totalité lors de la réservation.
+            </p>
+            <p className="mb-4">
+              THÉRANICE est exploité par une SCI non assujettie à la TVA.
+            </p>
             <p className="mb-6">
-              L'ensemble du contenu du site (textes, images, logos, vidéos, etc.) est la propriété exclusive de Theranice 
-              et est protégé par les lois sur la propriété intellectuelle. 
-              Toute reproduction, représentation ou utilisation, même partielle, est interdite sans autorisation expresse.
+              Une facture sera émise après règlement.
             </p>
 
+            {/* Article 7 */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 10. Données personnelles
+              ▸ Article 7 – Politique d&apos;annulation
             </h2>
+            <ul className="list-disc pl-6 mb-6 space-y-2">
+              <li><strong>Annulation effectuée plus de 14 jours avant la date réservée :</strong> remboursement intégral.</li>
+              <li><strong>Annulation effectuée à 14 jours ou moins :</strong> aucun remboursement.</li>
+            </ul>
             <p className="mb-6">
-              Le traitement de vos données personnelles est régi par notre 
-              <a href="/politique-confidentialite" className="text-[#D4A373] hover:underline"> Politique de confidentialité</a>, 
-              que nous vous invitons à consulter.
+              Toute demande d&apos;annulation doit être adressée par écrit.
             </p>
 
+            {/* Article 8 */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 11. Suspension et résiliation
+              ▸ Article 8 – Responsabilité et dégradations
             </h2>
-            
-            <h3 className="text-xl font-semibold mb-3 mt-6">11.1. Suspension par Theranice</h3>
+            <p className="mb-4">
+              Le professionnel utilisateur est responsable de toute dégradation, détérioration ou disparition de matériel
+              survenant durant sa période d&apos;occupation.
+            </p>
+            <p className="mb-4">Il s&apos;engage à :</p>
+            <ul className="list-disc pl-6 mb-6 space-y-2">
+              <li>Disposer d&apos;une assurance responsabilité civile professionnelle en cours de validité</li>
+              <li>Déclarer immédiatement tout dommage</li>
+              <li>Indemniser l&apos;Exploitant à hauteur du préjudice constaté</li>
+            </ul>
+            <p className="mb-4">En cas de dégradation constatée, l&apos;Exploitant pourra :</p>
+            <ul className="list-disc pl-6 mb-6 space-y-2">
+              <li>Émettre une facture correspondant au montant de la réparation ou du remplacement</li>
+              <li>Suspendre ou refuser toute réservation future</li>
+            </ul>
+            <p className="mb-4">
+              Le règlement devra intervenir dans un délai de 8 jours à compter de l&apos;émission de la facture.
+            </p>
             <p className="mb-6">
-              Theranice se réserve le droit de suspendre ou supprimer votre compte en cas de manquement aux présentes CGU, 
-              de comportement inapproprié, ou d'utilisation frauduleuse du service, sans préavis ni indemnité.
+              À défaut de paiement, l&apos;Exploitant pourra engager toute procédure de recouvrement et suspendre l&apos;accès à la plateforme.
             </p>
 
-            <h3 className="text-xl font-semibold mb-3 mt-6">11.2. Résiliation par le client</h3>
-            <p className="mb-6">
-              Vous pouvez demander la suppression de votre compte à tout moment en nous contactant. 
-              Vos données personnelles seront alors supprimées conformément à notre politique de confidentialité, 
-              sous réserve des obligations légales de conservation.
-            </p>
-
+            {/* Article 9 */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 12. Modification des CGU
-            </h2>
-            <p className="mb-6">
-              Theranice se réserve le droit de modifier les présentes CGU à tout moment. 
-              Les nouvelles CGU seront portées à votre connaissance par publication sur le site. 
-              Toute utilisation du service après modification vaut acceptation des nouvelles CGU.
-            </p>
-
-            <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 13. Droit applicable et juridiction
-            </h2>
-            <p className="mb-6">
-              Les présentes CGU sont régies par le droit français. 
-              En cas de litige, les parties s'efforceront de trouver une solution amiable. 
-              À défaut, les tribunaux français seront seuls compétents.
-            </p>
-
-            <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 14. Médiation
+              ▸ Article 9 – Assurance
             </h2>
             <p className="mb-6">
-              Conformément à l'article L.612-1 du Code de la consommation, 
-              nous vous informons que vous pouvez recourir gratuitement au service de médiation proposé par [Nom du médiateur], 
-              en cas de litige non résolu avec notre service client.
+              Le professionnel déclare être titulaire d&apos;une assurance Responsabilité Civile Professionnelle couvrant son activité
+              pendant toute la durée d&apos;utilisation des locaux.
             </p>
 
+            {/* Article 10 */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ 15. Contact
+              ▸ Article 10 – Indépendance
             </h2>
-            <p className="mb-6">
-              Pour toute question concernant les présentes CGU, vous pouvez nous contacter :
+            <p className="mb-4">
+              Le professionnel exerce son activité en totale indépendance juridique, fiscale et sociale.
             </p>
             <p className="mb-6">
-              <strong>Email :</strong> <a href="mailto:contact@theranice.fr" className="text-[#D4A373] hover:underline">contact@theranice.fr</a><br />
-              <strong>Téléphone :</strong> [Numéro à compléter]<br />
-              <strong>Adresse :</strong> Theranice, [Adresse complète]
+              L&apos;Exploitant n&apos;intervient pas dans la relation entre le professionnel et ses patients.
             </p>
+
+            {/* Article 11 */}
+            <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
+              ▸ Article 11 – Données personnelles
+            </h2>
+            <p className="mb-4">
+              La SCI n&apos;a pas accès aux données personnelles ou de santé des patients.
+            </p>
+            <p className="mb-6">
+              Le locataire est seul responsable du respect de la réglementation applicable en matière de protection des données.
+            </p>
+
+            {/* Article 12 */}
+            <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
+              ▸ Article 12 – Engagement solidaire
+            </h2>
+            <p className="mb-4">
+              Dans le cadre de son engagement sociétal, THÉRANICE s&apos;engage à reverser la somme de 1 euro par réservation
+              confirmée à la Ligue contre le Cancer.
+            </p>
+            <p className="mb-4">
+              Ce versement est effectué par la SCI THERA NICE à titre volontaire et indépendant.
+            </p>
+            <p className="mb-4">
+              Il ne constitue pas un don effectué par le professionnel utilisateur et ne donne lieu à aucun reçu fiscal individuel.
+            </p>
+            <p className="mb-6">
+              L&apos;Exploitant se réserve la possibilité de modifier, suspendre ou mettre fin à cet engagement
+              pour des raisons économiques ou organisationnelles, sans que cela puisse engager sa responsabilité.
+            </p>
+
+            {/* Article 13 */}
+            <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
+              ▸ Article 13 – Suspension / Résiliation
+            </h2>
+            <p className="mb-4">
+              Tout manquement aux présentes conditions ou au Règlement Intérieur pourra entraîner :
+            </p>
+            <ul className="list-disc pl-6 mb-6 space-y-2">
+              <li>Suspension temporaire du compte</li>
+              <li>Refus de futures réservations</li>
+              <li>Suppression définitive de l&apos;accès</li>
+            </ul>
 
             <p className="text-sm text-slate-500 mt-12">
               Dernière mise à jour : {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}

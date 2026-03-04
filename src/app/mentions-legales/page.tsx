@@ -7,8 +7,8 @@ const garamond = EB_Garamond({
 });
 
 export const metadata = {
-  title: "Mentions légales | Theranice",
-  description: "Mentions légales du site Theranice - Location de salles thérapeutiques à Nice",
+  title: "Mentions légales | Théranice",
+  description: "Mentions légales du site Théranice – Espaces professionnels à Nice",
 };
 
 export default function MentionsLegalesPage() {
@@ -18,7 +18,7 @@ export default function MentionsLegalesPage() {
       <section className="relative isolate flex min-h-[40vh] items-center justify-center overflow-hidden pt-24 text-white">
         <Image
           src="/photos/covers1.jpg"
-          alt="Theranice"
+          alt="Théranice"
           fill
           className="absolute inset-0 object-cover"
           priority
@@ -35,85 +35,74 @@ export default function MentionsLegalesPage() {
       <section className="bg-white py-16">
         <div className="mx-auto max-w-4xl px-6">
           <div className="prose prose-slate max-w-none">
-            
+
+            {/* Éditeur */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373]`}>
               ▸ Éditeur du site
             </h2>
-            <p className="mb-6">
-              <strong>Raison sociale :</strong> Theranice<br />
-              <strong>Forme juridique :</strong> [À compléter - Ex: SARL, SAS, Auto-entrepreneur]<br />
-              <strong>Capital social :</strong> [À compléter]<br />
-              <strong>Siège social :</strong> [Adresse complète à Nice]<br />
-              <strong>SIRET :</strong> [Numéro SIRET à compléter]<br />
-              <strong>APE/NAF :</strong> [Code APE à compléter]<br />
-              <strong>Email :</strong> <a href="mailto:contact@theranice.fr" className="text-[#D4A373] hover:underline">contact@theranice.fr</a><br />
-              <strong>Téléphone :</strong> [Numéro à compléter]<br />
-              <strong>Responsable de publication :</strong> [Nom du responsable légal]
+            <p className="mb-2">Le site THÉRANICE est édité par :</p>
+            <p className="mb-6 pl-4 border-l-4 border-[#D4A373]/30 space-y-1">
+              <strong>SCI THERA NICE</strong><br />
+              19 rue Michelet<br />
+              06100 Nice – France<br />
+              <br />
+              Société Civile Immobilière<br />
+              Immatriculée au Registre du Commerce et des Sociétés de Nice<br />
+              <strong>SIRET :</strong> (à compléter)<br />
+              Non assujettie à la TVA<br />
+              <strong>Email :</strong> (à compléter)
             </p>
 
+            {/* Directeur de publication */}
+            <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
+              ▸ Directeur de la publication
+            </h2>
+            <p className="mb-6">
+              SCI THERA NICE, représentée par sa gérante en exercice.
+            </p>
+
+            {/* Hébergement */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
               ▸ Hébergement
             </h2>
-            <p className="mb-6">
-              <strong>Hébergeur :</strong> Vercel Inc.<br />
-              <strong>Adresse :</strong> 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis<br />
-              <strong>Site web :</strong> <a href="https://vercel.com" target="_blank" rel="noopener noreferrer" className="text-[#D4A373] hover:underline">https://vercel.com</a>
+            <p className="mb-2">Le site est hébergé par :</p>
+            <p className="mb-6 pl-4 border-l-4 border-[#D4A373]/30">
+              <strong>Vercel</strong><br />
+              1345 Avenue of the Americas<br />
+              New York, NY 10105<br />
+              United States<br />
+              <a
+                href="https://vercel.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#D4A373] hover:underline"
+              >
+                https://vercel.com
+              </a>
             </p>
 
+            {/* Propriété intellectuelle */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
               ▸ Propriété intellectuelle
             </h2>
             <p className="mb-6">
-              L'ensemble de ce site relève de la législation française et internationale sur le droit d'auteur et la propriété intellectuelle. 
-              Tous les droits de reproduction sont réservés, y compris pour les documents téléchargeables et les représentations iconographiques et photographiques.
-            </p>
-            <p className="mb-6">
-              La reproduction de tout ou partie de ce site sur un support électronique ou papier quel qu'il soit est formellement interdite 
-              sauf autorisation expresse du directeur de la publication.
+              L&apos;ensemble des éléments du site (textes, logo, structure, design) est protégé par le droit de la propriété intellectuelle.
+              Toute reproduction totale ou partielle sans autorisation préalable écrite est interdite.
             </p>
 
+            {/* Responsabilité */}
             <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ Protection des données personnelles
+              ▸ Responsabilité
             </h2>
-            <p className="mb-6">
-              Conformément à la loi "Informatique et Libertés" du 6 janvier 1978 modifiée et au Règlement Général sur la Protection des Données (RGPD), 
-              vous disposez d'un droit d'accès, de rectification, de suppression et d'opposition aux données personnelles vous concernant.
+            <p className="mb-4">
+              La SCI THERA NICE s&apos;efforce d&apos;assurer l&apos;exactitude des informations publiées.
+              Elle ne saurait être tenue responsable :
             </p>
-            <p className="mb-6">
-              Pour exercer ces droits, vous pouvez nous contacter à l'adresse email suivante : 
-              <a href="mailto:contact@theranice.fr" className="text-[#D4A373] hover:underline"> contact@theranice.fr</a>
-            </p>
-            <p className="mb-6">
-              Pour plus d'informations sur la gestion de vos données personnelles, consultez notre 
-              <a href="/politique-confidentialite" className="text-[#D4A373] hover:underline"> Politique de confidentialité</a>.
-            </p>
-
-            <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ Cookies
-            </h2>
-            <p className="mb-6">
-              Ce site utilise des cookies techniques nécessaires à son bon fonctionnement. Ces cookies ne collectent aucune donnée personnelle 
-              et ne nécessitent pas de consentement préalable. Aucun cookie de tracking ou publicitaire n'est utilisé.
-            </p>
-
-            <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ Limitation de responsabilité
-            </h2>
-            <p className="mb-6">
-              Theranice s'efforce d'assurer au mieux de ses possibilités, l'exactitude et la mise à jour des informations diffusées sur ce site. 
-              Toutefois, Theranice ne peut garantir l'exactitude, la précision ou l'exhaustivité des informations mises à disposition sur ce site.
-            </p>
-            <p className="mb-6">
-              En conséquence, Theranice décline toute responsabilité pour toute imprécision, inexactitude ou omission portant sur des informations 
-              disponibles sur ce site.
-            </p>
-
-            <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373] mt-12`}>
-              ▸ Droit applicable
-            </h2>
-            <p className="mb-6">
-              Les présentes mentions légales sont régies par le droit français. En cas de litige, les tribunaux français seront seuls compétents.
-            </p>
+            <ul className="list-disc pl-6 mb-6 space-y-2">
+              <li>D&apos;erreurs ou omissions</li>
+              <li>D&apos;une indisponibilité temporaire du site</li>
+              <li>D&apos;un usage inapproprié des informations publiées</li>
+            </ul>
 
             <p className="text-sm text-slate-500 mt-12">
               Dernière mise à jour : {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
