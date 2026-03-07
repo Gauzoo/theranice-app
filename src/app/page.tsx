@@ -90,13 +90,7 @@ export default function Home() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-100 sm:text-xl sm:text-slate-200">
-              THÉRANICE propose une solution souple et sécurisée, permettant aux thérapeutes d&apos;exercer sans les contraintes d&apos;un bail traditionnel.
-            </p>
-
-            <div className="mt-8 h-px w-24 bg-[#D4A373]" aria-hidden="true" />
-
-            <p className="mt-8 max-w-2xl text-base leading-7 text-slate-100/90 sm:text-slate-200">
-              Aucun engagement long terme. Aucune gestion locative. Aucune charge fixe à supporter. Vous réservez uniquement lorsque vous en avez besoin.
+              Un lieu pensé pour accueillir consultations, accompagnements et soins dans une atmosphère sereine, élégante et immédiatement opérationnelle.
             </p>
 
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-start">
