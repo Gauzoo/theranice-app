@@ -48,7 +48,7 @@ export default function MentionsLegalesPage() {
               <br />
               Société Civile Immobilière<br />
               Immatriculée au Registre du Commerce et des Sociétés de Nice<br />
-              <strong>SIRET :</strong> (à compléter)<br />
+              <strong>SIRET :</strong> 990 302 887<br />
               Non assujettie à la TVA<br />
               <strong>Email :</strong> (à compléter)
             </p>

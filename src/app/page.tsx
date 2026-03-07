@@ -10,6 +10,58 @@ const garamond = EB_Garamond({
   weight: ["400", "500", "600", "700"],
 });
 
+const spaces = [
+  {
+    name: "Salon Athéna",
+    image: "/photos/1.jpg",
+    description:
+      "Un espace lumineux et structurant, idéal pour les consultations individuelles.",
+    details:
+      "Le Salon Athéna convient particulièrement aux psychologues, coachs, sophrologues, hypnothérapeutes et praticiens en accompagnement individuel.",
+    equipment: [
+      "Deux fauteuils de consultation",
+      "Un bureau",
+      "Des chaises",
+      "Un plaid",
+      "Lampe d'appoint",
+      "Accès à un ampli Bluetooth",
+      "Connexion fibre",
+      "Récepteur de sonnette d'entrée",
+      "Ouverture de la porte d'entrée depuis la salle",
+      "Climatisation réversible",
+      "Table de massage sur demande",
+    ],
+  },
+  {
+    name: "Salle Gaïa",
+    image: "/photos/2.jpg",
+    description:
+      "Un espace plus intimiste, parfaitement adapté aux pratiques nécessitant une table de massage.",
+    details:
+      "La Salle Gaïa est idéale pour les praticiens en soins corporels et thérapies manuelles.",
+    equipment: [
+      "Table de massage et accessoires",
+      "Bureau pliable",
+      "Une chaise",
+      "Tabouret roulant",
+      "Plaid",
+      "Lave-mains",
+      "Essuie-mains",
+      "Accès à un ampli Bluetooth",
+      "Connexion fibre",
+      "Récepteur de sonnette d'entrée",
+      "Ouverture de la porte d'entrée depuis la salle",
+      "Climatisation réversible",
+    ],
+  },
+];
+
+const sharedSpaces = [
+  "Salle d'attente",
+  "Cuisine équipée (café et tisanes à disposition)",
+  "Sanitaires accessibles PMR",
+];
+
 export default function Home() {
   return (
     <div className="bg-slate-50 text-slate-900">
@@ -28,10 +80,18 @@ export default function Home() {
         <div className="relative mx-auto flex max-w-4xl flex-col gap-6 px-6 py-24 text-center sm:text-left">
   
           <h1 className="text-4xl font-semibold sm:text-5xl">
-            Louez un lieu apaisant pour vos séances à Nice
+            Des espaces pensés pour les professionnels de l&apos;accompagnement à Nice
           </h1>
           <p className="max-w-2xl text-lg text-slate-100 sm:text-slate-200">
-            Theranice met à disposition un espace chaleureux et équipé, réservé aux professionnels du bien-être. Sélectionnez un créneau demi-journée, réglez en ligne et recevez votre code d&apos;accès instantanément.
+            THÉRANICE propose une solution souple et sécurisée, permettant aux thérapeutes d&apos;exercer sans les contraintes d&apos;un bail traditionnel.
+          </p>
+          <div className="flex flex-wrap gap-3 text-sm font-medium uppercase tracking-[0.18em] text-slate-100/90">
+            <span>Aucun engagement long terme</span>
+            <span>Aucune gestion locative</span>
+            <span>Aucune charge fixe</span>
+          </div>
+          <p className="max-w-2xl text-base text-slate-100 sm:text-slate-200">
+            Vous réservez uniquement lorsque vous en avez besoin.
           </p>
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-start">
             <Link
@@ -46,100 +106,207 @@ export default function Home() {
 
       <section className="bg-[#FFFFFF] py-16 scroll-mt-24" id="nos-espaces">
         <div className="mx-auto max-w-6xl px-6">
-        <h2 className={`${garamond.className} text-4xl text-[#D4A373] font-semibold`}>▸ Nos espaces</h2>
+          <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+            <div>
+              <h2 className={`${garamond.className} text-4xl font-semibold text-[#D4A373]`}>
+                ▸ Nos espaces
+              </h2>
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
+                Des espaces pensés pour les professionnels de l&apos;accompagnement, dans un environnement calme, soigné et confidentiel.
+              </p>
+              <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-600">
+                THÉRANICE propose une solution souple et sécurisée, permettant aux thérapeutes d&apos;exercer sans les contraintes d&apos;un bail traditionnel.
+              </p>
+              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                <div className="border border-[#D4A373]/30 bg-[#F7F1EB] px-5 py-4 text-sm font-medium uppercase tracking-[0.14em] text-slate-700">
+                  Aucun engagement long terme
+                </div>
+                <div className="border border-[#D4A373]/30 bg-[#F7F1EB] px-5 py-4 text-sm font-medium uppercase tracking-[0.14em] text-slate-700">
+                  Aucune gestion locative
+                </div>
+                <div className="border border-[#D4A373]/30 bg-[#F7F1EB] px-5 py-4 text-sm font-medium uppercase tracking-[0.14em] text-slate-700 sm:col-span-2">
+                  Aucune charge fixe à supporter. Vous réservez uniquement lorsque vous en avez besoin.
+                </div>
+              </div>
+            </div>
+            <div className="rounded-[2rem] bg-slate-900 p-4 text-white shadow-xl">
+              <Carousel
+                images={[
+                  "/photos/1.jpg",
+                  "/photos/2.jpg",
+                  "/photos/3.jpg"
+                ]}
+              />
+            </div>
+          </div>
 
-        <h3 className="mt-6 text-xl font-semibold text-[#333333]">Nice Valrose</h3>
-        <p className="mt-4 text-justify text-slate-600">
-          Une salle lumineuse de 35 m² avec mobilier modulable, climatisation réversible, équipement audio, et connexion fibre. Idéale pour les consultations individuelles ou de petit groupe. Deuxième salle prévue prochainement.
-        </p>
-        
-        {/* Carrousel de photos */}
-        <div className="mt-8">
-          <Carousel 
-            images={[
-              "/photos/1.jpg",
-              "/photos/2.jpg",
-              "/photos/3.jpg"
-            ]} 
-          />
-        </div>
-        
-        {/* Équipements */}
-        <div className="mt-8 border-2 border-[#D4A373] bg-white p-6 shadow-sm">
-          <h4 className="text-xl font-semibold text-[#333333]">Équipements disponibles</h4>
-          <ul className="mt-4 grid grid-cols-1 gap-3 text-slate-600 sm:grid-cols-2 md:grid-cols-3">
-            <li className="flex items-center gap-2">
-              <span className="text-[#D4A373]">✓</span>
-              Équipement 1
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-[#D4A373]">✓</span>
-              Équipement 2
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-[#D4A373]">✓</span>
-              Équipement 3
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-[#D4A373]">✓</span>
-              Équipement 4
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-[#D4A373]">✓</span>
-              Équipement 5
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-[#D4A373]">✓</span>
-              Équipement 6
-            </li>
-          </ul>
-        </div>
-        
-        <p className="mt-8 text-justify text-slate-600">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-        </p>
-        <p className="mt-4 text-justify text-slate-600">
-          Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-        </p>
-        <p className="mt-4 text-justify text-slate-600">
-          Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
-        </p>
+          <div className="mt-14 grid gap-8">
+            {spaces.map((space, index) => (
+              <article
+                key={space.name}
+                className="grid overflow-hidden border border-slate-200 bg-white shadow-sm lg:grid-cols-[0.95fr_1.05fr]"
+              >
+                <div className={`relative min-h-[320px] ${index % 2 === 1 ? "lg:order-2" : ""}`}>
+                  <Image
+                    src={space.image}
+                    alt={space.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 45vw"
+                  />
+                </div>
+                <div className="p-8 lg:p-10">
+                  <h3 className={`${garamond.className} text-3xl font-semibold text-[#D4A373]`}>
+                    {space.name}
+                  </h3>
+                  <p className="mt-4 text-lg leading-8 text-slate-700">{space.description}</p>
+                  <p className="mt-4 text-slate-600">Équipements :</p>
+                  <ul className="mt-4 grid gap-3 text-slate-600 sm:grid-cols-2">
+                    {space.equipment.map((item) => (
+                      <li key={item} className="flex gap-3">
+                        <span className="mt-1 text-[#D4A373]">●</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-6 border-t border-slate-200 pt-6 text-slate-700">{space.details}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="mt-10 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="border border-slate-200 bg-[#FCFAF7] p-8 shadow-sm">
+              <h3 className={`${garamond.className} text-3xl font-semibold text-[#D4A373]`}>
+                Grande Salle
+              </h3>
+              <p className="mt-4 text-lg leading-8 text-slate-700">
+                Configuration modulable avec possibilité d&apos;ouverture de la porte coulissante permettant l&apos;utilisation conjointe du Salon Athéna et de la Salle Gaïa, selon disponibilité et réservation.
+              </p>
+              <p className="mt-6 text-slate-600">Cette configuration est adaptée :</p>
+              <ul className="mt-4 grid gap-3 text-slate-600 sm:grid-cols-2">
+                <li className="flex gap-3"><span className="text-[#D4A373]">●</span><span>Aux ateliers</span></li>
+                <li className="flex gap-3"><span className="text-[#D4A373]">●</span><span>Aux formations</span></li>
+                <li className="flex gap-3"><span className="text-[#D4A373]">●</span><span>Aux pratiques en petit groupe</span></li>
+                <li className="flex gap-3"><span className="text-[#D4A373]">●</span><span>Aux séances nécessitant davantage d&apos;espace</span></li>
+              </ul>
+            </div>
+
+            <div className="border border-slate-200 bg-white p-8 shadow-sm">
+              <h3 className={`${garamond.className} text-3xl font-semibold text-[#D4A373]`}>
+                Espaces communs
+              </h3>
+              <p className="mt-4 text-lg leading-8 text-slate-700">
+                Toutes les réservations incluent l&apos;accès aux espaces partagés.
+              </p>
+              <ul className="mt-6 grid gap-4 text-slate-600">
+                {sharedSpaces.map((item) => (
+                  <li key={item} className="flex gap-3 border-b border-slate-100 pb-4 last:border-b-0 last:pb-0">
+                    <span className="text-[#D4A373]">●</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 
       <section className="bg-[#FFFFFF] py-16 scroll-mt-24" id="forfait">
         <div className="mx-auto max-w-6xl px-6">
         <h2 className={`${garamond.className} text-4xl text-[#D4A373] font-semibold`}>▸ Foire aux questions</h2>
-        <p className="mt-6 text-slate-600">
-          Découvrez nos forfaits flexibles et nos conditions d&apos;utilisation.
+        <p className="mt-6 max-w-3xl text-slate-600">
+          Les réponses essentielles pour comprendre le fonctionnement de THÉRANICE, les réservations et les conditions d&apos;utilisation des cabinets.
         </p>
         
         <div className="mt-8 " >
           <FAQ
             items={[
               {
-                question: "▸ Quel est le prix d'une demi-journée ?",
-                answer: "Le tarif pour une demi-journée (4 heures) est de XX€. Ce tarif inclut l'accès à la salle équipée, le coin thé, le matériel de base, et le code d'accès sécurisé. Des forfaits avec plusieurs créneaux sont également disponibles à tarif préférentiel."
+                question: "▸ Quel est le prix d’une demi-journée ou d’une journée ?",
+                answer: (
+                  <div className="space-y-3">
+                    <p>Les tarifs sont indiqués directement sur la plateforme de réservation lors du choix du créneau.</p>
+                    <p>Les prix sont exprimés en euros.</p>
+                    <p>TVA non applicable – article 293 B du CGI.</p>
+                    <p>Chaque réservation inclut l&apos;accès aux espaces communs ainsi qu&apos;aux équipements mentionnés dans la description des salles.</p>
+                  </div>
+                )
               },
               {
                 question: "▸ Comment pratiquer chez THÉRANICE ?",
-                answer: "Pour pratiquer chez THÉRANICE, il vous suffit d'acheter un forfait demi-journée via notre plateforme de réservation en ligne. Une fois votre paiement confirmé, vous recevrez un code d'accès pour la serrure connectée."
+                answer: (
+                  <div className="space-y-3">
+                    <p>Pour exercer au sein de THÉRANICE :</p>
+                    <ol className="list-decimal space-y-2 pl-6">
+                      <li>Créez votre profil professionnel sur la plateforme</li>
+                      <li>Attendez la validation de votre profil</li>
+                      <li>Réservez le créneau souhaité</li>
+                      <li>Procédez au paiement en ligne</li>
+                    </ol>
+                    <p>Une fois le paiement confirmé, vous recevez les informations d&apos;accès, ainsi que le code de la serrure connectée pour la période réservée.</p>
+                    <p>Les espaces sont exclusivement destinés aux professionnels de l&apos;accompagnement et du soin.</p>
+                  </div>
+                )
               },
               {
-                question: "▸ Quels sont les règles d'utilisation des cabinets ?",
-                answer: "Les cabinets doivent être utilisés dans le respect des autres praticiens. Merci de laisser l'espace propre et rangé après votre passage. Le matériel mis à disposition doit être utilisé avec soin. Toute dégradation sera facturée."
+                question: "▸ THÉRANICE a-t-il un engagement solidaire ?",
+                answer: (
+                  <div className="space-y-3">
+                    <p>Oui.</p>
+                    <p>Pour chaque réservation effectuée, 1 € est reversé à la Ligue contre le Cancer.</p>
+                    <p>Cet engagement s&apos;inscrit dans la volonté de THÉRANICE de soutenir une démarche responsable et solidaire.</p>
+                  </div>
+                )
               },
               {
-                question: "▸ Comment acheter un forfait ?",
-                answer: "L'achat d'un forfait se fait directement en ligne via notre système de réservation. Sélectionnez votre créneau (matin ou après-midi), procédez au paiement sécurisé, et recevez instantanément votre confirmation avec le code d'accès."
-              },
-              {
-                question: "▸ Y a-t-il un délai d'utilisation des forfaits ?",
-                answer: "Les forfaits achetés sont valables pour la date et le créneau sélectionnés lors de la réservation. Ils ne sont pas reportables, sauf en cas d'annulation effectuée au moins 24h avant le créneau réservé."
+                question: "▸ Quelles sont les règles d’utilisation des cabinets ?",
+                answer: (
+                  <div className="space-y-3">
+                    <p>Les espaces doivent être utilisés dans le respect :</p>
+                    <ul className="list-disc space-y-2 pl-6">
+                      <li>du cadre professionnel du lieu</li>
+                      <li>du matériel mis à disposition</li>
+                      <li>des horaires réservés</li>
+                    </ul>
+                    <p>Le cabinet doit être restitué propre, rangé et dans son état initial.</p>
+                    <p>Toute dégradation engage la responsabilité du professionnel utilisateur.</p>
+                    <p>L&apos;acceptation du règlement intérieur est obligatoire lors de chaque réservation.</p>
+                  </div>
+                )
               },
               {
                 question: "▸ Comment réserver un créneau ?",
-                answer: "Consultez le calendrier des disponibilités sur notre plateforme, choisissez le jour et le créneau souhaité (matin 8h-12h ou après-midi 13h-17h), puis validez votre réservation en procédant au paiement."
+                answer: (
+                  <div className="space-y-3">
+                    <p>Depuis votre espace personnel :</p>
+                    <ul className="list-disc space-y-2 pl-6">
+                      <li>Sélectionnez la salle souhaitée</li>
+                      <li>Choisissez un créneau disponible</li>
+                      <li>Validez et procédez au paiement</li>
+                    </ul>
+                    <p>La réservation est confirmée après règlement.</p>
+                    <p>Un email de confirmation vous est immédiatement adressé.</p>
+                  </div>
+                )
+              },
+              {
+                question: "▸ Y a-t-il un délai d’utilisation après réservation ?",
+                answer: (
+                  <div className="space-y-3">
+                    <p>La réservation est valable uniquement pour le créneau sélectionné.</p>
+                    <p>Toute annulation doit intervenir au minimum 14 jours avant la date réservée pour donner lieu à remboursement, conformément aux Conditions de mise à disposition.</p>
+                  </div>
+                )
+              },
+              {
+                question: "▸ Quand recevrai-je ma facture ?",
+                answer: (
+                  <div className="space-y-3">
+                    <p>La facture est émise automatiquement à l&apos;issue de la période de mise à disposition.</p>
+                    <p>Elle est transmise par email et reste disponible dans votre espace personnel.</p>
+                  </div>
+                )
               }
             ]}
           />

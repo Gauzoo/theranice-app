@@ -1,11 +1,12 @@
 
 'use client';
 
+import type { ReactNode } from "react";
 import { useState } from "react";
 
 interface FAQItem {
   question: string;
-  answer: string;
+  answer: ReactNode;
 }
 
 interface FAQProps {
@@ -52,7 +53,7 @@ export default function FAQ({ items }: FAQProps) {
           </button>
           <div
             className={`overflow-hidden transition-all duration-300 ${
-              openIndex === index ? "max-h-96" : "max-h-0"
+              openIndex === index ? "max-h-[40rem]" : "max-h-0"
             }`}
           >
             <div className="border-t border-slate-200 p-3 text-slate-600">
