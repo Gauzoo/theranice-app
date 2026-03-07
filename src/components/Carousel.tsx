@@ -27,21 +27,19 @@ export default function Carousel({ images }: CarouselProps) {
   };
 
   return (
-    <div className="relative mx-auto w-full max-w-4xl">
-      {/* Image principale */}
-      <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-slate-200">
+    <div className="relative w-full">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-[1.25rem] bg-slate-200">
         <Image
           src={images[currentIndex]}
           alt={`Photo ${currentIndex + 1}`}
           fill
           className="object-cover transition-opacity duration-500"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+          sizes="(max-width: 1024px) 100vw, 48vw"
         />
-        
-        {/* Bouton précédent */}
+
         <button
           onClick={goToPrevious}
-          className="absolute left-4 top-1/2 -translate-y-1/2 cursor-pointer rounded-full bg-white/80 p-3 text-slate-900 shadow-lg transition-all hover:bg-white hover:scale-110"
+          className="absolute left-4 top-1/2 cursor-pointer -translate-y-1/2 rounded-full bg-white/88 p-3 text-slate-900 shadow-lg transition-all hover:bg-white"
           aria-label="Image précédente"
         >
           <svg
@@ -60,10 +58,9 @@ export default function Carousel({ images }: CarouselProps) {
           </svg>
         </button>
 
-        {/* Bouton suivant */}
         <button
           onClick={goToNext}
-          className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer rounded-full bg-white/80 p-3 text-slate-900 shadow-lg transition-all hover:bg-white hover:scale-110"
+          className="absolute right-4 top-1/2 cursor-pointer -translate-y-1/2 rounded-full bg-white/88 p-3 text-slate-900 shadow-lg transition-all hover:bg-white"
           aria-label="Image suivante"
         >
           <svg
@@ -83,7 +80,6 @@ export default function Carousel({ images }: CarouselProps) {
         </button>
       </div>
 
-      {/* Indicateurs (points) */}
       <div className="mt-4 flex justify-center gap-2">
         {images.map((_, index) => (
           <button
