@@ -58,7 +58,7 @@ export default function ReglementInterieurPage() {
               ▸ Article 2 – Description des espaces
             </h2>
 
-            <h3 className="text-xl font-semibold mb-3 mt-6">Salle 1</h3>
+            <h3 className="text-xl font-semibold mb-3 mt-6">Salon Athéna</h3>
             <ul className="list-disc pl-6 mb-6 space-y-2">
               <li>Deux fauteuils de consultation</li>
               <li>Un bureau</li>
@@ -68,7 +68,7 @@ export default function ReglementInterieurPage() {
               <li>Table de massage sur demande</li>
             </ul>
 
-            <h3 className="text-xl font-semibold mb-3 mt-6">Salle 2</h3>
+            <h3 className="text-xl font-semibold mb-3 mt-6">Salle Gaïa</h3>
             <ul className="list-disc pl-6 mb-6 space-y-2">
               <li>Un bureau</li>
               <li>Des chaises</li>
@@ -79,8 +79,11 @@ export default function ReglementInterieurPage() {
             </ul>
 
             <h3 className="text-xl font-semibold mb-3 mt-6">Grande salle</h3>
-            <p className="mb-6">
+            <p className="mb-2">
               Possibilité d&apos;ouverture de la porte coulissante permettant l&apos;utilisation conjointe des deux espaces selon réservation.
+            </p>
+            <p className="mb-6 font-semibold">
+              Capacité maximale : 19 personnes.
             </p>
 
             <h3 className="text-xl font-semibold mb-3 mt-6">Espaces communs</h3>

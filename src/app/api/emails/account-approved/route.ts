@@ -87,9 +87,9 @@ export async function POST(request: NextRequest) {
 
               <p><strong>Nos salles disponibles :</strong></p>
               <ul>
-                <li>Salle 1 (35m²) - 50€/créneau</li>
-                <li>Salle 2 (35m²) - 50€/créneau</li>
-                <li>Grande salle (70m²) - 80€/créneau</li>
+                <li>Athéna – 35€ la demi-journée / 65€ la journée</li>
+                <li>Gaïa – 35€ la demi-journée / 65€ la journée</li>
+                <li>Grande salle – 70€ la demi-journée / 130€ la journée</li>
               </ul>
 
               <p><strong>Créneaux horaires :</strong></p>

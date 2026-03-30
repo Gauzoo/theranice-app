@@ -33,21 +33,26 @@ interface CartItem {
 }
 
 const ROOM_PRICES = {
-  room1: 50,
-  room2: 50,
-  large: 80,
+  room1: 35,
+  room2: 35,
+  large: 70,
 };
 
 const FULLDAY_PRICES = {
-  room1: 90,
-  room2: 90,
-  large: 140,
+  room1: 65,
+  room2: 65,
+  large: 130,
 };
 
 const ROOM_LABELS = {
-  room1: "Salle 1 (35m²)",
-  room2: "Salle 2 (35m²)",
-  large: "Grande salle (70m²)",
+  room1: "Athéna",
+  room2: "Gaïa",
+  large: "Grande salle",
+};
+
+const ROOM_IMAGES: Record<string, string> = {
+  room1: "/photos/1.jpg",
+  room2: "/photos/2.jpg",
 };
 
 type AccountStatus = 'pending' | 'documents_submitted' | 'approved' | 'rejected';
@@ -82,6 +87,7 @@ export default function ReservationPage() {
   }, []);
 
   // Vérifie si un créneau est disponible
+  // TEMPORAIRE : exclusion mutuelle — si n'importe quelle salle est réservée pour un créneau, toutes sont bloquées
   const isSlotAvailable = (date: Date, slot: Slot, room: Room): boolean => {
     // Utilise la date locale au lieu de UTC
     const year = date.getFullYear();
@@ -94,48 +100,20 @@ export default function ReservationPage() {
 
     // Si on veut réserver la journée complète
     if (slot === 'fullday') {
-      // La journée est disponible si :
-      // - Pour la grande salle : aucune réservation n'existe (ni matin, ni après-midi, ni journée)
-      // - Pour les petites salles : cette salle n'est pas réservée ET la grande salle n'est pas réservée
-      if (room === 'large') {
-        return bookingsForDate.length === 0;
-      } else {
-        const roomBookedAnytime = bookingsForDate.some(b => b.room === room);
-        const largeBookedAnytime = bookingsForDate.some(b => b.room === 'large');
-        return !roomBookedAnytime && !largeBookedAnytime;
-      }
+      // Exclusion mutuelle : si n'importe quelle réservation existe pour cette date, c'est bloqué
+      return bookingsForDate.length === 0;
     }
 
     // Si on veut réserver matin ou après-midi
-    // Vérifie d'abord s'il y a une réservation journée sur cette salle
-    const fulldayBooked = bookingsForDate.some(b => b.slot === 'fullday' && b.room === room);
-    if (fulldayBooked) {
-      return false; // La journée est réservée, donc matin et après-midi sont bloqués
+    // Vérifie d'abord s'il y a une réservation journée (n'importe quelle salle)
+    const anyFulldayBooked = bookingsForDate.some(b => b.slot === 'fullday');
+    if (anyFulldayBooked) {
+      return false;
     }
 
-    // Vérifie si la grande salle est réservée en journée complète (bloque TOUTES les salles)
-    const largeFulldayBooked = bookingsForDate.some(b => b.slot === 'fullday' && b.room === 'large');
-    if (largeFulldayBooked) {
-      return false; // Si grande salle réservée toute la journée, rien n'est disponible
-    }
-    
-    // Trouve toutes les réservations pour ce créneau spécifique
-    const bookingsForSlot = bookingsForDate.filter(b => b.slot === slot);
-
-    // Si on veut réserver la grande salle
-    if (room === 'large') {
-      // La grande salle est disponible si aucune salle n'est réservée pour ce créneau
-      return bookingsForSlot.length === 0;
-    }
-
-    // Si on veut réserver une petite salle
-    // Elle est disponible si :
-    // 1. Elle n'est pas déjà réservée pour ce créneau
-    // 2. La grande salle n'est pas réservée pour ce créneau
-    const roomBooked = bookingsForSlot.some(b => b.room === room);
-    const largeBooked = bookingsForSlot.some(b => b.room === 'large');
-    
-    return !roomBooked && !largeBooked;
+    // Exclusion mutuelle : si n'importe quelle salle est réservée pour ce créneau, tout est bloqué
+    const anyBookingForSlot = bookingsForDate.some(b => b.slot === slot);
+    return !anyBookingForSlot;
   };
 
   // Vérifie si une salle spécifique est disponible pour les dates sélectionnées (tous créneaux)
@@ -187,46 +165,29 @@ export default function ReservationPage() {
   };
 
   // Vérifie si la sélection est en conflit avec le panier
+  // TEMPORAIRE : exclusion mutuelle — si n'importe quelle salle est dans le panier pour ce créneau, tout est bloqué
   const isSelectionInCart = (date: Date, slot: Slot, room: Room): boolean => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
 
-    // On vérifie les conflits avec le panier actuel
     const cartItemsForDate = cart.filter(item => item.dateStr === dateStr);
     
-    // Si pas d'item dans le panier pour cette date, pas de conflit
     if (cartItemsForDate.length === 0) return false;
 
-    // Logique de conflit identique à isSlotAvailable mais sur le panier
+    // Si on veut la journée complète, n'importe quel item dans le panier pour cette date = conflit
     if (slot === 'fullday') {
-      if (room === 'large') {
-        return cartItemsForDate.length > 0;
-      } else {
-        const roomBooked = cartItemsForDate.some(item => item.room === room);
-        const largeBooked = cartItemsForDate.some(item => item.room === 'large');
-        return roomBooked || largeBooked;
-      }
+      return cartItemsForDate.length > 0;
     }
 
-    // Si on veut réserver matin ou après-midi
-    const fulldayBooked = cartItemsForDate.some(item => item.slot === 'fullday' && item.room === room);
-    if (fulldayBooked) return true;
+    // Vérifie s'il y a une journée complète (n'importe quelle salle) dans le panier
+    const anyFulldayInCart = cartItemsForDate.some(item => item.slot === 'fullday');
+    if (anyFulldayInCart) return true;
 
-    const largeFulldayBooked = cartItemsForDate.some(item => item.slot === 'fullday' && item.room === 'large');
-    if (largeFulldayBooked) return true;
-    
-    const itemsForSlot = cartItemsForDate.filter(item => item.slot === slot);
-
-    if (room === 'large') {
-      return itemsForSlot.length > 0;
-    }
-
-    const roomBooked = itemsForSlot.some(item => item.room === room);
-    const largeBooked = itemsForSlot.some(item => item.room === 'large');
-    
-    return roomBooked || largeBooked;
+    // Exclusion mutuelle : si n'importe quelle salle est dans le panier pour ce créneau, tout est bloqué
+    const anyItemForSlot = cartItemsForDate.some(item => item.slot === slot);
+    return anyItemForSlot;
   };
 
   const handleDateClick = (value: Date) => {
@@ -576,7 +537,7 @@ export default function ReservationPage() {
                     return (
                       <label
                         key={room}
-                        className={`flex items-center justify-between p-4 border-2 transition-colors ${
+                        className={`flex items-center p-4 border-2 transition-colors ${
                           !isAvailable
                             ? 'opacity-50 cursor-not-allowed bg-slate-100 border-slate-200'
                             : selectedRoom === room
@@ -604,13 +565,23 @@ export default function ReservationPage() {
                             {!isAvailable && <span className="ml-2 text-sm text-red-600">(Tous les créneaux indisponibles)</span>}
                           </span>
                         </div>
-                        <span className={`font-semibold ${isAvailable ? 'text-[#D4A373]' : 'text-slate-400'}`}>
-                          {ROOM_PRICES[room]}€
-                        </span>
                       </label>
                     );
                   })}
                 </div>
+
+                {/* Photo de la salle sélectionnée */}
+                {selectedRoom && ROOM_IMAGES[selectedRoom] && (
+                  <div className="mt-4 relative aspect-[4/3] overflow-hidden rounded-lg border border-slate-200">
+                    <Image
+                      src={ROOM_IMAGES[selectedRoom]}
+                      alt={ROOM_LABELS[selectedRoom]}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Sélection du créneau */}
@@ -643,6 +614,9 @@ export default function ReservationPage() {
                         {!isSlotAvailableForSelection('morning') && <span className="ml-2 text-sm text-red-600">(Indisponible)</span>}
                       </span>
                     </div>
+                    <span className={`font-semibold ${isSlotAvailableForSelection('morning') ? 'text-[#D4A373]' : 'text-slate-400'}`}>
+                      {selectedRoom ? ROOM_PRICES[selectedRoom] : ROOM_PRICES.room1}€
+                    </span>
                   </label>
 
                   <label
@@ -669,6 +643,9 @@ export default function ReservationPage() {
                         {!isSlotAvailableForSelection('afternoon') && <span className="ml-2 text-sm text-red-600">(Indisponible)</span>}
                       </span>
                     </div>
+                    <span className={`font-semibold ${isSlotAvailableForSelection('afternoon') ? 'text-[#D4A373]' : 'text-slate-400'}`}>
+                      {selectedRoom ? ROOM_PRICES[selectedRoom] : ROOM_PRICES.room1}€
+                    </span>
                   </label>
 
                   <label
@@ -696,7 +673,7 @@ export default function ReservationPage() {
                       </span>
                     </div>
                     <span className={`font-semibold ${isSlotAvailableForSelection('fullday') ? 'text-[#D4A373]' : 'text-slate-400'}`}>
-                      {selectedRoom && FULLDAY_PRICES[selectedRoom]}€
+                      {selectedRoom ? FULLDAY_PRICES[selectedRoom] : FULLDAY_PRICES.room1}€
                     </span>
                   </label>
                 </div>

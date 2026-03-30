@@ -29,9 +29,9 @@ interface Booking {
 }
 
 const ROOM_LABELS = {
-  room1: "Salle 1 (35m²)",
-  room2: "Salle 2 (35m²)",
-  large: "Grande salle (70m²)",
+  room1: "Athéna",
+  room2: "Gaïa",
+  large: "Grande salle",
 };
 
 const SLOT_LABELS = {

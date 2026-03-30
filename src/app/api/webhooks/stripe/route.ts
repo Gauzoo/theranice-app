@@ -83,22 +83,15 @@ export async function POST(request: NextRequest) {
           const bookings = confirmedBookings || [];
 
           // Logique de vérification stricte
+          // TEMPORAIRE : exclusion mutuelle — si n'importe quelle salle est réservée, tout est bloqué
           if (slot === 'fullday') {
-            if (room === 'large') {
-              isAvailable = bookings.length === 0;
-            } else {
-              isAvailable = !bookings.some(b => b.room === room || b.room === 'large');
-            }
+            isAvailable = bookings.length === 0;
           } else {
-            const fulldayBooked = bookings.some(b => b.slot === 'fullday' && (b.room === room || b.room === 'large'));
-            if (fulldayBooked) isAvailable = false;
+            const anyFulldayBooked = bookings.some(b => b.slot === 'fullday');
+            if (anyFulldayBooked) isAvailable = false;
             else {
-               const slotBookings = bookings.filter(b => b.slot === slot);
-               if (room === 'large') {
-                 isAvailable = slotBookings.length === 0;
-               } else {
-                 isAvailable = !slotBookings.some(b => b.room === room || b.room === 'large');
-               }
+               const anySlotBooked = bookings.some(b => b.slot === slot);
+               isAvailable = !anySlotBooked;
             }
           }
 

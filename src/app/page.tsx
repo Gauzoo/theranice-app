@@ -13,7 +13,7 @@ const garamond = EB_Garamond({
 const spaces = [
   {
     name: "Salon Athéna",
-    images: ["/photos/1.jpg", "/photos/covers1.jpg"],
+    images: ["/photos/1.jpg"],
     description:
       "Un espace lumineux et structurant, idéal pour les consultations individuelles.",
     details:
@@ -34,7 +34,7 @@ const spaces = [
   },
   {
     name: "Salle Gaïa",
-    images: ["/photos/2.jpg", "/photos/3.jpg"],
+    images: ["/photos/2.jpg"],
     description:
       "Un espace plus intimiste, parfaitement adapté aux pratiques nécessitant une table de massage.",
     details:
@@ -86,7 +86,7 @@ export default function Home() {
             </div>
 
             <h1 className={`${garamond.className} mt-7 text-5xl leading-[1.04] font-semibold sm:text-6xl lg:text-7xl`}>
-              Des espaces calmes, soignes et confidentiels pour exercer avec justesse.
+              Des espaces calmes et soignéspour exercer avec justesse.
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-100 sm:text-xl sm:text-slate-200">
@@ -152,7 +152,19 @@ export default function Home() {
                 className="flex h-full flex-col overflow-hidden border border-slate-200 bg-white shadow-sm"
               >
                 <div className="border-b border-slate-200 bg-[#F8F5F1] p-4">
-                  <Carousel images={space.images} />
+                  {space.images.length === 1 ? (
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-[1.25rem] bg-slate-200">
+                      <Image
+                        src={space.images[0]}
+                        alt={space.name}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 1024px) 100vw, 48vw"
+                      />
+                    </div>
+                  ) : (
+                    <Carousel images={space.images} />
+                  )}
                 </div>
                 <div className="flex flex-1 flex-col p-8 lg:p-10">
                   <h3 className={`${garamond.className} text-3xl font-semibold text-[#D4A373]`}>
@@ -336,9 +348,6 @@ export default function Home() {
           <p>Vous pouvez également nous contacter directement :</p>
           <p className="mt-2">
             <strong>Email :</strong> contact@theranice.fr
-          </p>
-          <p className="mt-1">
-            <strong>Téléphone :</strong> 06 00 00 00 00
           </p>
         </div>
         </div>

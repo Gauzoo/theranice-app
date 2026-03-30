@@ -22,11 +22,6 @@ export default function SiteFooter() {
                   contact@theranice.fr
                 </a>
               </li>
-              <li>
-                <a href="tel:0600000000" className="hover:text-[#D4A373] transition-colors">
-                  06 00 00 00 00
-                </a>
-              </li>
               <li className="text-[#D4A373]">
                 Nice, France
               </li>

@@ -103,9 +103,9 @@ export async function POST(request: NextRequest) {
     };
     
     const roomLabels: Record<string, string> = {
-      room1: 'Salle 1 (35m²)',
-      room2: 'Salle 2 (35m²)',
-      large: 'Grande salle (70m²)'
+      room1: 'Athéna',
+      room2: 'Gaïa',
+      large: 'Grande salle'
     };
 
     // Construction de la description du panier pour Stripe
@@ -120,15 +120,15 @@ export async function POST(request: NextRequest) {
 
 
     const ROOM_PRICES: Record<string, number> = {
-      room1: 50,
-      room2: 50,
-      large: 80,
+      room1: 35,
+      room2: 35,
+      large: 70,
     };
     
     const FULLDAY_PRICES: Record<string, number> = {
-      room1: 90,
-      room2: 90,
-      large: 140,
+      room1: 65,
+      room2: 65,
+      large: 130,
     };
 
     // Calcul du prix total et validation côté serveur

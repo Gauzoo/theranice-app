@@ -59,8 +59,8 @@ interface PendingValidation extends Member {
 }
 
 const ROOM_LABELS: Record<string, string> = {
-  room1: "Salle 1",
-  room2: "Salle 2",
+  room1: "Athéna",
+  room2: "Gaïa",
   large: "Grande salle",
 };
 
@@ -1237,9 +1237,9 @@ export default function AdminDashboard() {
                   }}
                   className="w-full border border-slate-300 rounded px-3 py-2"
                 >
-                  <option value="room1">Salle 1 (35m²)</option>
-                  <option value="room2">Salle 2 (35m²)</option>
-                  <option value="large">Grande salle (70m²)</option>
+                  <option value="room1">Athéna</option>
+                  <option value="room2">Gaïa</option>
+                  <option value="large">Grande salle</option>
                 </select>
               </div>
 
