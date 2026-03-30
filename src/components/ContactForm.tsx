@@ -9,18 +9,26 @@ export default function ContactForm() {
     sujet: '',
     message: ''
   });
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    alert('Message envoyé ! Nous vous répondrons dans les plus brefs délais.');
-    
-    // Réinitialiser le formulaire
-    setFormData({
-      nom: '',
-      prenom: '',
-      sujet: '',
-      message: ''
-    });
+    setStatus('loading');
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) throw new Error();
+
+      setStatus('success');
+      setFormData({ nom: '', prenom: '', sujet: '', message: '' });
+    } catch {
+      setStatus('error');
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -33,6 +41,16 @@ export default function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+      {status === 'success' && (
+        <div className="border border-green-200 bg-green-50 px-5 py-4 text-green-800">
+          Message envoyé ! Nous vous répondrons dans les plus brefs délais.
+        </div>
+      )}
+      {status === 'error' && (
+        <div className="border border-red-200 bg-red-50 px-5 py-4 text-red-800">
+          Une erreur est survenue. Veuillez réessayer ou nous écrire directement à contact@theranice.fr.
+        </div>
+      )}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Nom */}
         <div>
@@ -107,9 +125,10 @@ export default function ContactForm() {
       <div className="flex justify-end">
         <button
           type="submit"
-          className="cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363]"
+          disabled={status === 'loading'}
+          className="cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Envoyer
+          {status === 'loading' ? 'Envoi en cours...' : 'Envoyer'}
         </button>
       </div>
     </form>
