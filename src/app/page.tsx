@@ -86,7 +86,7 @@ export default function Home() {
             </div>
 
             <h1 className={`${garamond.className} mt-7 text-5xl leading-[1.04] font-semibold sm:text-6xl lg:text-7xl`}>
-              Des espaces calmes et soignéspour exercer avec justesse.
+              Des espaces calmes et soignés pour exercer avec justesse.
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-100 sm:text-xl sm:text-slate-200">
