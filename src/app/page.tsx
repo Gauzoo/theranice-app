@@ -90,7 +90,7 @@ export default function Home() {
             </h1>
 
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-100 sm:text-xl sm:text-slate-200">
-              Un lieu pensé pour accueillir consultations, accompagnements et soins dans une atmosphère sereine, élégante et immédiatement opérationnelle.
+              Un espace professionnel, serein et immédiatement opérationnel — et pour chaque réservation confirmée, 1&nbsp;€ est reversé à la Ligue contre le Cancer.
             </p>
 
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-start">
@@ -270,16 +270,7 @@ export default function Home() {
                     )
                   },
                   {
-                    question: "THÉRANICE a-t-il un engagement solidaire ?",
-                    answer: (
-                      <div className="space-y-3">
-                        <p>Oui.</p>
-                        <p>Pour chaque réservation effectuée, 1 € est reversé à la Ligue contre le Cancer.</p>
-                        <p>Cet engagement s&apos;inscrit dans la volonté de THÉRANICE de soutenir une démarche responsable et solidaire.</p>
-                      </div>
-                    )
-                  },
-                  {
+
                     question: "Quelles sont les règles d’utilisation des cabinets ?",
                     answer: (
                       <div className="space-y-3">
@@ -335,21 +326,17 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-[#FFFFFF] py-16 pb-32 scroll-mt-24" id="contact">
+      <section className="bg-[#FFFFFF] py-16  scroll-mt-24" id="contact">
         <div className="mx-auto max-w-6xl px-6">
         <h2 className={`${garamond.className} text-4xl text-[#D4A373] font-semibold`}>▸ Contact</h2>
         <p className="mt-6 text-slate-600">
-          Besoin d&apos;infos supplémentaires ou d&apos;une visite ? Remplissez le formulaire ci-dessous et nous vous répondrons dans les plus brefs délais.
+          Besoin d&apos;infos supplémentaires ou d&apos;une visite ? Remplissez le formulaire ci-dessous et nous vous répondrons dans les plus brefs délais ou contactez-nous 
+          directement par email à <strong>contact@theranice.fr</strong>.
         </p>
         
         <ContactForm />
         
-        <div className="mt-8 text-center text-slate-600">
-          <p>Vous pouvez également nous contacter directement :</p>
-          <p className="mt-2">
-            <strong>Email :</strong> contact@theranice.fr
-          </p>
-        </div>
+
         </div>
       </section>
     </div>

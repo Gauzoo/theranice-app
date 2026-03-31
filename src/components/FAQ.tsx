@@ -33,9 +33,9 @@ export default function FAQ({ items }: FAQProps) {
               openIndex === index ? "bg-[#FCFAF7]" : "hover:bg-[#FCFAF7]"
             }`}
           >
-            <div className="flex items-start gap-4">
-              <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#D4A373]" aria-hidden="true" />
-              <h4 className="text-lg font-semibold leading-7 text-slate-900">
+            <div className="flex items-center gap-4">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#D4A373]" aria-hidden="true" />
+              <h4 className="text-lg font-semibold leading-7 text-[#D4A373]">
               {item.question}
               </h4>
             </div>

@@ -23,7 +23,7 @@ export default function SiteFooter() {
                 </a>
               </li>
               <li className="text-[#D4A373]">
-                Nice, France
+                19 rue Michelet, Nice
               </li>
             </ul>
           </div>
