@@ -39,13 +39,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Réservation déjà annulée' }, { status: 400 });
     }
 
-    // Vérifie le délai d'annulation (7 jours) - sauf pour l'admin
+    // Vérifie le délai d'annulation (14 jours) - sauf pour l'admin
     if (!isAdmin) {
       const bookingDate = new Date(booking.date + 'T00:00:00');
       const now = new Date();
       const daysDiff = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-      if (daysDiff <= 7) {
-        return NextResponse.json({ error: 'Annulation impossible : moins de 7 jours avant la réservation' }, { status: 400 });
+      if (daysDiff <= 14) {
+        return NextResponse.json({ error: 'Annulation impossible : moins de 14 jours avant la réservation' }, { status: 400 });
       }
     }
 
