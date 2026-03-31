@@ -174,8 +174,8 @@ export default function Home() {
                   <p className="mt-4 text-slate-600">Équipements :</p>
                   <ul className="mt-4 grid gap-3 text-slate-600 sm:grid-cols-2">
                     {space.equipment.map((item) => (
-                      <li key={item} className="flex gap-3">
-                        <span className="mt-1 text-[#D4A373]">●</span>
+                      <li key={item} className="flex items-center gap-3">
+                        <span className="h-2 w-2 shrink-0 rounded-full bg-[#D4A373]" aria-hidden="true" />
                         <span>{item}</span>
                       </li>
                     ))}
