@@ -86,11 +86,10 @@ export default function Home() {
             </div>
 
             <h1 className={`${garamond.className} mt-7 text-5xl leading-[1.04] font-semibold sm:text-6xl lg:text-7xl`}>
-              Des espaces calmes et soignés pour exercer avec justesse.
+              Des espaces calmes et soignés pour exercer avec sérénité.
             </h1>
-
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-100 sm:text-xl sm:text-slate-200">
-              Un espace professionnel, serein et immédiatement opérationnel — et pour chaque réservation confirmée, 1&nbsp;€ est reversé à la Ligue contre le Cancer.
+            <p className="mt-10 text-sm uppercase tracking-[0.2em] ">
+               Un espace professionnel, serein et immédiatement opérationnel et pour chaque réservation confirmée, 1&nbsp;€ est reversé à la Ligue contre le Cancer.
             </p>
 
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-start">
@@ -104,13 +103,11 @@ export default function Home() {
               className="inline-flex items-center justify-center border border-white/20 bg-white/10 px-7 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-sm transition-colors hover:bg-white/15"
               href="#nos-espaces"
             >
-              Decouvrir les espaces
+              Découvrir les espaces
             </Link>
             </div>
 
-            <p className="mt-10 text-sm uppercase tracking-[0.2em] text-white/70">
-              Un cadre elegant, une reservation simple, une experience fluide.
-            </p>
+
           </div>
         </div>
       </section>
@@ -270,7 +267,16 @@ export default function Home() {
                     )
                   },
                   {
-
+                    question: "THÉRANICE a-t-il un engagement solidaire ?",
+                    answer: (
+                      <div className="space-y-3">
+                        <p>Oui.</p>
+                        <p>Pour chaque réservation effectuée, 1 € est reversé à la Ligue contre le Cancer.</p>
+                        <p>Cet engagement s&apos;inscrit dans la volonté de THÉRANICE de soutenir une démarche responsable et solidaire.</p>
+                      </div>
+                    )
+                  },
+                  {
                     question: "Quelles sont les règles d’utilisation des cabinets ?",
                     answer: (
                       <div className="space-y-3">
