@@ -162,24 +162,6 @@ export async function POST(request: NextRequest) {
                 });
               } catch (e) { console.error('Email error', e); }
 
-              // Envoi facture PDF
-              try {
-                await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-invoice`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    email: session.customer_email,
-                    nom: session.metadata?.nom,
-                    prenom: session.metadata?.prenom,
-                    date,
-                    slot,
-                    room,
-                    price: booking.price,
-                    bookingId: booking.id,
-                  }),
-                });
-              } catch (e) { console.error('Invoice email error', e); }
-
             } else {
               results.push({ id: booking.id, status: 'error', error: updateError });
             }
@@ -344,26 +326,6 @@ export async function POST(request: NextRequest) {
           });
         } catch (emailError) {
           console.error(`Error sending confirmation email for ${date}:`, emailError);
-        }
-
-        // Envoi facture PDF
-        try {
-          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-invoice`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: session.customer_email,
-              nom,
-              prenom,
-              date,
-              slot,
-              room,
-              price: unitPrice,
-              bookingId: bookingData.id,
-            }),
-          });
-        } catch (invoiceError) {
-          console.error(`Error sending invoice for ${date}:`, invoiceError);
         }
       }
 

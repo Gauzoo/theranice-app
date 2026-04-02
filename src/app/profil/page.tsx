@@ -53,6 +53,8 @@ export default function ProfilPage() {
     email: "",
     telephone: "",
     activite_exercee: "",
+    adresse: "",
+    siret: "",
     account_status: "pending" as AccountStatus,
     carte_identite_url: "",
     kbis_url: "",
@@ -96,6 +98,8 @@ export default function ProfilPage() {
           email: user.email || "",
           telephone: profile.telephone || "",
           activite_exercee: profile.activite_exercee || "",
+          adresse: profile.adresse || "",
+          siret: profile.siret || "",
           account_status: profile.account_status || "pending",
           carte_identite_url: profile.carte_identite_url || "",
           kbis_url: profile.kbis_url || "",
@@ -564,6 +568,8 @@ export default function ProfilPage() {
           prenom: formData.prenom,
           telephone: formData.telephone,
           activite_exercee: formData.activite_exercee,
+          adresse: formData.adresse,
+          siret: formData.siret,
         })
         .eq('id', user.id)
         .select();
@@ -762,7 +768,45 @@ export default function ProfilPage() {
               />
             </div>
 
-            {/* Carte d'identité */}
+            {/* Adresse complète */}
+            <div>
+              <label htmlFor="adresse" className="block text-sm font-semibold text-slate-900">
+                Adresse complète <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="adresse"
+                name="adresse"
+                value={formData.adresse}
+                onChange={handleChange}
+                disabled={!isEditing}
+                required
+                className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373] disabled:bg-slate-100 disabled:cursor-not-allowed"
+                placeholder="12 avenue Jean Médecin, 06000 Nice"
+              />
+              <p className="mt-1 text-xs text-slate-500">Adresse utilisée pour la facturation</p>
+            </div>
+
+            {/* SIRET */}
+            <div>
+              <label htmlFor="siret" className="block text-sm font-semibold text-slate-900">
+                SIRET <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="siret"
+                name="siret"
+                value={formData.siret}
+                onChange={handleChange}
+                disabled={!isEditing}
+                required
+                className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373] disabled:bg-slate-100 disabled:cursor-not-allowed"
+                placeholder="Ex: 123 456 789 00012"
+              />
+              <p className="mt-1 text-xs text-slate-500">Numéro SIRET de votre activité</p>
+            </div>
+
+            {/* Carte d&apos;identité */}
             <div>
               <label className="block text-sm font-semibold text-slate-900">
                 Carte d&apos;identité <span className="text-red-500">*</span>

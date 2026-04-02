@@ -54,7 +54,7 @@ function SuccessContent() {
             </div>
           ) : (
             <div className="bg-white shadow-lg p-8 text-center">
-              <div className="text-6xl mb-6">✅</div>
+        
               <h2 className={`${garamond.className} text-3xl font-semibold mb-4 text-[#D4A373]`}>
                 Réservation confirmée !
               </h2>
@@ -63,15 +63,12 @@ function SuccessContent() {
               </p>
               <div className="bg-[#FEFAE0] border-l-4 border-[#D4A373] p-6 mb-6">
                 <p className="text-slate-700">
-                  <strong>📧 Email de confirmation envoyé</strong><br />
-                  Vous allez recevoir un email avec tous les détails de votre réservation et votre code d&apos;accès.
+                  <strong>Email de confirmation envoyé</strong><br />
+                  Vous allez recevoir un email avec tous les détails de votre réservation, votre code d&apos;accès et votre facture.
+                  
                 </p>
               </div>
-              {sessionId && (
-                <p className="text-sm text-slate-500 mb-6">
-                  Session ID: {sessionId}
-                </p>
-              )}
+ 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
                   href="/mes-reservations"
