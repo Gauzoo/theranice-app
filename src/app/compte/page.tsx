@@ -31,6 +31,8 @@ export default function ComptePage() {
     const prenom = formData.get("prenom") as string;
     const telephone = formData.get("telephone") as string;
     const activite_exercee = formData.get("activite_exercee") as string;
+    const adresse = formData.get("adresse") as string;
+    const siret = formData.get("siret") as string;
 
     // Vérification que les mots de passe correspondent
     if (password !== confirmPassword) {
@@ -66,6 +68,8 @@ export default function ComptePage() {
             prenom,
             telephone,
             activite_exercee,
+            adresse,
+            siret,
           },
         },
       });
@@ -215,6 +219,36 @@ export default function ComptePage() {
                 required
                 className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
                 placeholder="Ex: Hypnothérapie, Sophrologie..."
+              />
+            </div>
+
+            {/* Adresse complète */}
+            <div>
+              <label htmlFor="adresse" className="block text-sm font-semibold text-slate-900">
+                Adresse complète <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="adresse"
+                name="adresse"
+                required
+                className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
+                placeholder="12 avenue Jean Médecin, 06000 Nice"
+              />
+            </div>
+
+            {/* SIRET */}
+            <div>
+              <label htmlFor="siret" className="block text-sm font-semibold text-slate-900">
+                SIRET <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="siret"
+                name="siret"
+                required
+                className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
+                placeholder="Ex: 123 456 789 00012"
               />
             </div>
 

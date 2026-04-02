@@ -205,12 +205,13 @@ export default function LoginModal({ isOpen, onClose, buttonRef }: LoginModalPro
 
             {/* Mot de passe oublié */}
             <div className="text-center pt-2">
-              <a
-                href="#"
+              <Link
+                href="/mot-de-passe-oublie"
+                onClick={onClose}
                 className="text-sm text-slate-600 hover:text-[#D4A373] transition-colors"
               >
                 Mot de passe oublié ?
-              </a>
+              </Link>
             </div>
           </form>
         </div>

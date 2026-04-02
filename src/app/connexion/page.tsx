@@ -142,12 +142,12 @@ export default function ConnexionPage() {
 
             {/* Mot de passe oublié */}
             <div className="text-center pt-2">
-              <a
-                href="#"
+              <Link
+                href="/mot-de-passe-oublie"
                 className="text-sm text-slate-600 hover:text-[#D4A373] transition-colors"
               >
                 Mot de passe oublié ?
-              </a>
+              </Link>
             </div>
           </form>
         </div>
