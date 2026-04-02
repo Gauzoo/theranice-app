@@ -803,7 +803,7 @@ export default function ProfilPage() {
                 className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373] disabled:bg-slate-100 disabled:cursor-not-allowed"
                 placeholder="12 avenue Jean Médecin, 06000 Nice"
               />
-              <p className="mt-1 text-xs text-slate-500">Adresse utilisée pour la facturation : <strong>Adresse / Code Postal / Ville</strong></p>
+              <p className="mt-1 text-xs text-slate-500">Adresse utilisée pour la facturation : <strong>Adresse, Code Postal Ville</strong></p>
             </div>
 
             {/* SIRET */}
@@ -1003,6 +1003,12 @@ export default function ProfilPage() {
 
             {/* Boutons d'action */}
             <div className="flex flex-wrap items-center gap-4 pt-6">
+              <Link
+                href="/modifier-mot-de-passe"
+                className="bg-slate-700 px-8 py-3 font-semibold uppercase tracking-wide text-white text-sm transition-colors hover:bg-slate-600"
+              >
+                Modifier le mot de passe
+              </Link>
               {!isEditing ? (
                 <button
                   type="button"
@@ -1034,12 +1040,7 @@ export default function ProfilPage() {
                   </button>
                 </>
               )}
-              <Link
-                href="/modifier-mot-de-passe"
-                className="bg-slate-700 px-8 py-3 font-semibold uppercase tracking-wide text-white text-sm transition-colors hover:bg-slate-600"
-              >
-                Modifier le mot de passe
-              </Link>
+
             </div>
           </form>
 
