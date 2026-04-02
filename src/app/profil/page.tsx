@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { EB_Garamond } from "next/font/google";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -72,14 +73,6 @@ export default function ProfilPage() {
   const [kbisFile, setKbisFile] = useState<File | null>(null);
   const [rcProFile, setRcProFile] = useState<File | null>(null);
 
-  // État pour le changement de mot de passe
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
-
   // Récupère les données de l'utilisateur au chargement
   useEffect(() => {
     if (authLoading) return;
@@ -101,13 +94,13 @@ export default function ProfilPage() {
 
       if (profile) {
         setFormData({
-          nom: profile.nom || "",
-          prenom: profile.prenom || "",
+          nom: profile.nom || user.user_metadata?.nom || "",
+          prenom: profile.prenom || user.user_metadata?.prenom || "",
           email: user.email || "",
-          telephone: profile.telephone || "",
-          activite_exercee: profile.activite_exercee || "",
-          adresse: profile.adresse || "",
-          siret: profile.siret || "",
+          telephone: profile.telephone || user.user_metadata?.telephone || "",
+          activite_exercee: profile.activite_exercee || user.user_metadata?.activite_exercee || "",
+          adresse: profile.adresse || user.user_metadata?.adresse || "",
+          siret: profile.siret || user.user_metadata?.siret || "",
           account_status: profile.account_status || "pending",
           carte_identite_url: profile.carte_identite_url || "",
           kbis_url: profile.kbis_url || "",
@@ -451,55 +444,6 @@ export default function ProfilPage() {
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError(null);
-    setPasswordSuccess(false);
-
-    if (newPassword.length < 6) {
-      setPasswordError("Le nouveau mot de passe doit contenir au moins 6 caractères");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Les mots de passe ne correspondent pas");
-      return;
-    }
-
-    setPasswordLoading(true);
-    try {
-      const supabase = createClient();
-
-      // Vérifier le mot de passe actuel
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: currentPassword,
-      });
-      if (signInError) {
-        setPasswordError("Mot de passe actuel incorrect");
-        return;
-      }
-
-      // Mettre à jour le mot de passe
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-      if (updateError) {
-        setPasswordError(updateError.message);
-        return;
-      }
-
-      setPasswordSuccess(true);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setTimeout(() => setPasswordSuccess(false), 5000);
-    } catch {
-      setPasswordError("Erreur lors du changement de mot de passe");
-    } finally {
-      setPasswordLoading(false);
-    }
-  };
-
   const uploadDocument = async (file: File, documentType: 'carte-identite' | 'kbis' | 'rc-pro'): Promise<string> => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -738,15 +682,6 @@ export default function ProfilPage() {
         <div className="mx-auto max-w-3xl px-6">
           <div className="flex items-center justify-between mb-8">
             <h2 className={`${garamond.className} text-4xl font-semibold text-[#D4A373]`}>▸ Mes informations</h2>
-            
-            {!isEditing && (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="cursor-pointer bg-[#D4A373] px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363]"
-              >
-                Modifier
-              </button>
-            )}
           </div>
 
           {/* Messages d'erreur et de succès */}
@@ -762,7 +697,7 @@ export default function ProfilPage() {
             </div>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Nom et Prénom */}
             <div className="grid gap-6 md:grid-cols-2">
               <div>
@@ -868,7 +803,7 @@ export default function ProfilPage() {
                 className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373] disabled:bg-slate-100 disabled:cursor-not-allowed"
                 placeholder="12 avenue Jean Médecin, 06000 Nice"
               />
-              <p className="mt-1 text-xs text-slate-500">Adresse utilisée pour la facturation</p>
+              <p className="mt-1 text-xs text-slate-500">Adresse utilisée pour la facturation : Adresse / Code Postal / Ville</p>
             </div>
 
             {/* SIRET */}
@@ -890,384 +825,224 @@ export default function ProfilPage() {
               <p className="mt-1 text-xs text-slate-500">Numéro SIRET de votre activité</p>
             </div>
 
-            {/* Carte d&apos;identité */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-900">
-                Carte d&apos;identité <span className="text-red-500">*</span>
-              </label>
-              {formData.carte_identite_url ? (
-                <div className="mt-2">
-                  {formData.carte_identite_rejection_notes && formData.carte_identite_status === 'rejected' && (
-                    <div className="bg-[#B12F2E] border border-[#B12F2E] rounded p-3 mb-3 text-sm text-white">
-                      <strong>Raison du refus :</strong> {formData.carte_identite_rejection_notes}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <a
-                      href={formData.carte_identite_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-800 underline font-medium"
-                    >
-                      {(() => {
-                        const urlParts = formData.carte_identite_url.split('/');
-                        const fileNameWithParams = urlParts[urlParts.length - 1];
-                        const fileName = fileNameWithParams.split('?')[0];
-                        // Extraire le nom après le timestamp
-                        const parts = fileName.split('-');
-                        if (parts.length >= 3) {
-                          return parts.slice(2).join('-'); // Enlève "carte-identite-timestamp-"
-                        }
-                        return fileName;
-                      })()}
+            {/* Documents — 3 colonnes */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+
+              {/* Carte d'identité */}
+              <div className="border border-slate-200 bg-white p-4 flex flex-col gap-2">
+                <span className="text-sm font-semibold text-slate-900">
+                  Carte d&apos;identité <span className="text-red-500">*</span>
+                </span>
+                {formData.carte_identite_url ? (
+                  <>
+                    {formData.carte_identite_rejection_notes && formData.carte_identite_status === 'rejected' && (
+                      <div className="bg-[#B12F2E] rounded p-2 text-xs text-white">
+                        <strong>Refus :</strong> {formData.carte_identite_rejection_notes}
+                      </div>
+                    )}
+                    <a href={formData.carte_identite_url} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:text-blue-800 underline truncate">
+                      Voir le document
                     </a>
-                    {formData.carte_identite_status !== 'approved' && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteDocument('carte')}
-                        className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
-                        title="Supprimer le document"
-                      >
-                        X
-                      </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {formData.carte_identite_status === 'pending' && (
+                        <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 text-xs font-medium">En attente</span>
+                      )}
+                      {formData.carte_identite_status === 'approved' && (
+                        <span className="bg-[#56862F] text-white px-2 py-0.5 text-xs font-medium">Validé</span>
+                      )}
+                      {formData.carte_identite_status === 'rejected' && (
+                        <span className="bg-[#B12F2E] text-white px-2 py-0.5 text-xs font-medium">Refusé</span>
+                      )}
+                      {formData.carte_identite_status !== 'approved' && (
+                        <button type="button" onClick={() => handleDeleteDocument('carte')}
+                          className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-0.5 text-xs font-bold rounded cursor-pointer"
+                          title="Supprimer">X</button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <input type="file" id="carte-identite-input"
+                      onChange={(e) => handleFileChange(e, 'carte')}
+                      accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                    <label htmlFor="carte-identite-input"
+                      className="cursor-pointer bg-[#D4A373] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] text-center">
+                      + Ajouter un fichier
+                    </label>
+                    {carteIdentiteFile && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-[#56862F] font-medium truncate">✓ {carteIdentiteFile.name}</span>
+                        <button type="button" onClick={() => handleUploadDocument('carte')}
+                          disabled={uploadingDoc}
+                          className="cursor-pointer bg-[#56862F] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white text-center transition-colors hover:bg-[#456d25] disabled:opacity-50 disabled:cursor-not-allowed">
+                          {uploadingDoc ? 'Upload...' : 'Envoyer'}
+                        </button>
+                      </div>
                     )}
-                    {formData.carte_identite_status === 'pending' && (
-                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 text-sm font-medium">
-                        Document en attente de validation
-                      </span>
+                  </>
+                )}
+                <p className="text-xs text-slate-400 mt-auto">PDF, JPG, PNG · max 5 MB</p>
+              </div>
+
+              {/* KBIS */}
+              <div className="border border-slate-200 bg-white p-4 flex flex-col gap-2">
+                <span className="text-sm font-semibold text-slate-900">
+                  KBIS ou justificatif <span className="text-red-500">*</span>
+                </span>
+                {formData.kbis_url ? (
+                  <>
+                    {formData.kbis_rejection_notes && formData.kbis_status === 'rejected' && (
+                      <div className="bg-[#B12F2E] rounded p-2 text-xs text-white">
+                        <strong>Refus :</strong> {formData.kbis_rejection_notes}
+                      </div>
                     )}
-                    {formData.carte_identite_status === 'approved' && (
-                      <span className="bg-[#56862F] text-white px-3 py-1  text-sm font-medium">
-                        Document validé
-                      </span>
+                    <a href={formData.kbis_url} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:text-blue-800 underline truncate">
+                      Voir le document
+                    </a>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {formData.kbis_status === 'pending' && (
+                        <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 text-xs font-medium">En attente</span>
+                      )}
+                      {formData.kbis_status === 'approved' && (
+                        <span className="bg-[#56862F] text-white px-2 py-0.5 text-xs font-medium">Validé</span>
+                      )}
+                      {formData.kbis_status === 'rejected' && (
+                        <span className="bg-[#B12F2E] text-white px-2 py-0.5 text-xs font-medium">Refusé</span>
+                      )}
+                      {formData.kbis_status !== 'approved' && (
+                        <button type="button" onClick={() => handleDeleteDocument('kbis')}
+                          className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-0.5 text-xs font-bold rounded cursor-pointer"
+                          title="Supprimer">X</button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <input type="file" id="kbis-input"
+                      onChange={(e) => handleFileChange(e, 'kbis')}
+                      accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                    <label htmlFor="kbis-input"
+                      className="cursor-pointer bg-[#D4A373] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] text-center">
+                      + Ajouter un fichier
+                    </label>
+                    {kbisFile && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-[#56862F] font-medium truncate">✓ {kbisFile.name}</span>
+                        <button type="button" onClick={() => handleUploadDocument('kbis')}
+                          disabled={uploadingDoc}
+                          className="cursor-pointer bg-[#56862F] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white text-center transition-colors hover:bg-[#456d25] disabled:opacity-50 disabled:cursor-not-allowed">
+                          {uploadingDoc ? 'Upload...' : 'Envoyer'}
+                        </button>
+                      </div>
                     )}
-                    {formData.carte_identite_status === 'rejected' && (
-                      <span className="bg-[#B12F2E] text-white px-3 py-1 text-sm font-medium">
-                        X Document refusé
-                      </span>
+                  </>
+                )}
+                <p className="text-xs text-slate-400 mt-auto">PDF, JPG, PNG · max 5 MB</p>
+              </div>
+
+              {/* RC Pro */}
+              <div className="border border-slate-200 bg-white p-4 flex flex-col gap-2">
+                <span className="text-sm font-semibold text-slate-900">
+                  Attestation RC Pro <span className="text-red-500">*</span>
+                </span>
+                {formData.rc_pro_url ? (
+                  <>
+                    {formData.rc_pro_rejection_notes && formData.rc_pro_status === 'rejected' && (
+                      <div className="bg-[#B12F2E] rounded p-2 text-xs text-white">
+                        <strong>Refus :</strong> {formData.rc_pro_rejection_notes}
+                      </div>
                     )}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-2 flex items-center gap-4">
-                  <input
-                    type="file"
-                    id="carte-identite-input"
-                    onChange={(e) => handleFileChange(e, 'carte')}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="carte-identite-input"
-                    className="cursor-pointer bg-[#D4A373] px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363]"
-                  >
-                    Ajouter un fichier
-                  </label>
-                  {carteIdentiteFile && (
-                    <>
-                      <span className="text-sm text-[#56862F] font-medium">
-                        ✓ {carteIdentiteFile.name}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleUploadDocument('carte')}
-                        disabled={uploadingDoc}
-                        className="cursor-pointer bg-[#56862F] px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#456d25] disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {uploadingDoc ? 'Upload...' : 'Upload'}
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-              <p className="text-xs text-slate-500 mt-1">Format accepté : PDF, JPG, PNG (max 5 MB)</p>
+                    <a href={formData.rc_pro_url} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:text-blue-800 underline truncate">
+                      Voir le document
+                    </a>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {formData.rc_pro_status === 'pending' && (
+                        <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 text-xs font-medium">En attente</span>
+                      )}
+                      {formData.rc_pro_status === 'approved' && (
+                        <span className="bg-[#56862F] text-white px-2 py-0.5 text-xs font-medium">Validé</span>
+                      )}
+                      {formData.rc_pro_status === 'rejected' && (
+                        <span className="bg-[#B12F2E] text-white px-2 py-0.5 text-xs font-medium">Refusé</span>
+                      )}
+                      {formData.rc_pro_status !== 'approved' && (
+                        <button type="button" onClick={() => handleDeleteDocument('rc_pro')}
+                          className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-0.5 text-xs font-bold rounded cursor-pointer"
+                          title="Supprimer">X</button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <input type="file" id="rc-pro-input"
+                      onChange={(e) => handleFileChange(e, 'rc_pro')}
+                      accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                    <label htmlFor="rc-pro-input"
+                      className="cursor-pointer bg-[#D4A373] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] text-center">
+                      + Ajouter un fichier
+                    </label>
+                    {rcProFile && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-[#56862F] font-medium truncate">✓ {rcProFile.name}</span>
+                        <button type="button" onClick={() => handleUploadDocument('rc_pro')}
+                          disabled={uploadingDoc}
+                          className="cursor-pointer bg-[#56862F] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white text-center transition-colors hover:bg-[#456d25] disabled:opacity-50 disabled:cursor-not-allowed">
+                          {uploadingDoc ? 'Upload...' : 'Envoyer'}
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+                <p className="text-xs text-slate-400 mt-auto">PDF, JPG, PNG · max 5 MB</p>
+              </div>
+
             </div>
 
-            {/* KBIS */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-900">
-                KBIS ou justificatif professionnel <span className="text-red-500">*</span>
-              </label>
-              {formData.kbis_url ? (
-                <div className="mt-2">
-                  {formData.kbis_rejection_notes && formData.kbis_status === 'rejected' && (
-                    <div className="bg-[#B12F2E] border border-[#B12F2E] rounded p-3 mb-3 text-sm text-white">
-                      <strong>Raison du refus :</strong> {formData.kbis_rejection_notes}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <a
-                      href={formData.kbis_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-800 underline font-medium"
-                    >
-                      {(() => {
-                        const urlParts = formData.kbis_url.split('/');
-                        const fileNameWithParams = urlParts[urlParts.length - 1];
-                        const fileName = fileNameWithParams.split('?')[0];
-                        // Extraire le nom après le timestamp
-                        const parts = fileName.split('-');
-                        if (parts.length >= 2) {
-                          return parts.slice(2).join('-'); // Enlève "kbis-timestamp-"
-                        }
-                        return fileName;
-                      })()}
-                    </a>
-                    {formData.kbis_status !== 'approved' && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteDocument('kbis')}
-                        className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
-                        title="Supprimer le document"
-                      >
-                        X
-                      </button>
-                    )}
-                    {formData.kbis_status === 'pending' && (
-                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 text-sm font-medium">
-                        Document en attente de validation
-                      </span>
-                    )}
-                    {formData.kbis_status === 'approved' && (
-                      <span className="bg-[#56862F] text-white px-3 py-1 text-sm font-medium">
-                        Document validé
-                      </span>
-                    )}
-                    {formData.kbis_status === 'rejected' && (
-                      <span className="bg-[#B12F2E] text-white px-3 py-1 text-sm font-medium">
-                        X Document refusé
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-2 flex items-center gap-4">
-                  <input
-                    type="file"
-                    id="kbis-input"
-                    onChange={(e) => handleFileChange(e, 'kbis')}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="kbis-input"
-                    className="cursor-pointer bg-[#D4A373] px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363]"
-                  >
-                    Ajouter un fichier
-                  </label>
-                  {kbisFile && (
-                    <>
-                      <span className="text-sm text-[#56862F] font-medium">
-                        ✓ {kbisFile.name}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleUploadDocument('kbis')}
-                        disabled={uploadingDoc}
-                        className="cursor-pointer bg-[#56862F] px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#456d25] disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {uploadingDoc ? 'Upload...' : 'Upload'}
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-              <p className="text-xs text-slate-500 mt-1">Format accepté : PDF, JPG, PNG (max 5 MB)</p>
-            </div>
-
-            {/* Responsabilité Civile Professionnelle */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-900">
-                Attestation RC Professionnelle <span className="text-red-500">*</span>
-              </label>
-              {formData.rc_pro_url ? (
-                <div className="mt-2">
-                  {formData.rc_pro_rejection_notes && formData.rc_pro_status === 'rejected' && (
-                    <div className="bg-[#B12F2E] border border-[#B12F2E] rounded p-3 mb-3 text-sm text-white">
-                      <strong>Raison du refus :</strong> {formData.rc_pro_rejection_notes}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <a
-                      href={formData.rc_pro_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-800 underline font-medium"
-                    >
-                      {(() => {
-                        const urlParts = formData.rc_pro_url.split('/');
-                        const fileNameWithParams = urlParts[urlParts.length - 1];
-                        const fileName = fileNameWithParams.split('?')[0];
-                        const parts = fileName.split('-');
-                        if (parts.length >= 3) {
-                          return parts.slice(2).join('-');
-                        }
-                        return fileName;
-                      })()}
-                    </a>
-                    {formData.rc_pro_status !== 'approved' && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteDocument('rc_pro')}
-                        className="bg-[#d06264] hover:bg-[#c05254] text-white px-2 py-1 text-xs font-bold rounded cursor-pointer"
-                        title="Supprimer le document"
-                      >
-                        X
-                      </button>
-                    )}
-                    {formData.rc_pro_status === 'pending' && (
-                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 text-sm font-medium">
-                        Document en attente de validation
-                      </span>
-                    )}
-                    {formData.rc_pro_status === 'approved' && (
-                      <span className="bg-[#56862F] text-white px-3 py-1 text-sm font-medium">
-                        Document validé
-                      </span>
-                    )}
-                    {formData.rc_pro_status === 'rejected' && (
-                      <span className="bg-[#B12F2E] text-white px-3 py-1 text-sm font-medium">
-                        X Document refusé
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-2 flex items-center gap-4">
-                  <input
-                    type="file"
-                    id="rc-pro-input"
-                    onChange={(e) => handleFileChange(e, 'rc_pro')}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="rc-pro-input"
-                    className="cursor-pointer bg-[#D4A373] px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363]"
-                  >
-                    Ajouter un fichier
-                  </label>
-                  {rcProFile && (
-                    <>
-                      <span className="text-sm text-[#56862F] font-medium">
-                        ✓ {rcProFile.name}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleUploadDocument('rc_pro')}
-                        disabled={uploadingDoc}
-                        className="cursor-pointer bg-[#56862F] px-6 py-2 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#456d25] disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {uploadingDoc ? 'Upload...' : 'Upload'}
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-              <p className="text-xs text-slate-500 mt-1">Format accepté : PDF, JPG, PNG (max 5 MB)</p>
-            </div>
-
-            {/* Boutons pour les informations personnelles - visible uniquement en mode édition */}
-            {isEditing && (
-              <div className="flex justify-center gap-4 pt-4">
+            {/* Boutons d'action */}
+            <div className="flex flex-wrap items-center gap-4 pt-6">
+              {!isEditing ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setCarteIdentiteFile(null);
-                    setKbisFile(null);
-                    setRcProFile(null);
-                  }}
-                  className="cursor-pointer bg-slate-300 px-8 py-3 font-semibold uppercase tracking-wide text-slate-700 transition-colors hover:bg-slate-400"
+                  onClick={() => setIsEditing(true)}
+                  className="cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363]"
                 >
-                  Annuler
+                  Modifier mes informations
                 </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? "Enregistrement..." : "Enregistrer mes informations"}
-                </button>
-              </div>
-            )}
-          </form>
-
-        </div>
-      </section>
-
-      {/* Section Sécurité - Changement de mot de passe */}
-      <section className="mx-auto max-w-3xl px-6 pb-20">
-        <div className="bg-white border border-slate-200 p-8">
-          <h2 className={`${garamond.className} text-2xl font-semibold text-[#333333] mb-6`}>
-            Sécurité
-          </h2>
-
-          {passwordError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 mb-4 text-sm">
-              {passwordError}
-            </div>
-          )}
-          {passwordSuccess && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 mb-4 text-sm">
-              Mot de passe modifié avec succès
-            </div>
-          )}
-
-          <form onSubmit={handleChangePassword} className="space-y-4">
-            <div>
-              <label htmlFor="currentPassword" className="block text-sm font-semibold text-slate-900 mb-1">
-                Mot de passe actuel
-              </label>
-              <input
-                type="password"
-                id="currentPassword"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-                className="w-full border border-slate-300 px-4 py-3 text-sm focus:border-[#D4A373] focus:ring-1 focus:ring-[#D4A373] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label htmlFor="newPassword" className="block text-sm font-semibold text-slate-900 mb-1">
-                Nouveau mot de passe
-              </label>
-              <input
-                type="password"
-                id="newPassword"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={6}
-                className="w-full border border-slate-300 px-4 py-3 text-sm focus:border-[#D4A373] focus:ring-1 focus:ring-[#D4A373] focus:outline-none"
-              />
-              <p className="text-xs text-slate-500 mt-1">Minimum 6 caractères</p>
-            </div>
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-semibold text-slate-900 mb-1">
-                Confirmer le nouveau mot de passe
-              </label>
-              <input
-                type="password"
-                id="confirmPassword"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={6}
-                className="w-full border border-slate-300 px-4 py-3 text-sm focus:border-[#D4A373] focus:ring-1 focus:ring-[#D4A373] focus:outline-none"
-              />
-            </div>
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={passwordLoading}
-                className="cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-50 disabled:cursor-not-allowed"
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setCarteIdentiteFile(null);
+                      setKbisFile(null);
+                      setRcProFile(null);
+                    }}
+                    className="cursor-pointer bg-slate-300 px-8 py-3 font-semibold uppercase tracking-wide text-slate-700 transition-colors hover:bg-slate-400"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? "Enregistrement..." : "Enregistrer"}
+                  </button>
+                </>
+              )}
+              <Link
+                href="/modifier-mot-de-passe"
+                className="bg-slate-700 px-8 py-3 font-semibold uppercase tracking-wide text-white text-sm transition-colors hover:bg-slate-600"
               >
-                {passwordLoading ? "Modification..." : "Modifier le mot de passe"}
-              </button>
+                Modifier le mot de passe
+              </Link>
             </div>
           </form>
+
         </div>
       </section>
     </div>

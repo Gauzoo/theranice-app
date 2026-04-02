@@ -143,7 +143,7 @@ export default function ComptePage() {
             </div>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Nom et Prénom */}
             <div className="grid gap-6 md:grid-cols-2">
 

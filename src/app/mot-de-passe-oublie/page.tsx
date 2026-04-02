@@ -71,7 +71,7 @@ export default function MotDePasseOublie() {
             <p className="text-slate-600 mb-8 text-center">
               Saisissez votre adresse email pour recevoir un lien de réinitialisation.
             </p>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
                   {error}
