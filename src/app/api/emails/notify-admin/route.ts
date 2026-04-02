@@ -1,18 +1,35 @@
 import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+const schema = z.object({
+  userName: z.string().min(1).max(200),
+  userEmail: z.string().email().max(320),
+  userPhone: z.string().max(30).optional(),
+  userActivity: z.string().max(500).optional(),
+});
+
 export async function POST(request: NextRequest) {
   try {
-    const { userName, userEmail, userPhone, userActivity } = await request.json();
-
-    if (!userName || !userEmail) {
+    const body = await request.json();
+    const result = schema.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'userName et userEmail sont requis' },
+        { error: 'Données invalides' },
         { status: 400 }
       );
     }
+    const { userName, userEmail, userPhone, userActivity } = result.data;
+    const safeUserName = escapeHtml(userName);
+    const safeUserEmail = escapeHtml(userEmail);
+    const safeUserPhone = escapeHtml(userPhone || 'Non renseigné');
+    const safeUserActivity = escapeHtml(userActivity || 'Non renseignée');
 
     const { data, error } = await resend.emails.send({
       from: 'Theranice <onboarding@resend.dev>',
@@ -78,10 +95,10 @@ export async function POST(request: NextRequest) {
               <p>Un nouveau membre a soumis ses documents et souhaite rejoindre Theranice.</p>
               
               <div class="info-box">
-                <p style="margin: 5px 0;"><strong>Nom :</strong> ${userName}</p>
-                <p style="margin: 5px 0;"><strong>Email :</strong> ${userEmail}</p>
-                <p style="margin: 5px 0;"><strong>Téléphone :</strong> ${userPhone || 'Non renseigné'}</p>
-                <p style="margin: 5px 0;"><strong>Activité :</strong> ${userActivity || 'Non renseignée'}</p>
+                <p style="margin: 5px 0;"><strong>Nom :</strong> ${safeUserName}</p>
+                <p style="margin: 5px 0;"><strong>Email :</strong> ${safeUserEmail}</p>
+                <p style="margin: 5px 0;"><strong>Téléphone :</strong> ${safeUserPhone}</p>
+                <p style="margin: 5px 0;"><strong>Activité :</strong> ${safeUserActivity}</p>
               </div>
 
               <p>Les documents (carte d'identité et KBIS) sont disponibles dans votre dashboard admin.</p>

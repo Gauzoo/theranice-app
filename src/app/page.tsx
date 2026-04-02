@@ -63,8 +63,60 @@ const sharedSpaces = [
 ];
 
 export default function Home() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "LocalBusiness",
+        "@id": "https://theranice.fr/#organization",
+        name: "SCI THERA NICE",
+        alternateName: "Théranice",
+        description: "Location de salles thérapeutiques à Nice pour thérapeutes et praticiens bien-être.",
+        url: "https://theranice.fr",
+        telephone: "+33 6 65 46 26 42",
+        email: "contact@theranice.fr",
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: "19 rue Michelet",
+          addressLocality: "Nice",
+          postalCode: "06100",
+          addressCountry: "FR",
+        },
+        image: "https://theranice.fr/photos/photo1.jpg",
+        priceRange: "8€–35€/h",
+        openingHours: "Mo-Sa 08:00-20:00",
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://theranice.fr/#faq",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "Comment réserver une salle ?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Créez un compte, soumettez vos documents professionnels, puis réservez en ligne après validation de votre profil.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Quels sont les tarifs ?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Les tarifs varient de 8€/h pour une demi-journée à 35€/h pour une journée complète selon la salle choisie.",
+            },
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="bg-slate-50 text-slate-900">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <section
         className="relative isolate flex min-h-[84vh] items-center overflow-hidden pt-24 text-white"
         id="hero"
@@ -160,7 +212,7 @@ export default function Home() {
                       />
                     </div>
                   ) : (
-                    <Carousel images={space.images} />
+                    <Carousel images={space.images} alt={space.name} />
                   )}
                 </div>
                 <div className="flex flex-1 flex-col p-8 lg:p-10">

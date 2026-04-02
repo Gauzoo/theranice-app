@@ -9,6 +9,7 @@ const garamond = EB_Garamond({
 export const metadata = {
   title: "Règlement Intérieur | Théranice",
   description: "Règlement intérieur des espaces professionnels Théranice",
+  alternates: { canonical: "/reglement-interieur" },
 };
 
 export default function ReglementInterieurPage() {

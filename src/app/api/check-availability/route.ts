@@ -5,7 +5,11 @@ export async function POST(request: NextRequest) {
   try {
     const { date, slot, room } = await request.json();
 
-    // Utilise la service role key pour bypass RLS
+    if (!date || !slot || !room) {
+      return NextResponse.json({ available: false, error: 'Paramètres manquants' }, { status: 400 });
+    }
+
+    // Utilise la service role key côté serveur uniquement (jamais exposée au client)
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!

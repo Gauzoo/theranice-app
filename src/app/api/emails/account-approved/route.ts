@@ -1,18 +1,30 @@
 import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+const schema = z.object({
+  userEmail: z.string().email().max(320),
+  userName: z.string().min(1).max(200),
+});
+
 export async function POST(request: NextRequest) {
   try {
-    const { userEmail, userName } = await request.json();
-
-    if (!userEmail || !userName) {
+    const body = await request.json();
+    const result = schema.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'userEmail et userName sont requis' },
+        { error: 'Données invalides' },
         { status: 400 }
       );
     }
+    const { userEmail, userName } = result.data;
+    const safeUserName = escapeHtml(userName);
 
     const { data, error } = await resend.emails.send({
       from: 'Theranice <onboarding@resend.dev>',
@@ -76,7 +88,7 @@ export async function POST(request: NextRequest) {
               <h1 style="margin: 0;">✅ Compte validé !</h1>
             </div>
             <div class="content">
-              <p>Bonjour ${userName},</p>
+              <p>Bonjour ${safeUserName},</p>
               
               <div class="success-box">
                 <h2 style="margin: 0 0 10px 0; color: #10b981;">🎉 Félicitations !</h2>

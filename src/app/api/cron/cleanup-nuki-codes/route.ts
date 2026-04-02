@@ -17,11 +17,13 @@ const SLOT_END_HOURS: Record<string, number> = {
 
 export async function GET(request: Request) {
   try {
-    // Vérifie le secret d'authentification pour le cron
+    // Vérifie l'authentification : Bearer token OU header Vercel cron
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
+    const isVercelCron = request.headers.get('x-vercel-cron-auth-token') === cronSecret;
+    const isBearerAuth = cronSecret && authHeader === `Bearer ${cronSecret}`;
     
-    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret || (!isVercelCron && !isBearerAuth)) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 

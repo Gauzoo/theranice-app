@@ -68,6 +68,12 @@ export async function GET() {
 
 export async function DELETE(request: Request) {
   try {
+    // Vérification de sécurité CRITIQUE
+    const isAdmin = await checkAdminPermission();
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const { memberId } = await request.json();
 
     if (!memberId) {

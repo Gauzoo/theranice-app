@@ -1,7 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 
-// Liste des emails administrateurs
-const ADMIN_EMAILS = ['gauthier.guerin@gmail.com'];
+// Liste des emails administrateurs (configurable via variable d'environnement)
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'gauthier.guerin@gmail.com')
+  .split(',')
+  .map(email => email.trim())
+  .filter(Boolean);
 
 export async function checkAdminPermission() {
   const supabase = await createClient();

@@ -9,6 +9,7 @@ const garamond = EB_Garamond({
 export const metadata = {
   title: "Mentions légales | Théranice",
   description: "Mentions légales du site Théranice – Espaces professionnels à Nice",
+  alternates: { canonical: "/mentions-legales" },
 };
 
 export default function MentionsLegalesPage() {

@@ -1,18 +1,32 @@
 import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+const schema = z.object({
+  userEmail: z.string().email().max(320),
+  userName: z.string().min(1).max(200),
+  rejectionNotes: z.string().min(1).max(2000),
+});
+
 export async function POST(request: NextRequest) {
   try {
-    const { userEmail, userName, rejectionNotes } = await request.json();
-
-    if (!userEmail || !userName || !rejectionNotes) {
+    const body = await request.json();
+    const result = schema.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'userEmail, userName et rejectionNotes sont requis' },
+        { error: 'Données invalides' },
         { status: 400 }
       );
     }
+    const { userEmail, userName, rejectionNotes } = result.data;
+    const safeUserName = escapeHtml(userName);
+    const safeRejectionNotes = escapeHtml(rejectionNotes);
 
     const { data, error } = await resend.emails.send({
       from: 'Theranice <onboarding@resend.dev>',
@@ -82,7 +96,7 @@ export async function POST(request: NextRequest) {
               <h1 style="margin: 0;">Votre demande de compte</h1>
             </div>
             <div class="content">
-              <p>Bonjour ${userName},</p>
+              <p>Bonjour ${safeUserName},</p>
               
               <div class="warning-box">
                 <p style="margin: 0; font-size: 16px;">Nous avons examiné votre demande de compte et ne pouvons malheureusement pas l'approuver dans son état actuel.</p>
@@ -90,7 +104,7 @@ export async function POST(request: NextRequest) {
 
               <p><strong>Raison du refus :</strong></p>
               <div class="notes-box">
-                <p style="margin: 0;">${rejectionNotes}</p>
+                <p style="margin: 0;">${safeRejectionNotes}</p>
               </div>
 
               <p>Nous vous invitons à :</p>

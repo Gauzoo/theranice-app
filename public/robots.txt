@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /profil
+Disallow: /mes-reservations
+Disallow: /compte
+Disallow: /connexion
+Disallow: /mot-de-passe-oublie
+Disallow: /reset-password
+Disallow: /api/
+
+Sitemap: https://theranice.fr/sitemap.xml

@@ -3,8 +3,30 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // CSRF: vérifier l'origine de la requête
+    const origin = request.headers.get('origin');
+    const allowedOrigins = [
+      process.env.NEXT_PUBLIC_SITE_URL,
+      'https://theranice.fr',
+      'https://www.theranice.fr',
+      'http://localhost:3000',
+    ].filter(Boolean);
+
+    if (origin && !allowedOrigins.includes(origin)) {
+      return NextResponse.json({ error: 'Origine non autorisée' }, { status: 403 });
+    }
+
     const { nom, prenom, sujet, message } = await request.json();
 
     if (!nom || !prenom || !sujet || !message) {
@@ -14,11 +36,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const safeNom = escapeHtml(nom);
+    const safePrenom = escapeHtml(prenom);
+    const safeSujet = escapeHtml(sujet);
+    const safeMessage = escapeHtml(message);
+
     const { data, error } = await resend.emails.send({
       from: 'Theranice <noreply@theranice.fr>',
       to: ['contact@theranice.fr'],
       replyTo: undefined,
-      subject: `[Contact] ${sujet}`,
+      subject: `[Contact] ${safeSujet}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -41,15 +68,15 @@ export async function POST(request: NextRequest) {
             <div class="content">
               <div class="field">
                 <div class="label">Nom</div>
-                <div class="value">${nom} ${prenom}</div>
+                <div class="value">${safeNom} ${safePrenom}</div>
               </div>
               <div class="field">
                 <div class="label">Sujet</div>
-                <div class="value">${sujet}</div>
+                <div class="value">${safeSujet}</div>
               </div>
               <div class="field">
                 <div class="label">Message</div>
-                <div class="message-box">${message}</div>
+                <div class="message-box">${safeMessage}</div>
               </div>
             </div>
             <div class="footer">

@@ -18,7 +18,8 @@
     "react-calendar": "^6.0.0",
     "react-dom": "19.1.0",
     "resend": "^6.4.0",
-    "stripe": "^19.2.0"
+    "stripe": "^19.2.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

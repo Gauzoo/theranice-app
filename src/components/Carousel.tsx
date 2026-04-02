@@ -5,9 +5,10 @@ import { useState } from "react";
 
 interface CarouselProps {
   images: string[];
+  alt?: string;
 }
 
-export default function Carousel({ images }: CarouselProps) {
+export default function Carousel({ images, alt = "Photo" }: CarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const goToPrevious = () => {
@@ -31,7 +32,7 @@ export default function Carousel({ images }: CarouselProps) {
       <div className="relative aspect-[4/3] overflow-hidden rounded-[1.25rem] bg-slate-200">
         <Image
           src={images[currentIndex]}
-          alt={`Photo ${currentIndex + 1}`}
+          alt={`${alt} — photo ${currentIndex + 1}`}
           fill
           className="object-cover transition-opacity duration-500"
           sizes="(max-width: 1024px) 100vw, 48vw"

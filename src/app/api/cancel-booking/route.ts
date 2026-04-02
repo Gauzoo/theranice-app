@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { deleteNukiKeypadCode } from '@/lib/nuki';
 
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'gauthier.guerin@gmail.com')
+  .split(',')
+  .map(email => email.trim())
+  .filter(Boolean);
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -29,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifie que l'utilisateur est le propriétaire OU admin
-    const isAdmin = user.email === 'gauthier.guerin@gmail.com';
+    const isAdmin = user.email ? ADMIN_EMAILS.includes(user.email) : false;
     if (booking.user_id !== user.id && !isAdmin) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     }
@@ -55,19 +60,21 @@ export async function POST(request: NextRequest) {
       try {
         await deleteNukiKeypadCode(booking.nuki_auth_id);
         nukiRevoked = true;
-        console.log(`Code Nuki révoqué pour la réservation ${bookingId}`);
+        console.log(`Code Nuki révoqué pour la réservation ${booking.id.substring(0, 8)}...`);
       } catch (nukiError) {
-        console.error(`Erreur révocation code Nuki pour réservation ${bookingId}:`, nukiError);
+        console.error(`Erreur révocation code Nuki pour réservation ${booking.id.substring(0, 8)}...:`, nukiError);
         // On continue l'annulation même si le code Nuki n'a pas pu être révoqué
       }
     }
 
-    // Met à jour le statut de la réservation
+    // Met à jour le statut de la réservation avec audit trail
     const { error: updateError } = await supabase
       .from('bookings')
       .update({ 
         status: 'cancelled',
         nuki_code_status: nukiRevoked ? 'revoked' : booking.nuki_code_status === 'active' ? 'revoke_failed' : booking.nuki_code_status,
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: user.id,
       })
       .eq('id', bookingId);
 

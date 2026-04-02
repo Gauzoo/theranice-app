@@ -9,6 +9,7 @@ const garamond = EB_Garamond({
 export const metadata = {
   title: "Conditions Générales de Mise à Disposition | Théranice",
   description: "Conditions générales de mise à disposition des espaces professionnels Théranice",
+  alternates: { canonical: "/conditions-generales" },
 };
 
 export default function ConditionsGeneralesPage() {

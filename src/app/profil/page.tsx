@@ -72,6 +72,14 @@ export default function ProfilPage() {
   const [kbisFile, setKbisFile] = useState<File | null>(null);
   const [rcProFile, setRcProFile] = useState<File | null>(null);
 
+  // État pour le changement de mot de passe
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
   // Récupère les données de l'utilisateur au chargement
   useEffect(() => {
     if (authLoading) return;
@@ -142,10 +150,23 @@ export default function ProfilPage() {
       return;
     }
 
-    // Vérifier le type
+    // Vérifier le type MIME
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
       setError("Format non autorisé. Utilisez PDF, JPG ou PNG");
+      return;
+    }
+
+    // Vérifier que l'extension correspond au type MIME
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    const mimeToExt: Record<string, string[]> = {
+      'application/pdf': ['pdf'],
+      'image/jpeg': ['jpg', 'jpeg'],
+      'image/png': ['png'],
+    };
+    const allowedExts = mimeToExt[file.type] || [];
+    if (!ext || !allowedExts.includes(ext)) {
+      setError("L'extension du fichier ne correspond pas à son format. Vérifiez le fichier.");
       return;
     }
 
@@ -230,7 +251,13 @@ export default function ProfilPage() {
 
     } catch (err) {
       const error = err as Error;
-      setError(error.message || "Erreur lors de l'upload");
+      if (error.message?.includes('storage')) {
+        setError("Erreur lors de l'envoi du fichier. Vérifiez votre connexion et réessayez.");
+      } else if (error.message?.includes('row-level security') || error.message?.includes('policy')) {
+        setError("Vous n'avez pas la permission de modifier ce document.");
+      } else {
+        setError(error.message || "Erreur lors de l'upload du document. Veuillez réessayer.");
+      }
     } finally {
       setUploadingDoc(false);
     }
@@ -412,9 +439,64 @@ export default function ProfilPage() {
 
     } catch (err) {
       const error = err as Error;
-      setError(error.message || "Erreur lors de l'upload");
+      if (error.message?.includes('storage')) {
+        setError("Erreur lors de l'envoi du fichier. Vérifiez votre connexion et réessayez.");
+      } else if (error.message?.includes('row-level security') || error.message?.includes('policy')) {
+        setError("Vous n'avez pas la permission de modifier ce document.");
+      } else {
+        setError(error.message || "Erreur lors de l'upload du document. Veuillez réessayer.");
+      }
     } finally {
       setUploadingDoc(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(false);
+
+    if (newPassword.length < 6) {
+      setPasswordError("Le nouveau mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Les mots de passe ne correspondent pas");
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      const supabase = createClient();
+
+      // Vérifier le mot de passe actuel
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: currentPassword,
+      });
+      if (signInError) {
+        setPasswordError("Mot de passe actuel incorrect");
+        return;
+      }
+
+      // Mettre à jour le mot de passe
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (updateError) {
+        setPasswordError(updateError.message);
+        return;
+      }
+
+      setPasswordSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => setPasswordSuccess(false), 5000);
+    } catch {
+      setPasswordError("Erreur lors du changement de mot de passe");
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -424,9 +506,11 @@ export default function ProfilPage() {
     
     if (!user) throw new Error("Utilisateur non connecté");
 
-    // Garder le nom original du fichier avec un préfixe pour le type
+    // Sanitize: extraire uniquement l'extension et utiliser un nom sécurisé
+    const originalName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const ext = originalName.split('.').pop() || 'bin';
     const timestamp = Date.now();
-    const filePath = `${user.id}/${documentType}-${timestamp}-${file.name}`;
+    const filePath = `${user.id}/${documentType}-${timestamp}.${ext}`;
 
     // Upload le nouveau fichier
     const { error: uploadError } = await supabase.storage
@@ -1110,6 +1194,80 @@ export default function ProfilPage() {
             )}
           </form>
 
+        </div>
+      </section>
+
+      {/* Section Sécurité - Changement de mot de passe */}
+      <section className="mx-auto max-w-3xl px-6 pb-20">
+        <div className="bg-white border border-slate-200 p-8">
+          <h2 className={`${garamond.className} text-2xl font-semibold text-[#333333] mb-6`}>
+            Sécurité
+          </h2>
+
+          {passwordError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 mb-4 text-sm">
+              {passwordError}
+            </div>
+          )}
+          {passwordSuccess && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 mb-4 text-sm">
+              Mot de passe modifié avec succès
+            </div>
+          )}
+
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div>
+              <label htmlFor="currentPassword" className="block text-sm font-semibold text-slate-900 mb-1">
+                Mot de passe actuel
+              </label>
+              <input
+                type="password"
+                id="currentPassword"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+                className="w-full border border-slate-300 px-4 py-3 text-sm focus:border-[#D4A373] focus:ring-1 focus:ring-[#D4A373] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label htmlFor="newPassword" className="block text-sm font-semibold text-slate-900 mb-1">
+                Nouveau mot de passe
+              </label>
+              <input
+                type="password"
+                id="newPassword"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full border border-slate-300 px-4 py-3 text-sm focus:border-[#D4A373] focus:ring-1 focus:ring-[#D4A373] focus:outline-none"
+              />
+              <p className="text-xs text-slate-500 mt-1">Minimum 6 caractères</p>
+            </div>
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-semibold text-slate-900 mb-1">
+                Confirmer le nouveau mot de passe
+              </label>
+              <input
+                type="password"
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full border border-slate-300 px-4 py-3 text-sm focus:border-[#D4A373] focus:ring-1 focus:ring-[#D4A373] focus:outline-none"
+              />
+            </div>
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={passwordLoading}
+                className="cursor-pointer bg-[#D4A373] px-8 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {passwordLoading ? "Modification..." : "Modifier le mot de passe"}
+              </button>
+            </div>
+          </form>
         </div>
       </section>
     </div>

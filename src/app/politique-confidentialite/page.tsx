@@ -9,6 +9,7 @@ const garamond = EB_Garamond({
 export const metadata = {
   title: "Politique de confidentialité | Théranice",
   description: "Politique de confidentialité et protection des données personnelles – Théranice",
+  alternates: { canonical: "/politique-confidentialite" },
 };
 
 export default function PolitiqueConfidentialitePage() {

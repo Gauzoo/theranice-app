@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { generateUniquePinCode, createNukiKeypadCode, formatPinCode } from '@/lib/nuki';
+import { generateUniquePinCode, createNukiKeypadCode } from '@/lib/nuki';
 
 // Désactive le body parser de Next.js pour Stripe webhooks
 export const dynamic = 'force-dynamic';
@@ -51,6 +51,19 @@ export async function POST(request: NextRequest) {
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
+
+      // Idempotency: vérifier si ce paiement a déjà été traité
+      const { data: existingBookings } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('payment_intent_id', session.payment_intent as string)
+        .eq('status', 'confirmed')
+        .limit(1);
+
+      if (existingBookings && existingBookings.length > 0) {
+        console.log(`Webhook déjà traité pour payment_intent ${session.payment_intent}`);
+        return NextResponse.json({ received: true, skipped: 'already_processed' });
+      }
 
       // --- NOUVELLE LOGIQUE PANIER ---
       if (type === 'cart_checkout') {
@@ -116,7 +129,7 @@ export async function POST(request: NextRequest) {
                 accessCode = String(pinCode);
                 nukiAuthId = nukiResult.authId || null;
                 nukiCodeStatus = 'active';
-                console.log(`[Nuki] Code ${formatPinCode(pinCode)} created for booking ${booking.id}`);
+                console.log(`[Nuki] Code created for booking ${booking.id.substring(0, 8)}...`);
               } else {
                 console.error(`[Nuki] Failed to create code for booking ${booking.id}:`, nukiResult.error);
                 // On sauvegarde quand même le code pour référence, statut = error
