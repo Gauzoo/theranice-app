@@ -235,6 +235,7 @@ export default function ComptePage() {
                 className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
                 placeholder="12 avenue Jean Médecin, 06000 Nice"
               />
+              <p className="mt-1 text-xs text-slate-500">Adresse utilisée pour la facturation : <strong>Adresse / Code Postal / Ville</strong></p>
             </div>
 
             {/* SIRET */}
