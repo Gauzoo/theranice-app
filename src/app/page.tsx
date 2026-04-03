@@ -134,15 +134,20 @@ export default function Home() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-3 border border-white/15 bg-white/10 px-4 py-2 text-[11px] font-medium uppercase tracking-[0.26em] text-white/90 backdrop-blur-sm">
               <span className="h-2 w-2 rounded-full bg-[#D4A373]" aria-hidden="true" />
-              Cabinets professionnels a Nice
+              Cabinet professionnel à Nice – quartier de la Libération
             </div>
 
             <h1 className={`${garamond.className} mt-7 text-5xl leading-[1.04] font-semibold sm:text-6xl lg:text-7xl`}>
               Des espaces calmes et soignés pour exercer avec sérénité.
             </h1>
-            <p className="mt-10 text-sm uppercase tracking-[0.2em] ">
-               Un espace professionnel, serein et immédiatement opérationnel et pour chaque réservation confirmée, 1&nbsp;€ est reversé à la Ligue contre le Cancer.
+            <p className="mt-10 text-sm uppercase tracking-[0.2em]">
+              Un espace professionnel, serein et immédiatement opérationnel.
             </p>
+
+            <div className="mt-6 inline-flex items-center gap-3 border border-white/15 bg-white/10 px-5 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-white/90 backdrop-blur-sm">
+              <span className="text-base" aria-hidden="true">♥</span>
+              Pour chaque réservation confirmée, 1&nbsp;€ est reversé à la Ligue contre le Cancer.
+            </div>
 
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-start">
             <Link

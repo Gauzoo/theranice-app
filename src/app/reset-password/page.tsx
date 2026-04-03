@@ -39,9 +39,8 @@ export default function ResetPassword() {
       setTimeout(() => {
         router.push("/connexion");
       }, 3000);
-    } catch (err) {
-      const error = err as Error;
-      setError(error.message || "Une erreur est survenue");
+    } catch {
+      setError("Une erreur est survenue lors de la modification du mot de passe. Veuillez réessayer.");
     } finally {
       setLoading(false);
     }
