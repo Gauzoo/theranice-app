@@ -4,13 +4,13 @@ type ErrorLike = {
   status?: unknown;
 };
 
-export type SupabaseAuthErrorDetails = {
+type SupabaseAuthErrorDetails = {
   message: string;
   code: string;
   status: number | null;
 };
 
-export function getSupabaseAuthErrorDetails(error: unknown): SupabaseAuthErrorDetails {
+function getSupabaseAuthErrorDetails(error: unknown): SupabaseAuthErrorDetails {
   if (error instanceof Error) {
     const errorLike = error as ErrorLike;
     return {

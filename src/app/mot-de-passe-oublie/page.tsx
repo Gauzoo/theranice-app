@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getSupabaseAuthErrorDetails, translateSupabaseAuthError } from "@/lib/supabase/authErrors";
+import { translateSupabaseAuthError } from "@/lib/supabase/authErrors";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -26,15 +26,6 @@ export default function MotDePasseOublie() {
       if (error) throw error;
       setSent(true);
     } catch (err: unknown) {
-      const details = getSupabaseAuthErrorDetails(err);
-
-      console.error("[auth.resetPasswordForEmail] failed", {
-        email,
-        status: details.status,
-        code: details.code,
-        message: details.message,
-      });
-
       setError(
         translateSupabaseAuthError(
           err,
