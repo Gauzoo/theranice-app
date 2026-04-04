@@ -19,13 +19,18 @@ export default function MotDePasseOublie() {
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback/recovery`,
       });
 
       if (error) throw error;
       setSent(true);
-    } catch {
-      setError("Impossible d'envoyer l'email de réinitialisation. Vérifiez l'adresse saisie ou réessayez plus tard.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.toLowerCase().includes("rate") || message.toLowerCase().includes("limit") || message.toLowerCase().includes("too many") || message.toLowerCase().includes("429")) {
+        setError("Trop de tentatives. Veuillez patienter quelques minutes avant de réessayer.");
+      } else {
+        setError("Impossible d'envoyer l'email de réinitialisation. Vérifiez l'adresse saisie ou réessayez plus tard.");
+      }
     } finally {
       setLoading(false);
     }

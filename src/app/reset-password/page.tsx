@@ -1,17 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [hasSession, setHasSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setHasSession(!!session);
+      setChecking(false);
+    });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +78,22 @@ export default function ResetPassword() {
 
       {/* Content */}
       <section className="mx-auto max-w-lg px-6 py-16">
-        {success ? (
+        {checking ? (
+          <div className="text-center text-slate-500">Chargement...</div>
+        ) : !hasSession ? (
+          <div className="bg-red-50 border border-red-200 rounded p-6 text-center">
+            <p className="text-red-800 font-medium">Lien expiré ou invalide</p>
+            <p className="text-red-700 text-sm mt-2">
+              Ce lien de réinitialisation n&apos;est plus valide. Veuillez en demander un nouveau.
+            </p>
+            <Link
+              href="/mot-de-passe-oublie"
+              className="inline-block mt-4 text-sm text-[#D4A373] hover:text-[#c49363] font-medium"
+            >
+              Demander un nouveau lien
+            </Link>
+          </div>
+        ) : success ? (
           <div className="bg-green-50 border border-green-200 rounded p-6 text-center">
             <p className="text-green-800 font-medium">Mot de passe modifié !</p>
             <p className="text-green-700 text-sm mt-2">Redirection vers la connexion...</p>
