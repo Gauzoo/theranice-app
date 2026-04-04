@@ -26,8 +26,9 @@ export async function GET(req: NextRequest) {
   }
 
   revalidatePath('/', 'layout')
+  revalidatePath('/admin', 'layout')
   
-  const response = NextResponse.redirect(new URL('/', req.url), {
+  const response = NextResponse.redirect(new URL('/connexion', req.url), {
     status: 302,
   })
 

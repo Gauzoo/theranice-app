@@ -1,6 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'gauthier.guerin@gmail.com')
+  .split(',')
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean)
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -45,11 +50,24 @@ export async function middleware(request: NextRequest) {
     console.error('Middleware auth error:', e)
   }
 
-  // Protection des routes
-  if (!user && request.nextUrl.pathname.startsWith('/profil')) {
+  const isProfilRoute = request.nextUrl.pathname.startsWith('/profil')
+  const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
+
+  // Protection des routes authentifiées
+  if (!user && (isProfilRoute || isAdminRoute)) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/connexion'
     return NextResponse.redirect(redirectUrl)
+  }
+
+  // Protection des routes admin
+  if (isAdminRoute) {
+    const email = user?.email?.toLowerCase() || ''
+    if (!ADMIN_EMAILS.includes(email)) {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/'
+      return NextResponse.redirect(redirectUrl)
+    }
   }
 
   return response

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getSupabaseAuthErrorDetails, translateSupabaseAuthError } from "@/lib/supabase/authErrors";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -25,12 +26,21 @@ export default function MotDePasseOublie() {
       if (error) throw error;
       setSent(true);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "";
-      if (message.toLowerCase().includes("rate") || message.toLowerCase().includes("limit") || message.toLowerCase().includes("too many") || message.toLowerCase().includes("429")) {
-        setError("Trop de tentatives. Veuillez patienter quelques minutes avant de réessayer.");
-      } else {
-        setError("Impossible d'envoyer l'email de réinitialisation. Vérifiez l'adresse saisie ou réessayez plus tard.");
-      }
+      const details = getSupabaseAuthErrorDetails(err);
+
+      console.error("[auth.resetPasswordForEmail] failed", {
+        email,
+        status: details.status,
+        code: details.code,
+        message: details.message,
+      });
+
+      setError(
+        translateSupabaseAuthError(
+          err,
+          "Impossible d'envoyer l'email de reinitialisation pour cette adresse. Contactez l'administration si le probleme persiste."
+        )
+      );
     } finally {
       setLoading(false);
     }

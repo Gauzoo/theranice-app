@@ -1,14 +1,22 @@
 type ErrorLike = {
   message?: unknown;
   code?: unknown;
+  status?: unknown;
 };
 
-function normalizeAuthError(error: unknown): { message: string; code: string } {
+export type SupabaseAuthErrorDetails = {
+  message: string;
+  code: string;
+  status: number | null;
+};
+
+export function getSupabaseAuthErrorDetails(error: unknown): SupabaseAuthErrorDetails {
   if (error instanceof Error) {
     const errorLike = error as ErrorLike;
     return {
       message: (error.message || "").toLowerCase(),
       code: typeof errorLike.code === "string" ? errorLike.code.toLowerCase() : "",
+      status: typeof errorLike.status === "number" ? errorLike.status : null,
     };
   }
 
@@ -17,14 +25,15 @@ function normalizeAuthError(error: unknown): { message: string; code: string } {
     return {
       message: typeof errorLike.message === "string" ? errorLike.message.toLowerCase() : "",
       code: typeof errorLike.code === "string" ? errorLike.code.toLowerCase() : "",
+      status: typeof errorLike.status === "number" ? errorLike.status : null,
     };
   }
 
-  return { message: "", code: "" };
+  return { message: "", code: "", status: null };
 }
 
 export function translateSupabaseAuthError(error: unknown, fallback: string): string {
-  const { message, code } = normalizeAuthError(error);
+  const { message, code, status } = getSupabaseAuthErrorDetails(error);
 
   const contains = (value: string) => message.includes(value) || code.includes(value);
 
@@ -52,6 +61,32 @@ export function translateSupabaseAuthError(error: unknown, fallback: string): st
     return "La creation de compte est desactivee pour le moment.";
   }
 
+  if (contains("user not found") || contains("user_not_found") || contains("email not found")) {
+    return "Aucun compte n'est associe a cette adresse email.";
+  }
+
+  if (
+    contains("email provider is disabled")
+    || contains("email_provider_disabled")
+    || contains("password login is disabled")
+    || contains("password_provider_disabled")
+  ) {
+    return "La connexion par email/mot de passe est desactivee pour le moment.";
+  }
+
+  if (
+    contains("email address not authorized")
+    || contains("smtp")
+    || contains("mailbox unavailable")
+    || contains("email address is invalid")
+  ) {
+    return "Le service d'envoi d'emails rencontre un probleme temporaire. Veuillez reessayer plus tard.";
+  }
+
+  if (contains("for security purposes") || contains("over_email_send_rate_limit") || status === 429) {
+    return "Limite d'envoi atteinte. Veuillez patienter quelques minutes avant de reessayer.";
+  }
+
   if (contains("rate") || contains("too many") || contains("429") || contains("security purposes")) {
     return "Trop de tentatives. Veuillez patienter quelques minutes avant de reessayer.";
   }
@@ -62,6 +97,10 @@ export function translateSupabaseAuthError(error: unknown, fallback: string): st
 
   if (contains("network") || contains("fetch") || contains("failed to fetch")) {
     return "Probleme reseau. Verifiez votre connexion puis reessayez.";
+  }
+
+  if (status !== null && status >= 500) {
+    return "Le service d'authentification est temporairement indisponible. Veuillez reessayer dans quelques instants.";
   }
 
   return fallback;

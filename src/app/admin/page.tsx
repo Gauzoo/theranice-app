@@ -108,34 +108,26 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
-    checkAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const checkAuth = async () => {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      router.push('/connexion');
-      return;
-    }
-
-    // Vérifier si l'utilisateur est admin (email spécifique)
-    // TODO: Remplacer par l'email de ta cliente
-    const adminEmails = ['gauthier.guerin@gmail.com'];
-    
-    if (!adminEmails.includes(user.email || '')) {
-      alert('Accès non autorisé');
-      router.push('/');
-      return;
-    }
 
     fetchBookings();
     fetchUsers();
     fetchMembers();
     fetchPendingValidations();
-  };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        router.replace('/connexion');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   const fetchPendingValidations = async () => {
     try {
@@ -700,8 +692,8 @@ export default function AdminDashboard() {
 
         {/* Filtres */}
         <div className="bg-white p-6 shadow-md mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-3">
+          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <h2 className={`${garamond.className} text-2xl font-semibold text-[#D4A373]`}>
                 ▸ Réservations
               </h2>
@@ -718,7 +710,7 @@ export default function AdminDashboard() {
             </div>
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-[#D4A373] hover:bg-[#c49363] text-white px-6 py-2 font-medium transition-colors cursor-pointer"
+              className="w-full sm:w-auto bg-[#D4A373] hover:bg-[#c49363] text-white px-4 sm:px-6 py-2 text-sm sm:text-base font-medium transition-colors cursor-pointer"
             >
               + Ajouter une réservation
             </button>
