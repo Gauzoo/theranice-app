@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
@@ -27,10 +28,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
     let mounted = true;
+
+    const hasRecoveryParams = () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+
+      return searchParams.get('type') === 'recovery'
+        || (searchParams.has('token_hash') && searchParams.get('type') === 'recovery')
+        || hashParams.get('type') === 'recovery'
+        || (hashParams.has('access_token') && hashParams.get('type') === 'recovery');
+    };
+
+    const redirectToResetPassword = () => {
+      if (pathname === '/reset-password' || !hasRecoveryParams()) {
+        return false;
+      }
+
+      const nextUrl = `/reset-password${window.location.search}${window.location.hash}`;
+      router.replace(nextUrl);
+      return true;
+    };
 
     const getProfile = async (userId: string) => {
       try {
@@ -51,6 +74,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Vérification initiale de la session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (mounted) {
+        if (redirectToResetPassword()) {
+          setLoading(false);
+          return;
+        }
+
         if (session?.user) {
           setUser(session.user);
           getProfile(session.user.id);
@@ -60,8 +88,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Écoute les changements d'état (connexion, déconnexion, refresh token)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (mounted) {
+        if ((event === 'PASSWORD_RECOVERY' || hasRecoveryParams()) && redirectToResetPassword()) {
+          setLoading(false);
+          return;
+        }
+
         if (session?.user) {
           setUser(session.user);
           // On ne recharge le profil que si l'utilisateur a changé
@@ -80,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []); // Dépendance vide pour ne s'exécuter qu'une fois
+  }, [pathname, router, user?.id]);
 
   return (
     <AuthContext.Provider value={{ user, profile, loading }}>

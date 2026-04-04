@@ -18,10 +18,83 @@ export default function ResetPassword() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setHasSession(!!session);
-      setChecking(false);
-    });
+    let active = true;
+
+    const clearRecoveryUrl = () => {
+      window.history.replaceState({}, document.title, "/reset-password");
+    };
+
+    const initializeRecoverySession = async () => {
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+        const code = searchParams.get("code");
+        const tokenHash = searchParams.get("token_hash");
+        const type = searchParams.get("type") ?? hashParams.get("type");
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+
+        if (accessToken && refreshToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (sessionError) {
+            throw sessionError;
+          }
+
+          clearRecoveryUrl();
+        } else if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+          if (exchangeError) {
+            throw exchangeError;
+          }
+
+          clearRecoveryUrl();
+        } else if (tokenHash && type === "recovery") {
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: "recovery",
+          });
+
+          if (verifyError) {
+            throw verifyError;
+          }
+
+          clearRecoveryUrl();
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!active) {
+          return;
+        }
+
+        setHasSession(!!session);
+        if (!session) {
+          setError("Lien expiré ou invalide. Veuillez demander un nouveau lien.");
+        }
+      } catch {
+        if (!active) {
+          return;
+        }
+
+        setHasSession(false);
+        setError("Lien expiré ou invalide. Veuillez demander un nouveau lien.");
+      } finally {
+        if (active) {
+          setChecking(false);
+        }
+      }
+    };
+
+    void initializeRecoverySession();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,6 +119,7 @@ export default function ResetPassword() {
 
       if (error) throw error;
 
+      await supabase.auth.signOut();
       setSuccess(true);
       setTimeout(() => {
         router.push("/connexion");
