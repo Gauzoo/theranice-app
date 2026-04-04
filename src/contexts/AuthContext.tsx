@@ -39,7 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const searchParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
 
-      return searchParams.get('type') === 'recovery'
+      return searchParams.has('code')
+        || searchParams.get('type') === 'recovery'
         || (searchParams.has('token_hash') && searchParams.get('type') === 'recovery')
         || hashParams.get('type') === 'recovery'
         || (hashParams.has('access_token') && hashParams.get('type') === 'recovery');

@@ -24,8 +24,75 @@ export default function ResetPassword() {
       window.history.replaceState({}, document.title, "/reset-password");
     };
 
+    const hasRecoveryPayload = () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+
+      return searchParams.has("code")
+        || (searchParams.has("token_hash") && searchParams.get("type") === "recovery")
+        || hashParams.get("type") === "recovery"
+        || hashParams.has("access_token");
+    };
+
+    const waitForRecoverySession = (timeoutMs: number) => new Promise<boolean>((resolve) => {
+      let finished = false;
+      let subscription: { unsubscribe: () => void } | null = null;
+
+      const finish = (value: boolean) => {
+        if (finished) {
+          return;
+        }
+
+        finished = true;
+        window.clearTimeout(timeoutId);
+        subscription?.unsubscribe();
+        resolve(value);
+      };
+
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        if (
+          (event === "PASSWORD_RECOVERY"
+            || event === "SIGNED_IN"
+            || event === "TOKEN_REFRESHED"
+            || event === "INITIAL_SESSION")
+          && !!session
+        ) {
+          finish(true);
+        }
+      });
+
+      subscription = data.subscription;
+
+      const timeoutId = window.setTimeout(() => {
+        void supabase.auth.getSession()
+          .then(({ data: { session } }) => {
+            finish(!!session);
+          })
+          .catch(() => {
+            finish(false);
+          });
+      }, timeoutMs);
+    });
+
     const initializeRecoverySession = async () => {
       try {
+        const isRecoveryFlow = hasRecoveryPayload();
+
+        if (isRecoveryFlow) {
+          await supabase.auth.initialize();
+        }
+
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+        if (!active) {
+          return;
+        }
+
+        if (currentSession) {
+          setHasSession(true);
+          return;
+        }
+
         const searchParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
         const code = searchParams.get("code");
@@ -33,9 +100,10 @@ export default function ResetPassword() {
         const type = searchParams.get("type") ?? hashParams.get("type");
         const accessToken = hashParams.get("access_token");
         const refreshToken = hashParams.get("refresh_token");
+        let sessionEstablished = false;
 
         if (accessToken && refreshToken) {
-          const { error: sessionError } = await supabase.auth.setSession({
+          const { data, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
@@ -44,17 +112,19 @@ export default function ResetPassword() {
             throw sessionError;
           }
 
+          sessionEstablished = !!data.session;
           clearRecoveryUrl();
         } else if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
           if (exchangeError) {
             throw exchangeError;
           }
 
+          sessionEstablished = !!data.session;
           clearRecoveryUrl();
         } else if (tokenHash && type === "recovery") {
-          const { error: verifyError } = await supabase.auth.verifyOtp({
+          const { data, error: verifyError } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
             type: "recovery",
           });
@@ -63,17 +133,23 @@ export default function ResetPassword() {
             throw verifyError;
           }
 
+          sessionEstablished = !!data.session;
           clearRecoveryUrl();
         }
 
+        if (!sessionEstablished && isRecoveryFlow) {
+          sessionEstablished = await waitForRecoverySession(4500);
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
+        const hasActiveSession = sessionEstablished || !!session;
 
         if (!active) {
           return;
         }
 
-        setHasSession(!!session);
-        if (!session) {
+        setHasSession(hasActiveSession);
+        if (!hasActiveSession) {
           setError("Lien expiré ou invalide. Veuillez demander un nouveau lien.");
         }
       } catch {

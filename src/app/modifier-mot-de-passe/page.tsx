@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { translateSupabaseAuthError } from "@/lib/supabase/authErrors";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
@@ -41,7 +42,7 @@ export default function ModifierMotDePasse() {
         password: currentPassword,
       });
       if (signInError) {
-        setError("Mot de passe actuel incorrect");
+        setError(translateSupabaseAuthError(signInError, "Mot de passe actuel incorrect"));
         setLoading(false);
         return;
       }
@@ -51,7 +52,7 @@ export default function ModifierMotDePasse() {
         password: newPassword,
       });
       if (updateError) {
-        setError(updateError.message);
+        setError(translateSupabaseAuthError(updateError, "Impossible de modifier le mot de passe pour le moment."));
         setLoading(false);
         return;
       }
@@ -60,8 +61,8 @@ export default function ModifierMotDePasse() {
       setTimeout(() => {
         router.push("/profil");
       }, 3000);
-    } catch {
-      setError("Une erreur est survenue");
+    } catch (err) {
+      setError(translateSupabaseAuthError(err, "Une erreur est survenue"));
     } finally {
       setLoading(false);
     }

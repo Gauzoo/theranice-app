@@ -4,6 +4,7 @@ import Image from "next/image";
 import { EB_Garamond } from "next/font/google";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { translateSupabaseAuthError } from "@/lib/supabase/authErrors";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -51,8 +52,7 @@ export default function ConnexionPage() {
         router.refresh();
       }
     } catch (err) {
-      const error = err as Error;
-      setError(error.message || "Email ou mot de passe incorrect");
+      setError(translateSupabaseAuthError(err, "Email ou mot de passe incorrect"));
     } finally {
       setLoading(false);
     }

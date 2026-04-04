@@ -4,6 +4,7 @@ import Image from "next/image";
 import { EB_Garamond } from "next/font/google";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { translateSupabaseAuthError } from "@/lib/supabase/authErrors";
 import { useRouter } from "next/navigation";
 
 const garamond = EB_Garamond({
@@ -94,8 +95,7 @@ export default function ComptePage() {
         }, 3000);
       }
     } catch (err) {
-      const error = err as Error;
-      setError(error.message || "Une erreur est survenue lors de l'inscription");
+      setError(translateSupabaseAuthError(err, "Une erreur est survenue lors de l'inscription"));
     } finally {
       setLoading(false);
     }

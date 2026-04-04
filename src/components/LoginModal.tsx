@@ -3,6 +3,7 @@
 import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { translateSupabaseAuthError } from "@/lib/supabase/authErrors";
 import { useRouter } from "next/navigation";
 
 
@@ -82,8 +83,7 @@ export default function LoginModal({ isOpen, onClose, buttonRef }: LoginModalPro
         router.refresh();
       }
     } catch (err) {
-      const error = err as Error;
-      setError(error.message || "Email ou mot de passe incorrect");
+      setError(translateSupabaseAuthError(err, "Email ou mot de passe incorrect"));
     } finally {
       setLoading(false);
     }
