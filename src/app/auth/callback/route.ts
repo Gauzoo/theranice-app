@@ -10,8 +10,14 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      // Detect password recovery via AMR claims in the session
+      const amr = data.session?.user?.amr
+      const isRecovery = amr?.some((entry) => entry.method === 'recovery')
+      if (isRecovery) {
+        return NextResponse.redirect(`${origin}/reset-password`)
+      }
       return NextResponse.redirect(`${origin}${next}`)
     }
   }

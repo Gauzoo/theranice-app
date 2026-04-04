@@ -19,7 +19,7 @@ export default function MotDePasseOublie() {
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback/recovery`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       });
 
       if (error) throw error;

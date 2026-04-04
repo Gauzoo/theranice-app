@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 
 interface Profile {
@@ -28,7 +27,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
@@ -62,14 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Écoute les changements d'état (connexion, déconnexion, refresh token)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (mounted) {
-        // Rediriger vers /reset-password si c'est un événement de récupération de mot de passe
-        if (event === 'PASSWORD_RECOVERY') {
-          router.push('/reset-password');
-          return;
-        }
-
         if (session?.user) {
           setUser(session.user);
           // On ne recharge le profil que si l'utilisateur a changé
