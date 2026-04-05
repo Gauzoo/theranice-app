@@ -73,6 +73,7 @@ const SLOT_LABELS: Record<string, string> = {
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "today" | "upcoming" | "past">("upcoming");
   const [showAddModal, setShowAddModal] = useState(false);
   const [users, setUsers] = useState<Array<{id: string, nom: string, prenom: string, telephone?: string}>>([]);
@@ -110,10 +111,18 @@ export default function AdminDashboard() {
   useEffect(() => {
     const supabase = createClient();
 
-    fetchBookings();
-    fetchUsers();
-    fetchMembers();
-    fetchPendingValidations();
+    const loadInitialData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchBookings(),
+        fetchUsers(),
+        fetchMembers(),
+        fetchPendingValidations(),
+      ]);
+      setLoading(false);
+    };
+
+    loadInitialData();
 
     const {
       data: { subscription },
@@ -175,7 +184,7 @@ export default function AdminDashboard() {
 
   const fetchBookings = async () => {
     const supabase = createClient();
-    setLoading(true);
+    setBookingsLoading(true);
 
     try {
       // Récupère toutes les réservations (avec cache bypass)
@@ -214,7 +223,7 @@ export default function AdminDashboard() {
       const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
       alert('Erreur : ' + errorMessage);
     } finally {
-      setLoading(false);
+      setBookingsLoading(false);
     }
   };
 
@@ -699,13 +708,16 @@ export default function AdminDashboard() {
               </h2>
               <button
                 onClick={fetchBookings}
-                className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded font-medium text-sm transition-colors cursor-pointer flex items-center gap-2"
+                disabled={bookingsLoading}
+                className={`bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded font-medium text-sm transition-colors flex items-center gap-2 ${
+                  bookingsLoading ? "cursor-wait opacity-70" : "cursor-pointer"
+                }`}
                 title="Rafraîchir les réservations"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-4 h-4 ${bookingsLoading ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Rafraîchir
+                {bookingsLoading ? 'Rafraîchissement...' : 'Rafraîchir'}
               </button>
             </div>
             <button
@@ -848,14 +860,14 @@ export default function AdminDashboard() {
 
         {/* Section Validation de comptes */}
         <div className="bg-white p-6 shadow-md mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <h2 className={`text-2xl font-bold text-[#D4A373] ${garamond.className}`}>
+          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <h2 className={`text-xl sm:text-2xl font-bold text-[#D4A373] leading-tight sm:leading-normal sm:whitespace-nowrap ${garamond.className}`}>
                 ▸ Comptes en attente de validation
               </h2>
               <button
                 onClick={fetchPendingValidations}
-                className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded font-medium text-sm transition-colors cursor-pointer flex items-center gap-2"
+                className="w-full sm:w-auto bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded font-medium text-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
                 title="Rafraîchir les comptes en attente"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -865,7 +877,7 @@ export default function AdminDashboard() {
               </button>
             </div>
             {pendingValidations.length > 0 && (
-              <span className="bg-orange-100 text-orange-800 px-3 py-1 text-sm font-semibold">
+              <span className="inline-flex w-fit bg-orange-100 text-orange-800 px-3 py-1 text-sm font-semibold">
                 {pendingValidations.length} en attente
               </span>
             )}
