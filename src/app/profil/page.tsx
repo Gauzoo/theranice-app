@@ -14,6 +14,91 @@ const garamond = EB_Garamond({
 });
 
 type AccountStatus = 'pending' | 'documents_submitted' | 'approved' | 'rejected';
+type DocumentType = 'carte' | 'kbis' | 'rc_pro';
+type StorageDocumentType = 'carte-identite' | 'kbis' | 'rc-pro';
+
+const DOCUMENTS_BUCKET = 'user-documents';
+
+const normalizeRawDocumentPath = (value: string): string => {
+  const trimmed = value.trim().replace(/^\/+/, '');
+
+  if (!trimmed) {
+    return '';
+  }
+
+  const bucketPrefix = `${DOCUMENTS_BUCKET}/`;
+  return trimmed.startsWith(bucketPrefix) ? trimmed.slice(bucketPrefix.length) : trimmed;
+};
+
+const decodePathSafely = (value: string): string => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
+const extractDocumentFilePath = (storedValue?: string | null): string | null => {
+  if (!storedValue) {
+    return null;
+  }
+
+  const trimmed = storedValue.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (!/^https?:\/\//i.test(trimmed)) {
+    const directPath = normalizeRawDocumentPath(trimmed);
+    return directPath || null;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    const segments = url.pathname.split('/').filter(Boolean);
+    const bucketIndex = segments.indexOf(DOCUMENTS_BUCKET);
+
+    if (bucketIndex !== -1 && bucketIndex + 1 < segments.length) {
+      const fromBucket = normalizeRawDocumentPath(
+        decodePathSafely(segments.slice(bucketIndex + 1).join('/'))
+      );
+      return fromBucket || null;
+    }
+
+    const objectIndex = segments.indexOf('object');
+    if (objectIndex !== -1) {
+      const mode = segments[objectIndex + 1] || '';
+      const hasVisibilityMode =
+        mode === 'public'
+        || mode === 'sign'
+        || mode === 'authenticated'
+        || mode === 'private';
+
+      const bucket = hasVisibilityMode ? segments[objectIndex + 2] : mode;
+      const pathStart = hasVisibilityMode ? objectIndex + 3 : objectIndex + 2;
+
+      if (bucket === DOCUMENTS_BUCKET && pathStart < segments.length) {
+        const fromObject = normalizeRawDocumentPath(
+          decodePathSafely(segments.slice(pathStart).join('/'))
+        );
+        return fromObject || null;
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+};
+
+const normalizeDocumentReference = (storedValue?: string | null): string => {
+  const filePath = extractDocumentFilePath(storedValue);
+  if (filePath) {
+    return filePath;
+  }
+
+  return storedValue?.trim() || '';
+};
 
 const STATUS_LABELS: Record<AccountStatus, { label: string; color: string; description: string }> = {
   pending: {
@@ -93,6 +178,10 @@ export default function ProfilPage() {
         .single();
 
       if (profile) {
+        const normalizedCarteRef = normalizeDocumentReference(profile.carte_identite_url);
+        const normalizedKbisRef = normalizeDocumentReference(profile.kbis_url);
+        const normalizedRcProRef = normalizeDocumentReference(profile.rc_pro_url);
+
         setFormData({
           nom: profile.nom || user.user_metadata?.nom || "",
           prenom: profile.prenom || user.user_metadata?.prenom || "",
@@ -102,9 +191,9 @@ export default function ProfilPage() {
           adresse: profile.adresse || user.user_metadata?.adresse || "",
           siret: profile.siret || user.user_metadata?.siret || "",
           account_status: profile.account_status || "pending",
-          carte_identite_url: profile.carte_identite_url || "",
-          kbis_url: profile.kbis_url || "",
-          rc_pro_url: profile.rc_pro_url || "",
+          carte_identite_url: normalizedCarteRef,
+          kbis_url: normalizedKbisRef,
+          rc_pro_url: normalizedRcProRef,
           carte_identite_status: profile.carte_identite_status || null,
           kbis_status: profile.kbis_status || null,
           rc_pro_status: profile.rc_pro_status || null,
@@ -113,6 +202,29 @@ export default function ProfilPage() {
           rc_pro_rejection_notes: profile.rc_pro_rejection_notes || "",
           validation_notes: profile.validation_notes || "",
         });
+
+        const normalizationUpdates: Record<string, string> = {};
+
+        if (normalizedCarteRef && normalizedCarteRef !== (profile.carte_identite_url || "")) {
+          normalizationUpdates.carte_identite_url = normalizedCarteRef;
+        }
+        if (normalizedKbisRef && normalizedKbisRef !== (profile.kbis_url || "")) {
+          normalizationUpdates.kbis_url = normalizedKbisRef;
+        }
+        if (normalizedRcProRef && normalizedRcProRef !== (profile.rc_pro_url || "")) {
+          normalizationUpdates.rc_pro_url = normalizedRcProRef;
+        }
+
+        if (Object.keys(normalizationUpdates).length > 0) {
+          const { error: normalizationError } = await supabase
+            .from('profiles')
+            .update(normalizationUpdates)
+            .eq('id', user.id);
+
+          if (normalizationError) {
+            console.error('Erreur de normalisation des références de documents:', normalizationError);
+          }
+        }
       } else {
         setFormData((prev) => ({
           ...prev,
@@ -133,7 +245,39 @@ export default function ProfilPage() {
     });
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'carte' | 'kbis' | 'rc_pro') => {
+  const getDocumentRefByType = (type: DocumentType): string => {
+    if (type === 'carte') return formData.carte_identite_url;
+    if (type === 'kbis') return formData.kbis_url;
+    return formData.rc_pro_url;
+  };
+
+  const handleOpenDocument = async (type: DocumentType) => {
+    setError(null);
+
+    try {
+      const storedRef = getDocumentRefByType(type);
+      const filePath = extractDocumentFilePath(storedRef);
+
+      if (!filePath) {
+        throw new Error('Référence document invalide');
+      }
+
+      const supabase = createClient();
+      const { data, error: signedUrlError } = await supabase.storage
+        .from(DOCUMENTS_BUCKET)
+        .createSignedUrl(filePath, 120);
+
+      if (signedUrlError || !data?.signedUrl) {
+        throw signedUrlError || new Error('URL signée indisponible');
+      }
+
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    } catch {
+      setError("Impossible d'ouvrir le document. Veuillez réessayer.");
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: DocumentType) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -179,24 +323,24 @@ export default function ProfilPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Utilisateur non connecté");
 
-      const documentType = type === 'carte' ? 'carte-identite' : type === 'kbis' ? 'kbis' : 'rc-pro';
-      const fileUrl = await uploadDocument(file, documentType);
+      const documentType: StorageDocumentType = type === 'carte' ? 'carte-identite' : type === 'kbis' ? 'kbis' : 'rc-pro';
+      const filePath = await uploadDocument(file, documentType);
 
       // Mettre à jour le profil avec la nouvelle URL ET le statut 'pending'
       const updateData = type === 'carte' 
         ? { 
-            carte_identite_url: fileUrl,
+            carte_identite_url: filePath,
             carte_identite_status: 'pending',
             carte_identite_rejection_notes: null
           }
         : type === 'kbis'
         ? { 
-            kbis_url: fileUrl,
+            kbis_url: filePath,
             kbis_status: 'pending',
             kbis_rejection_notes: null
           }
         : {
-            rc_pro_url: fileUrl,
+            rc_pro_url: filePath,
             rc_pro_status: 'pending',
             rc_pro_rejection_notes: null
           };
@@ -213,18 +357,18 @@ export default function ProfilPage() {
         ...prev,
         ...(type === 'carte' 
           ? { 
-              carte_identite_url: fileUrl,
+              carte_identite_url: filePath,
               carte_identite_status: 'pending',
               carte_identite_rejection_notes: ""
             }
           : type === 'kbis'
           ? { 
-              kbis_url: fileUrl,
+              kbis_url: filePath,
               kbis_status: 'pending',
               kbis_rejection_notes: ""
             }
           : {
-              rc_pro_url: fileUrl,
+              rc_pro_url: filePath,
               rc_pro_status: 'pending',
               rc_pro_rejection_notes: ""
             })
@@ -256,7 +400,7 @@ export default function ProfilPage() {
     }
   };
 
-  const handleDeleteDocument = async (type: 'carte' | 'kbis' | 'rc_pro') => {
+  const handleDeleteDocument = async (type: DocumentType) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) {
       return;
     }
@@ -270,19 +414,22 @@ export default function ProfilPage() {
       if (!user) throw new Error("Utilisateur non connecté");
 
       // Supprimer le fichier du storage
-      const fileUrl = type === 'carte'
-        ? formData.carte_identite_url
-        : type === 'kbis'
-          ? formData.kbis_url
-          : formData.rc_pro_url;
-      
-      if (fileUrl) {
-        // Extraire le chemin du fichier depuis l'URL
-        const urlParts = fileUrl.split('/');
-        const fileName = urlParts[urlParts.length - 1];
-        const filePath = `${user.id}/${fileName}`;
-        
-        await supabase.storage.from('user-documents').remove([filePath]);
+      const storedRef = getDocumentRefByType(type);
+
+      if (storedRef) {
+        const filePath = extractDocumentFilePath(storedRef);
+
+        if (!filePath) {
+          throw new Error("Impossible d'identifier le document à supprimer.");
+        }
+
+        const { error: removeError } = await supabase.storage
+          .from(DOCUMENTS_BUCKET)
+          .remove([filePath]);
+
+        if (removeError) {
+          throw new Error(`Suppression du fichier impossible: ${removeError.message}`);
+        }
       }
 
       // Déterminer le nouveau statut du compte
@@ -355,7 +502,7 @@ export default function ProfilPage() {
     }
   };
 
-  const handleUploadDocument = async (type: 'carte' | 'kbis' | 'rc_pro') => {
+  const handleUploadDocument = async (type: DocumentType) => {
     const file = type === 'carte' ? carteIdentiteFile : type === 'kbis' ? kbisFile : rcProFile;
     if (!file) return;
 
@@ -367,24 +514,24 @@ export default function ProfilPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Utilisateur non connecté");
 
-      const documentType = type === 'carte' ? 'carte-identite' : type === 'kbis' ? 'kbis' : 'rc-pro';
-      const fileUrl = await uploadDocument(file, documentType);
+      const documentType: StorageDocumentType = type === 'carte' ? 'carte-identite' : type === 'kbis' ? 'kbis' : 'rc-pro';
+      const filePath = await uploadDocument(file, documentType);
 
       // Mettre à jour le profil avec la nouvelle URL ET le statut 'pending'
       const updateData = type === 'carte' 
         ? { 
-            carte_identite_url: fileUrl,
+            carte_identite_url: filePath,
             carte_identite_status: 'pending',
             carte_identite_rejection_notes: null
           }
         : type === 'kbis'
         ? { 
-            kbis_url: fileUrl,
+            kbis_url: filePath,
             kbis_status: 'pending',
             kbis_rejection_notes: null
           }
         : {
-            rc_pro_url: fileUrl,
+            rc_pro_url: filePath,
             rc_pro_status: 'pending',
             rc_pro_rejection_notes: null
           };
@@ -401,18 +548,18 @@ export default function ProfilPage() {
         ...prev,
         ...(type === 'carte' 
           ? { 
-              carte_identite_url: fileUrl,
+              carte_identite_url: filePath,
               carte_identite_status: 'pending',
               carte_identite_rejection_notes: ""
             }
           : type === 'kbis'
           ? { 
-              kbis_url: fileUrl,
+              kbis_url: filePath,
               kbis_status: 'pending',
               kbis_rejection_notes: ""
             }
           : {
-              rc_pro_url: fileUrl,
+              rc_pro_url: filePath,
               rc_pro_status: 'pending',
               rc_pro_rejection_notes: ""
             })
@@ -444,7 +591,7 @@ export default function ProfilPage() {
     }
   };
 
-  const uploadDocument = async (file: File, documentType: 'carte-identite' | 'kbis' | 'rc-pro'): Promise<string> => {
+  const uploadDocument = async (file: File, documentType: StorageDocumentType): Promise<string> => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -458,17 +605,12 @@ export default function ProfilPage() {
 
     // Upload le nouveau fichier
     const { error: uploadError } = await supabase.storage
-      .from('user-documents')
+      .from(DOCUMENTS_BUCKET)
       .upload(filePath, file, { upsert: true });
 
     if (uploadError) throw uploadError;
 
-    // Récupère l'URL publique
-    const { data } = supabase.storage
-      .from('user-documents')
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
+    return filePath;
   };
 
   const handleSubmitDocuments = async () => {
@@ -840,10 +982,13 @@ export default function ProfilPage() {
                         <strong>Refus :</strong> {formData.carte_identite_rejection_notes}
                       </div>
                     )}
-                    <a href={formData.carte_identite_url} target="_blank" rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:text-blue-800 underline truncate">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDocument('carte')}
+                      className="text-xs text-blue-600 hover:text-blue-800 underline truncate text-left cursor-pointer"
+                    >
                       Voir le document
-                    </a>
+                    </button>
                     <div className="flex items-center gap-2 flex-wrap">
                       {formData.carte_identite_status === 'pending' && (
                         <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 text-xs font-medium">En attente</span>
@@ -897,10 +1042,13 @@ export default function ProfilPage() {
                         <strong>Refus :</strong> {formData.kbis_rejection_notes}
                       </div>
                     )}
-                    <a href={formData.kbis_url} target="_blank" rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:text-blue-800 underline truncate">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDocument('kbis')}
+                      className="text-xs text-blue-600 hover:text-blue-800 underline truncate text-left cursor-pointer"
+                    >
                       Voir le document
-                    </a>
+                    </button>
                     <div className="flex items-center gap-2 flex-wrap">
                       {formData.kbis_status === 'pending' && (
                         <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 text-xs font-medium">En attente</span>
@@ -954,10 +1102,13 @@ export default function ProfilPage() {
                         <strong>Refus :</strong> {formData.rc_pro_rejection_notes}
                       </div>
                     )}
-                    <a href={formData.rc_pro_url} target="_blank" rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:text-blue-800 underline truncate">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDocument('rc_pro')}
+                      className="text-xs text-blue-600 hover:text-blue-800 underline truncate text-left cursor-pointer"
+                    >
                       Voir le document
-                    </a>
+                    </button>
                     <div className="flex items-center gap-2 flex-wrap">
                       {formData.rc_pro_status === 'pending' && (
                         <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 text-xs font-medium">En attente</span>
