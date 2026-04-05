@@ -1644,9 +1644,9 @@ export default function AdminDashboard() {
 
       {/* Modal d'édition de membre */}
       {showEditMemberModal && editingMember && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6">
-          <div className="mx-auto flex h-full max-w-5xl items-center justify-center">
-            <div className="w-full max-h-[92vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-sm sm:p-6">
+          <div className="mx-auto flex min-h-full max-w-5xl items-center justify-center">
+            <div className="flex w-full max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)]">
               <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5">
                 <div>
                   <p className="text-xs uppercase tracking-[0.12em] text-slate-500">
@@ -1683,7 +1683,7 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              <div className="max-h-[calc(92vh-170px)] overflow-y-auto px-6 py-6">
+              <div className="flex-1 overflow-y-auto px-6 py-6">
                 <div className="space-y-8">
                   {memberModalFeedback && (
                     <div
@@ -1866,7 +1866,7 @@ export default function AdminDashboard() {
                   disabled={memberSaveLoading}
                   className="rounded bg-[#D4A373] px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-[#c49363] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                 >
-                  {memberSaveLoading ? 'Enregistrement...' : 'Enregistrer les modifications'}
+                  {memberSaveLoading ? 'Enregistrement...' : 'Enregistrer'}
                 </button>
               </div>
             </div>
