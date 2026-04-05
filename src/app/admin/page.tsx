@@ -40,11 +40,9 @@ interface Member {
   created_at: string;
   account_status?: 'pending' | 'documents_submitted' | 'approved' | 'rejected';
   activite_exercee?: string;
-}
-
-interface PendingValidation extends Member {
-  account_status: 'pending' | 'documents_submitted' | 'approved' | 'rejected';
-  activite_exercee?: string;
+  adresse?: string;
+  siret?: string;
+  validation_notes?: string;
   carte_identite_url?: string;
   kbis_url?: string;
   rc_pro_url?: string;
@@ -54,9 +52,19 @@ interface PendingValidation extends Member {
   carte_identite_rejection_notes?: string;
   kbis_rejection_notes?: string;
   rc_pro_rejection_notes?: string;
-  documents_submitted_at?: string;
-  validation_notes?: string;
 }
+
+interface PendingValidation extends Member {
+  account_status: 'pending' | 'documents_submitted' | 'approved' | 'rejected';
+  documents_submitted_at?: string;
+}
+
+type AdminDocumentType = 'carte' | 'kbis' | 'rc_pro';
+
+type MemberModalFeedback = {
+  type: 'success' | 'error';
+  message: string;
+} | null;
 
 const ROOM_LABELS: Record<string, string> = {
   room1: "Athéna",
@@ -70,6 +78,30 @@ const SLOT_LABELS: Record<string, string> = {
   fullday: "Journée complète (8h-17h)",
 };
 
+const MEMBER_DOCUMENTS: Array<{
+  type: AdminDocumentType;
+  label: string;
+  accept: string;
+}> = [
+  {
+    type: 'carte',
+    label: "Carte d'identité",
+    accept: '.pdf,.jpg,.jpeg,.png,.webp',
+  },
+  {
+    type: 'kbis',
+    label: 'KBIS',
+    accept: '.pdf,.jpg,.jpeg,.png,.webp',
+  },
+  {
+    type: 'rc_pro',
+    label: 'RC Pro',
+    accept: '.pdf,.jpg,.jpeg,.png,.webp',
+  },
+];
+
+const MAX_MEMBER_DOCUMENT_SIZE = 6 * 1024 * 1024;
+
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,6 +114,18 @@ export default function AdminDashboard() {
   const [members, setMembers] = useState<Member[]>([]);
   const [showEditMemberModal, setShowEditMemberModal] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [memberModalFeedback, setMemberModalFeedback] = useState<MemberModalFeedback>(null);
+  const [memberSaveLoading, setMemberSaveLoading] = useState(false);
+  const [memberDocumentLoading, setMemberDocumentLoading] = useState<Record<AdminDocumentType, boolean>>({
+    carte: false,
+    kbis: false,
+    rc_pro: false,
+  });
+  const [memberDocumentFiles, setMemberDocumentFiles] = useState<Record<AdminDocumentType, File | null>>({
+    carte: null,
+    kbis: null,
+    rc_pro: null,
+  });
   
   // Section Validation de comptes
   const [pendingValidations, setPendingValidations] = useState<PendingValidation[]>([]);
@@ -167,19 +211,22 @@ export default function AdminDashboard() {
     }
   };
 
-  const fetchMembers = async () => {
+  const fetchMembers = async (): Promise<Member[] | null> => {
     try {
       const response = await fetch('/api/admin/members');
       const result = await response.json();
       
       if (result.members) {
         setMembers(result.members);
+        return result.members as Member[];
       } else {
         console.error('Error fetching members:', result.error);
       }
     } catch (error) {
       console.error('Error fetching members:', error);
     }
+
+    return null;
   };
 
   const fetchBookings = async () => {
@@ -343,32 +390,341 @@ export default function AdminDashboard() {
     }
   };
 
+  const refreshEditingMember = async (memberId: string) => {
+    const refreshedMembers = await fetchMembers();
+
+    if (!refreshedMembers) {
+      return null;
+    }
+
+    const refreshedMember = refreshedMembers.find((member) => member.id === memberId) || null;
+    setEditingMember(refreshedMember);
+    return refreshedMember;
+  };
+
+  const closeEditMemberModal = () => {
+    setShowEditMemberModal(false);
+    setEditingMember(null);
+    setMemberModalFeedback(null);
+    setMemberSaveLoading(false);
+    setMemberDocumentLoading({
+      carte: false,
+      kbis: false,
+      rc_pro: false,
+    });
+    setMemberDocumentFiles({
+      carte: null,
+      kbis: null,
+      rc_pro: null,
+    });
+  };
+
   const handleEditMember = (member: Member) => {
     setEditingMember(member);
+    setMemberModalFeedback(null);
+    setMemberSaveLoading(false);
+    setMemberDocumentLoading({
+      carte: false,
+      kbis: false,
+      rc_pro: false,
+    });
+    setMemberDocumentFiles({
+      carte: null,
+      kbis: null,
+      rc_pro: null,
+    });
     setShowEditMemberModal(true);
   };
 
+  const getMemberDocumentUrl = (member: Member, documentType: AdminDocumentType) => {
+    if (documentType === 'carte') {
+      return member.carte_identite_url;
+    }
+    if (documentType === 'kbis') {
+      return member.kbis_url;
+    }
+    return member.rc_pro_url;
+  };
+
+  const getMemberDocumentStatus = (member: Member, documentType: AdminDocumentType) => {
+    if (documentType === 'carte') {
+      return member.carte_identite_status;
+    }
+    if (documentType === 'kbis') {
+      return member.kbis_status;
+    }
+    return member.rc_pro_status;
+  };
+
+  const getMemberDocumentNotes = (member: Member, documentType: AdminDocumentType) => {
+    if (documentType === 'carte') {
+      return member.carte_identite_rejection_notes;
+    }
+    if (documentType === 'kbis') {
+      return member.kbis_rejection_notes;
+    }
+    return member.rc_pro_rejection_notes;
+  };
+
+  const getDocumentStatusDisplay = (status: string | null | undefined) => {
+    if (status === 'approved') {
+      return { label: 'Validé', className: 'bg-[#56862F] text-white' };
+    }
+    if (status === 'rejected') {
+      return { label: 'Refusé', className: 'bg-[#B12F2E] text-white' };
+    }
+    if (status === 'pending') {
+      return { label: 'En attente', className: 'bg-orange-100 text-orange-800' };
+    }
+    return { label: 'Manquant', className: 'bg-slate-200 text-slate-700' };
+  };
+
+  const setDocumentLoadingState = (documentType: AdminDocumentType, value: boolean) => {
+    setMemberDocumentLoading((prev) => ({
+      ...prev,
+      [documentType]: value,
+    }));
+  };
+
+  const handleSelectMemberDocument = (documentType: AdminDocumentType, file: File | null) => {
+    if (!file) {
+      setMemberDocumentFiles((prev) => ({
+        ...prev,
+        [documentType]: null,
+      }));
+      return;
+    }
+
+    const allowedMimeTypes = new Set([
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+    ]);
+
+    if (!allowedMimeTypes.has(file.type)) {
+      setMemberModalFeedback({
+        type: 'error',
+        message: 'Format non autorisé. Utilisez PDF, JPG, PNG ou WEBP.',
+      });
+      return;
+    }
+
+    if (file.size > MAX_MEMBER_DOCUMENT_SIZE) {
+      setMemberModalFeedback({
+        type: 'error',
+        message: 'Le fichier est trop volumineux (max 6 Mo).',
+      });
+      return;
+    }
+
+    setMemberModalFeedback(null);
+    setMemberDocumentFiles((prev) => ({
+      ...prev,
+      [documentType]: file,
+    }));
+  };
+
+  const handleOpenMemberDocument = (documentType: AdminDocumentType) => {
+    if (!editingMember) {
+      return;
+    }
+
+    const documentReference = getMemberDocumentUrl(editingMember, documentType);
+    if (!documentReference) {
+      setMemberModalFeedback({
+        type: 'error',
+        message: 'Aucun document disponible pour cette catégorie.',
+      });
+      return;
+    }
+
+    window.open(
+      `/api/admin/view-document?userId=${editingMember.id}&fileType=${documentType}`,
+      '_blank',
+      'noopener,noreferrer'
+    );
+  };
+
+  const handleUploadMemberDocument = async (documentType: AdminDocumentType) => {
+    if (!editingMember) {
+      return;
+    }
+
+    const selectedFile = memberDocumentFiles[documentType];
+    if (!selectedFile) {
+      setMemberModalFeedback({
+        type: 'error',
+        message: 'Sélectionnez un fichier avant de lancer l\'upload.',
+      });
+      return;
+    }
+
+    setDocumentLoadingState(documentType, true);
+    setMemberModalFeedback(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('userId', editingMember.id);
+      formData.append('documentType', documentType);
+      formData.append('file', selectedFile);
+
+      const response = await fetch('/api/admin/member-document', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMemberModalFeedback({
+          type: 'error',
+          message: result.error || 'Erreur lors de l\'upload du document.',
+        });
+        return;
+      }
+
+      await refreshEditingMember(editingMember.id);
+      await fetchPendingValidations();
+
+      setMemberDocumentFiles((prev) => ({
+        ...prev,
+        [documentType]: null,
+      }));
+      setMemberModalFeedback({
+        type: 'success',
+        message: 'Document mis à jour avec succès.',
+      });
+    } catch (error) {
+      console.error('Error uploading member document:', error);
+      setMemberModalFeedback({
+        type: 'error',
+        message: 'Une erreur est survenue pendant l\'upload du document.',
+      });
+    } finally {
+      setDocumentLoadingState(documentType, false);
+    }
+  };
+
+  const handleDeleteMemberDocument = async (documentType: AdminDocumentType) => {
+    if (!editingMember) {
+      return;
+    }
+
+    const documentRef = getMemberDocumentUrl(editingMember, documentType);
+    if (!documentRef) {
+      setMemberModalFeedback({
+        type: 'error',
+        message: 'Aucun document à supprimer pour cette catégorie.',
+      });
+      return;
+    }
+
+    if (!confirm('Confirmer la suppression de ce document ?')) {
+      return;
+    }
+
+    setDocumentLoadingState(documentType, true);
+    setMemberModalFeedback(null);
+
+    try {
+      const response = await fetch('/api/admin/member-document', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: editingMember.id,
+          documentType,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMemberModalFeedback({
+          type: 'error',
+          message: result.error || 'Erreur lors de la suppression du document.',
+        });
+        return;
+      }
+
+      await refreshEditingMember(editingMember.id);
+      await fetchPendingValidations();
+
+      setMemberDocumentFiles((prev) => ({
+        ...prev,
+        [documentType]: null,
+      }));
+      setMemberModalFeedback({
+        type: 'success',
+        message: 'Document supprimé avec succès.',
+      });
+    } catch (error) {
+      console.error('Error deleting member document:', error);
+      setMemberModalFeedback({
+        type: 'error',
+        message: 'Une erreur est survenue pendant la suppression du document.',
+      });
+    } finally {
+      setDocumentLoadingState(documentType, false);
+    }
+  };
+
   const handleSaveMember = async () => {
-    if (!editingMember) return;
+    if (!editingMember) {
+      return;
+    }
 
-    const supabase = createClient();
-    
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        nom: editingMember.nom,
-        prenom: editingMember.prenom,
-        telephone: editingMember.telephone,
-      })
-      .eq('id', editingMember.id);
+    setMemberSaveLoading(true);
+    setMemberModalFeedback(null);
 
-    if (error) {
-      alert('Erreur lors de la modification : ' + error.message);
-    } else {
-      alert('Membre modifié avec succès');
-      setShowEditMemberModal(false);
-      setEditingMember(null);
-      fetchMembers();
+    try {
+      const response = await fetch('/api/admin/members', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          memberId: editingMember.id,
+          nom: editingMember.nom,
+          prenom: editingMember.prenom,
+          telephone: editingMember.telephone,
+          activite_exercee: editingMember.activite_exercee,
+          adresse: editingMember.adresse,
+          siret: editingMember.siret,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMemberModalFeedback({
+          type: 'error',
+          message: result.error || 'Erreur lors de la modification du membre.',
+        });
+        return;
+      }
+
+      if (result.member) {
+        setEditingMember(result.member);
+      }
+
+      await fetchMembers();
+      await fetchPendingValidations();
+
+      setMemberModalFeedback({
+        type: 'success',
+        message: 'Informations du membre mises à jour avec succès.',
+      });
+    } catch (error) {
+      console.error('Error saving member:', error);
+      setMemberModalFeedback({
+        type: 'error',
+        message: 'Une erreur est survenue pendant la sauvegarde du membre.',
+      });
+    } finally {
+      setMemberSaveLoading(false);
     }
   };
 
@@ -392,7 +748,11 @@ export default function AdminDashboard() {
       }
 
       alert('Membre supprimé avec succès');
-      fetchMembers();
+      if (editingMember?.id === memberId) {
+        closeEditMemberModal();
+      }
+      await fetchMembers();
+      await fetchPendingValidations();
     } catch (error) {
       console.error('Error deleting member:', error);
       alert('Erreur lors de la suppression du membre');
@@ -1284,71 +1644,229 @@ export default function AdminDashboard() {
 
       {/* Modal d'édition de membre */}
       {showEditMemberModal && editingMember && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h3 className={`text-2xl font-bold text-[#D4A373] mb-6 ${garamond.className}`}>
-                Modifier le membre
-              </h3>
-
-              <div className="space-y-4">
-                {/* Prénom */}
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6">
+          <div className="mx-auto flex h-full max-w-5xl items-center justify-center">
+            <div className="w-full max-h-[92vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Prénom *
-                  </label>
-                  <input
-                    type="text"
-                    value={editingMember.prenom}
-                    onChange={(e) => setEditingMember({ ...editingMember, prenom: e.target.value })}
-                    className="w-full border border-slate-300 rounded px-3 py-2"
-                  />
+                  <p className="text-xs uppercase tracking-[0.12em] text-slate-500">
+                    Fiche membre
+                  </p>
+                  <h3 className={`text-2xl font-bold text-[#D4A373] ${garamond.className}`}>
+                    Modifier {editingMember.prenom} {editingMember.nom}
+                  </h3>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    {editingMember.account_status === 'approved' && (
+                      <span className="bg-[#56862F] text-white px-2 py-1 font-medium">Compte validé</span>
+                    )}
+                    {editingMember.account_status === 'pending' && (
+                      <span className="bg-yellow-500 text-white px-2 py-1 font-medium">Documents manquants</span>
+                    )}
+                    {editingMember.account_status === 'documents_submitted' && (
+                      <span className="bg-[#D4A373] text-white px-2 py-1 font-medium">Documents en validation</span>
+                    )}
+                    {editingMember.account_status === 'rejected' && (
+                      <span className="bg-[#B12F2E] text-white px-2 py-1 font-medium">Compte rejeté</span>
+                    )}
+                    <span className="bg-white px-2 py-1 text-slate-600 border border-slate-200">
+                      Inscrit le {new Date(editingMember.created_at).toLocaleDateString('fr-FR')}
+                    </span>
+                  </div>
                 </div>
+                <button
+                  onClick={closeEditMemberModal}
+                  className="h-9 w-9 rounded-full bg-white text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700 cursor-pointer"
+                  title="Fermer"
+                  aria-label="Fermer"
+                >
+                  ×
+                </button>
+              </div>
 
-                {/* Nom */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Nom *
-                  </label>
-                  <input
-                    type="text"
-                    value={editingMember.nom}
-                    onChange={(e) => setEditingMember({ ...editingMember, nom: e.target.value })}
-                    className="w-full border border-slate-300 rounded px-3 py-2"
-                  />
-                </div>
+              <div className="max-h-[calc(92vh-170px)] overflow-y-auto px-6 py-6">
+                <div className="space-y-8">
+                  {memberModalFeedback && (
+                    <div
+                      className={`rounded-lg border px-4 py-3 text-sm ${
+                        memberModalFeedback.type === 'success'
+                          ? 'border-[#56862F] bg-green-50 text-[#2f4d1a]'
+                          : 'border-[#B12F2E] bg-red-50 text-[#7f2120]'
+                      }`}
+                    >
+                      {memberModalFeedback.message}
+                    </div>
+                  )}
 
-                {/* Téléphone */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Téléphone
-                  </label>
-                  <input
-                    type="tel"
-                    value={editingMember.telephone || ''}
-                    onChange={(e) => setEditingMember({ ...editingMember, telephone: e.target.value })}
-                    className="w-full border border-slate-300 rounded px-3 py-2"
-                    placeholder="06 12 34 56 78"
-                  />
+                  <section className="rounded-xl border border-slate-200 p-5">
+                    <h4 className="text-lg font-semibold text-slate-800 mb-4">Informations du membre</h4>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">Prénom *</label>
+                        <input
+                          type="text"
+                          value={editingMember.prenom}
+                          onChange={(e) => setEditingMember({ ...editingMember, prenom: e.target.value })}
+                          className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">Nom *</label>
+                        <input
+                          type="text"
+                          value={editingMember.nom}
+                          onChange={(e) => setEditingMember({ ...editingMember, nom: e.target.value })}
+                          className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">Email</label>
+                        <input
+                          type="email"
+                          value={editingMember.email || ''}
+                          readOnly
+                          className="w-full rounded border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">Téléphone</label>
+                        <input
+                          type="tel"
+                          value={editingMember.telephone || ''}
+                          onChange={(e) => setEditingMember({ ...editingMember, telephone: e.target.value })}
+                          className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
+                          placeholder="06 12 34 56 78"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">Activité exercée</label>
+                        <input
+                          type="text"
+                          value={editingMember.activite_exercee || ''}
+                          onChange={(e) => setEditingMember({ ...editingMember, activite_exercee: e.target.value })}
+                          className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
+                          placeholder="Psychologue, ostéopathe, sophrologue..."
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">SIRET</label>
+                        <input
+                          type="text"
+                          value={editingMember.siret || ''}
+                          onChange={(e) => setEditingMember({ ...editingMember, siret: e.target.value })}
+                          className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
+                          placeholder="14 chiffres"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="mb-2 block text-sm font-medium text-slate-700">Adresse professionnelle</label>
+                        <textarea
+                          value={editingMember.adresse || ''}
+                          onChange={(e) => setEditingMember({ ...editingMember, adresse: e.target.value })}
+                          rows={3}
+                          className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
+                          placeholder="Adresse complète"
+                        />
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="rounded-xl border border-slate-200 p-5">
+                    <h4 className="text-lg font-semibold text-slate-800 mb-4">Documents du compte</h4>
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                      {MEMBER_DOCUMENTS.map((document) => {
+                        const documentUrl = getMemberDocumentUrl(editingMember, document.type);
+                        const documentStatus = getDocumentStatusDisplay(
+                          getMemberDocumentStatus(editingMember, document.type)
+                        );
+                        const documentNotes = getMemberDocumentNotes(editingMember, document.type);
+                        const isLoading = memberDocumentLoading[document.type];
+                        const selectedFile = memberDocumentFiles[document.type];
+
+                        return (
+                          <div key={document.type} className="rounded-lg border border-slate-200 p-4 bg-slate-50">
+                            <div className="mb-3 flex items-start justify-between gap-2">
+                              <p className="text-sm font-semibold text-slate-800">{document.label}</p>
+                              <span className={`px-2 py-1 text-xs font-semibold ${documentStatus.className}`}>
+                                {documentStatus.label}
+                              </span>
+                            </div>
+
+                            {documentNotes && (
+                              <p className="mb-3 text-xs text-[#B12F2E]">
+                                Motif du refus: {documentNotes}
+                              </p>
+                            )}
+
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  onClick={() => handleOpenMemberDocument(document.type)}
+                                  disabled={!documentUrl || isLoading}
+                                  className="rounded bg-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                                >
+                                  Voir
+                                </button>
+
+                                <label className="rounded bg-[#FAEDCD] px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-[#f2dfb2] cursor-pointer">
+                                  Choisir un fichier
+                                  <input
+                                    type="file"
+                                    className="hidden"
+                                    accept={document.accept}
+                                    onChange={(e) => handleSelectMemberDocument(document.type, e.target.files?.[0] || null)}
+                                  />
+                                </label>
+                              </div>
+
+                              <p className="text-xs text-slate-500 truncate" title={selectedFile?.name || ''}>
+                                {selectedFile ? selectedFile.name : 'Aucun nouveau fichier sélectionné'}
+                              </p>
+
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  onClick={() => handleUploadMemberDocument(document.type)}
+                                  disabled={!selectedFile || isLoading}
+                                  className="rounded bg-[#D4A373] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#c49363] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                                >
+                                  {isLoading ? 'En cours...' : documentUrl ? 'Remplacer' : 'Uploader'}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteMemberDocument(document.type)}
+                                  disabled={!documentUrl || isLoading}
+                                  className="rounded bg-[#B12F2E] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#8e2424] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                                >
+                                  Supprimer
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  {editingMember.validation_notes && (
+                    <section className="rounded-xl border border-[#f1d4d3] bg-red-50 p-4">
+                      <h4 className="text-sm font-semibold text-[#7f2120] mb-1">Notes de validation</h4>
+                      <p className="text-sm text-[#7f2120]">{editingMember.validation_notes}</p>
+                    </section>
+                  )}
                 </div>
               </div>
 
-              {/* Boutons */}
-              <div className="flex gap-4 mt-6">
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-white px-6 py-4 sm:flex-row sm:items-center sm:justify-end">
                 <button
-                  onClick={handleSaveMember}
-                  className="flex-1 bg-[#D4A373] hover:bg-[#c49363] text-white px-6 py-2 font-medium transition-colors cursor-pointer"
+                  onClick={closeEditMemberModal}
+                  className="rounded bg-slate-200 px-5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-300 cursor-pointer"
                 >
-                  Enregistrer
+                  Fermer
                 </button>
                 <button
-                  onClick={() => {
-                    setShowEditMemberModal(false);
-                    setEditingMember(null);
-                  }}
-                  className="flex-1 bg-slate-200 hover:bg-[#FAEDCD] text-slate-700 px-6 py-2 font-medium transition-colors cursor-pointer"
+                  onClick={handleSaveMember}
+                  disabled={memberSaveLoading}
+                  className="rounded bg-[#D4A373] px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-[#c49363] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                 >
-                  Annuler
+                  {memberSaveLoading ? 'Enregistrement...' : 'Enregistrer les modifications'}
                 </button>
               </div>
             </div>

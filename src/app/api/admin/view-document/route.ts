@@ -2,6 +2,51 @@ import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermission } from '@/lib/adminAuth';
 
+const DOCUMENT_BUCKET = 'user-documents';
+
+const extractStoragePath = (rawReference: string | null | undefined) => {
+  if (!rawReference || typeof rawReference !== 'string') {
+    return null;
+  }
+
+  const trimmed = rawReference.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (!trimmed.includes('://')) {
+    return trimmed;
+  }
+
+  try {
+    const parsedUrl = new URL(trimmed);
+    const signedTokenPath = parsedUrl.searchParams.get('path');
+    if (signedTokenPath) {
+      return decodeURIComponent(signedTokenPath);
+    }
+
+    const marker = '/storage/v1/object/';
+    const markerIndex = parsedUrl.pathname.indexOf(marker);
+    if (markerIndex === -1) {
+      return null;
+    }
+
+    const storageSegment = parsedUrl.pathname.slice(markerIndex + marker.length);
+    const cleanedSegment = storageSegment.startsWith('public/')
+      ? storageSegment.slice('public/'.length)
+      : storageSegment;
+
+    const expectedPrefix = `${DOCUMENT_BUCKET}/`;
+    if (!cleanedSegment.startsWith(expectedPrefix)) {
+      return null;
+    }
+
+    return decodeURIComponent(cleanedSegment.slice(expectedPrefix.length));
+  } catch {
+    return null;
+  }
+};
+
 export async function GET(request: NextRequest) {
   try {
     // Vérification de sécurité CRITIQUE
@@ -40,44 +85,66 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    // Liste les fichiers dans le dossier de l'utilisateur
-    const { data: files, error: listError } = await supabaseAdmin
-      .storage
-      .from('user-documents')
-      .list(userId);
+    const urlField = fileType === 'carte' ? 'carte_identite_url' : fileType === 'kbis' ? 'kbis_url' : 'rc_pro_url';
 
-    if (listError) {
-      console.error('Error listing files:', listError);
-      return NextResponse.json(
-        { error: 'Erreur lors de la récupération des fichiers' },
-        { status: 500 }
-      );
-    }
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select(urlField)
+      .eq('id', userId)
+      .single();
 
-    if (!files || files.length === 0) {
+    if (profileError) {
+      console.error('Error fetching profile document field:', profileError);
       return NextResponse.json(
-        { error: 'Aucun fichier trouvé' },
+        { error: 'Profil introuvable' },
         { status: 404 }
       );
     }
 
-    // Trouve le fichier correspondant (carte-identite.* ou kbis.* ou rc-pro.*)
-    const prefix = fileType === 'carte' ? 'carte-identite' : fileType === 'kbis' ? 'kbis' : 'rc-pro';
-    const file = files.find(f => f.name.startsWith(prefix));
+    let filePath = extractStoragePath(profile?.[urlField as keyof typeof profile] as string | null | undefined);
 
-    if (!file) {
-      return NextResponse.json(
-        { error: `Fichier ${fileType} non trouvé` },
-        { status: 404 }
-      );
+    // Fallback rétrocompatibilité pour les anciens comptes sans chemin enregistré.
+    if (!filePath) {
+      const { data: files, error: listError } = await supabaseAdmin
+        .storage
+        .from(DOCUMENT_BUCKET)
+        .list(userId);
+
+      if (listError) {
+        console.error('Error listing files fallback:', listError);
+        return NextResponse.json(
+          { error: 'Erreur lors de la récupération des fichiers' },
+          { status: 500 }
+        );
+      }
+
+      if (!files || files.length === 0) {
+        return NextResponse.json(
+          { error: 'Aucun fichier trouvé' },
+          { status: 404 }
+        );
+      }
+
+      const prefix = fileType === 'carte' ? 'carte-identite' : fileType === 'kbis' ? 'kbis' : 'rc-pro';
+      const file = files
+        .filter((entry) => entry.name.startsWith(prefix))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .pop();
+
+      if (!file) {
+        return NextResponse.json(
+          { error: `Fichier ${fileType} non trouvé` },
+          { status: 404 }
+        );
+      }
+
+      filePath = `${userId}/${file.name}`;
     }
-
-    const filePath = `${userId}/${file.name}`;
 
     // Génère une URL signée valide pendant 60 secondes
     const { data: signedUrlData, error: signedError } = await supabaseAdmin
       .storage
-      .from('user-documents')
+      .from(DOCUMENT_BUCKET)
       .createSignedUrl(filePath, 60);
 
     if (signedError || !signedUrlData) {
