@@ -1,16 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { translateSupabaseAuthError } from "@/lib/supabase/authErrors";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 
 export default function MotDePasseOublie() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  const getPublicSiteOrigin = () => {
+    const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+
+    if (!configuredSiteUrl) {
+      return window.location.origin;
+    }
+
+    try {
+      return new URL(configuredSiteUrl).origin;
+    } catch {
+      return window.location.origin;
+    }
+  };
+
+  useEffect(() => {
+    const recoveryError = searchParams.get("error");
+
+    if (!recoveryError) {
+      return;
+    }
+
+    setError("Lien expire ou invalide. Veuillez demander un nouveau lien de reinitialisation.");
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,8 +45,11 @@ export default function MotDePasseOublie() {
 
     try {
       const supabase = createClient();
+      const callbackUrl = new URL("/auth/callback", getPublicSiteOrigin());
+      callbackUrl.searchParams.set("next", "/reset-password");
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: callbackUrl.toString(),
       });
 
       if (error) throw error;

@@ -47,7 +47,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const redirectToResetPassword = () => {
-      if (pathname === '/reset-password' || !hasRecoveryParams()) {
+      if (
+        pathname === '/reset-password'
+        || pathname === '/mot-de-passe-oublie'
+        || pathname.startsWith('/auth/')
+        || !hasRecoveryParams()
+      ) {
         return false;
       }
 
