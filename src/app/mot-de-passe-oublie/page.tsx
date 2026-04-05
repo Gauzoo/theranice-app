@@ -5,14 +5,12 @@ import { createClient } from "@/lib/supabase/client";
 import { translateSupabaseAuthError } from "@/lib/supabase/authErrors";
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
 
 export default function MotDePasseOublie() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const searchParams = useSearchParams();
 
   const getPublicSiteOrigin = () => {
     const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -29,14 +27,14 @@ export default function MotDePasseOublie() {
   };
 
   useEffect(() => {
-    const recoveryError = searchParams.get("error");
+    const recoveryError = new URLSearchParams(window.location.search).get("error");
 
     if (!recoveryError) {
       return;
     }
 
     setError("Lien expire ou invalide. Veuillez demander un nouveau lien de reinitialisation.");
-  }, [searchParams]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
