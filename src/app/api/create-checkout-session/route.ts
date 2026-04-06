@@ -59,23 +59,65 @@ function getLiveTestAmountCents(rawValue?: string): number {
   return Math.max(parsed, STRIPE_EUR_MINIMUM_CENTS);
 }
 
+function isStripeSecretKeyValid(value: string): boolean {
+  return value.startsWith('sk_test_') || value.startsWith('sk_live_');
+}
+
 export async function POST(request: NextRequest) {
   try {
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
     // Vérifie que la clé API Stripe est configurée
-    if (!process.env.STRIPE_SECRET_KEY) {
+    if (!stripeSecretKey) {
       console.warn('STRIPE_SECRET_KEY not configured');
       return NextResponse.json({ error: 'Payment service not configured' }, { status: 500 });
     }
 
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    if (!isStripeSecretKeyValid(stripeSecretKey)) {
+      console.error('Invalid STRIPE_SECRET_KEY format (expected sk_test_ or sk_live_)');
+      return NextResponse.json({ error: 'Configuration Stripe invalide (cle secrete)' }, { status: 500 });
+    }
+
+    if (!supabaseUrl) {
+      console.error('NEXT_PUBLIC_SUPABASE_URL not configured');
+      return NextResponse.json({ error: 'Database URL configuration error' }, { status: 500 });
+    }
+
+    if (!supabaseServiceKey) {
       console.error('SUPABASE_SERVICE_ROLE_KEY not configured');
       return NextResponse.json({ error: 'Database configuration error' }, { status: 500 });
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    if (!siteUrl) {
+      console.error('NEXT_PUBLIC_SITE_URL not configured');
+      return NextResponse.json({ error: 'Site URL configuration error' }, { status: 500 });
+    }
+
+    let parsedSiteUrl: URL;
+    try {
+      parsedSiteUrl = new URL(siteUrl);
+    } catch {
+      console.error('NEXT_PUBLIC_SITE_URL is invalid:', siteUrl);
+      return NextResponse.json({ error: 'NEXT_PUBLIC_SITE_URL invalide' }, { status: 500 });
+    }
+
+    const isLiveStripeKey = stripeSecretKey.startsWith('sk_live_');
+    const isHttpsSite = parsedSiteUrl.protocol === 'https:';
+    if (isLiveStripeKey && !isHttpsSite) {
+      console.error('Live Stripe key requires HTTPS NEXT_PUBLIC_SITE_URL');
+      return NextResponse.json(
+        { error: 'Configuration invalide: NEXT_PUBLIC_SITE_URL doit etre en https en mode live' },
+        { status: 500 }
+      );
+    }
+
+    const stripe = new Stripe(stripeSecretKey);
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      supabaseUrl,
+      supabaseServiceKey
     );
 
     const { cart, email, nom, prenom, userId } = await request.json() as CheckoutPayload;
@@ -237,8 +279,8 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/reservation/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/reservation/cancel`,
+      success_url: `${siteUrl}/reservation/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/reservation/cancel`,
       customer_email: email,
       metadata,
     });
@@ -270,6 +312,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (err) {
+    if (err instanceof Stripe.errors.StripeError) {
+      console.error('Stripe error:', {
+        type: err.type,
+        code: err.code,
+        message: err.message,
+      });
+      return NextResponse.json(
+        { error: `Erreur Stripe: ${err.message}` },
+        { status: 500 }
+      );
+    }
+
     console.error('Stripe error:', err);
     return NextResponse.json({ error: 'Erreur lors de la création de la session de paiement' }, { status: 500 });
   }
