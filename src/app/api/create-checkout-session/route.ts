@@ -63,6 +63,22 @@ function isStripeSecretKeyValid(value: string): boolean {
   return value.startsWith('sk_test_') || value.startsWith('sk_live_');
 }
 
+function buildCheckoutUrls(siteUrl: string): { successUrl: string; cancelUrl: string; origin: string } {
+  const parsedSiteUrl = new URL(siteUrl);
+  const origin = parsedSiteUrl.origin;
+
+  const success = new URL('/reservation/success', origin);
+  success.searchParams.set('session_id', '{CHECKOUT_SESSION_ID}');
+
+  const cancel = new URL('/reservation/cancel', origin);
+
+  return {
+    successUrl: success.toString(),
+    cancelUrl: cancel.toString(),
+    origin,
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -112,6 +128,19 @@ export async function POST(request: NextRequest) {
         { error: 'Configuration invalide: NEXT_PUBLIC_SITE_URL doit etre en https en mode live' },
         { status: 500 }
       );
+    }
+
+    const { successUrl, cancelUrl, origin: siteOrigin } = buildCheckoutUrls(siteUrl);
+
+    if (
+      parsedSiteUrl.pathname !== '/'
+      || parsedSiteUrl.search
+      || parsedSiteUrl.hash
+    ) {
+      console.warn('NEXT_PUBLIC_SITE_URL should only contain origin. Using normalized origin:', {
+        configured: siteUrl,
+        normalizedOrigin: siteOrigin,
+      });
     }
 
     const stripe = new Stripe(stripeSecretKey);
@@ -279,8 +308,8 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'payment',
-      success_url: `${siteUrl}/reservation/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/reservation/cancel`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       customer_email: email,
       metadata,
     });
