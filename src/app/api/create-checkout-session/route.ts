@@ -2,6 +2,63 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
+type Slot = 'morning' | 'afternoon' | 'fullday';
+type Room = 'room1' | 'room2' | 'large';
+
+interface CartItem {
+  date: string;
+  slot: Slot;
+  room: Room;
+}
+
+interface CheckoutPayload {
+  cart: CartItem[];
+  email?: string;
+  nom?: string;
+  prenom?: string;
+  userId?: string;
+}
+
+const ROOM_PRICES: Record<Room, number> = {
+  room1: 35,
+  room2: 35,
+  large: 70,
+};
+
+const FULLDAY_PRICES: Record<Room, number> = {
+  room1: 65,
+  room2: 65,
+  large: 130,
+};
+
+const STRIPE_EUR_MINIMUM_CENTS = 50;
+
+function getExpectedPrice(item: CartItem): number {
+  return item.slot === 'fullday' ? FULLDAY_PRICES[item.room] : ROOM_PRICES[item.room];
+}
+
+function parseAllowedEmails(rawValue?: string): Set<string> {
+  if (!rawValue) {
+    return new Set();
+  }
+
+  return new Set(
+    rawValue
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean)
+  );
+}
+
+function getLiveTestAmountCents(rawValue?: string): number {
+  const parsed = Number.parseInt(rawValue || '', 10);
+  if (Number.isNaN(parsed)) {
+    return STRIPE_EUR_MINIMUM_CENTS;
+  }
+
+  return Math.max(parsed, STRIPE_EUR_MINIMUM_CENTS);
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Vérifie que la clé API Stripe est configurée
@@ -21,7 +78,7 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { cart, email, nom, prenom, userId } = await request.json();
+    const { cart, email, nom, prenom, userId } = await request.json() as CheckoutPayload;
 
     // Validation du panier
     if (!cart || !Array.isArray(cart) || cart.length === 0) {
@@ -119,26 +176,49 @@ export async function POST(request: NextRequest) {
     }
 
 
-    const ROOM_PRICES: Record<string, number> = {
-      room1: 35,
-      room2: 35,
-      large: 70,
-    };
-    
-    const FULLDAY_PRICES: Record<string, number> = {
-      room1: 65,
-      room2: 65,
-      large: 130,
+    // Calcul du prix total et validation côté serveur
+    const cartWithSecurePrices = cart.map((item) => ({
+      item,
+      expectedPrice: getExpectedPrice(item),
+    }));
+
+    if (cartWithSecurePrices.some(({ expectedPrice }) => !expectedPrice || expectedPrice <= 0)) {
+      return NextResponse.json({ error: 'Panier invalide' }, { status: 400 });
+    }
+
+    const totalPrice = cartWithSecurePrices.reduce((sum, entry) => sum + entry.expectedPrice, 0);
+
+    const normalizedEmail = email?.trim().toLowerCase();
+    const liveTestEnabled = process.env.STRIPE_LIVE_TEST_ENABLED === 'true';
+    const allowedLiveTestEmails = parseAllowedEmails(process.env.STRIPE_LIVE_TEST_EMAILS);
+    const isLiveTestBooking =
+      liveTestEnabled
+      && !!normalizedEmail
+      && allowedLiveTestEmails.has(normalizedEmail);
+
+    if (isLiveTestBooking && cart.length > 1) {
+      return NextResponse.json(
+        { error: 'Le mode live test est limite a un seul creneau par paiement.' },
+        { status: 400 }
+      );
+    }
+
+    const liveTestAmountCents = getLiveTestAmountCents(process.env.STRIPE_LIVE_TEST_AMOUNT_CENTS);
+    const stripeAmountCents = isLiveTestBooking
+      ? liveTestAmountCents
+      : Math.round(totalPrice * 100);
+
+    const metadata: Record<string, string> = {
+      userId: userId || '',
+      type: 'cart_checkout',
+      nom: nom || '',
+      prenom: prenom || '',
     };
 
-    // Calcul du prix total et validation côté serveur
-    const totalPrice = cart.reduce((sum: number, item: any) => {
-      // Recalcule le prix pour chaque item au lieu de faire confiance au client
-      const expectedPrice = item.slot === 'fullday' 
-        ? FULLDAY_PRICES[item.room] 
-        : ROOM_PRICES[item.room];
-      return sum + (expectedPrice || 0);
-    }, 0);
+    if (isLiveTestBooking) {
+      metadata.live_test = 'true';
+      metadata.live_test_amount_cents = String(liveTestAmountCents);
+    }
 
     // Crée une session de checkout Stripe
     const session = await stripe.checkout.sessions.create({
@@ -151,7 +231,7 @@ export async function POST(request: NextRequest) {
               name: 'Réservation Theranice',
               description: description,
             },
-            unit_amount: Math.round(totalPrice * 100), // Stripe attend le montant en centimes
+            unit_amount: stripeAmountCents, // Stripe attend le montant en centimes
           },
           quantity: 1,
         },
@@ -160,28 +240,19 @@ export async function POST(request: NextRequest) {
       success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/reservation/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/reservation/cancel`,
       customer_email: email,
-      metadata: {
-        userId,
-        type: 'cart_checkout',
-        nom,
-        prenom,
-        // On ne met pas les détails du panier ici pour éviter de dépasser la limite
-        // On se fiera aux réservations en base
-      },
+      metadata,
     });
 
     // 2. Insérer les réservations en statut 'pending_payment'
-    const bookingsToInsert = cart.map((item: any) => {
-      const expectedPrice = item.slot === 'fullday' 
-        ? FULLDAY_PRICES[item.room] 
-        : ROOM_PRICES[item.room];
+    const bookingsToInsert = cartWithSecurePrices.map(({ item, expectedPrice }) => {
+      const securePrice = isLiveTestBooking ? liveTestAmountCents / 100 : expectedPrice;
 
       return {
         user_id: userId,
         date: item.date,
         slot: item.slot,
         room: item.room,
-        price: expectedPrice, // Utilise le prix sécurisé
+        price: securePrice,
         status: 'pending_payment',
         stripe_session_id: session.id,
       };

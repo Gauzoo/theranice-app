@@ -19,7 +19,32 @@ Ajouter dans `.env.local` :
 STRIPE_SECRET_KEY=sk_test_xxxxxxxxxxxxx
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxx
 STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxx
+
+# Mode live-test (optionnel)
+# Active uniquement un tarif de test pour des emails autorisés
+STRIPE_LIVE_TEST_ENABLED=false
+STRIPE_LIVE_TEST_EMAILS=cliente1@email.com,cliente2@email.com
+STRIPE_LIVE_TEST_AMOUNT_CENTS=50
 ```
+
+## Mode live-test en production
+
+Le checkout supporte un mode de test live sécurisé pour facturer un petit montant réel.
+
+- Le minimum Stripe en EUR est `0.50` (soit `50` centimes).
+- Le mode est activé uniquement si `STRIPE_LIVE_TEST_ENABLED=true`.
+- Le mode s'applique seulement aux emails listés dans `STRIPE_LIVE_TEST_EMAILS`.
+- Le montant est contrôlé par `STRIPE_LIVE_TEST_AMOUNT_CENTS` (minimum forcé à `50`).
+- Le panier est limité à un seul créneau en live-test pour garder une comptabilité claire.
+
+### Procédure recommandée
+
+1. Mettre `STRIPE_LIVE_TEST_ENABLED=true`.
+2. Ajouter l'email client cible dans `STRIPE_LIVE_TEST_EMAILS`.
+3. Laisser `STRIPE_LIVE_TEST_AMOUNT_CENTS=50`.
+4. Faire le paiement live.
+5. Vérifier webhook + réservation + emails.
+6. Désactiver immédiatement: `STRIPE_LIVE_TEST_ENABLED=false`.
 
 ### 4. Base de données Supabase
 
