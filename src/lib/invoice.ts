@@ -48,6 +48,74 @@ function loadLogo(): string | null {
   }
 }
 
+function splitBillingAddress(clientAdresse: string): { streetLine: string; postalCityLine: string } {
+  const normalized = clientAdresse.replace(/\s+/g, ' ').trim();
+  if (!normalized) {
+    return { streetLine: '', postalCityLine: '' };
+  }
+
+  const commaIndex = normalized.indexOf(',');
+  if (commaIndex >= 0) {
+    return {
+      streetLine: normalized.slice(0, commaIndex).trim(),
+      postalCityLine: normalized.slice(commaIndex + 1).trim(),
+    };
+  }
+
+  const postalCityMatch = normalized.match(/^(.*)\s(\d{5}\s+.+)$/);
+  if (postalCityMatch) {
+    return {
+      streetLine: postalCityMatch[1].trim(),
+      postalCityLine: postalCityMatch[2].trim(),
+    };
+  }
+
+  return { streetLine: normalized, postalCityLine: '' };
+}
+
+function writeLine(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  text: string,
+  lineHeight = 5,
+  options?: { align?: 'left' | 'center' | 'right' | 'justify' }
+): number {
+  doc.text(text, x, y, options);
+  return y + lineHeight;
+}
+
+function drawHorizontalRule(
+  doc: jsPDF,
+  margin: number,
+  pageWidth: number,
+  y: number,
+  color: [number, number, number],
+  lineWidth: number
+): void {
+  doc.setDrawColor(...color);
+  doc.setLineWidth(lineWidth);
+  doc.line(margin, y, pageWidth - margin, y);
+}
+
+function writeAmountRow(
+  doc: jsPDF,
+  leftX: number,
+  rightX: number,
+  y: number,
+  label: string,
+  value: string,
+  lineHeight = 7
+): number {
+  doc.text(label, leftX, y);
+  doc.text(value, rightX, y, { align: 'right' });
+  return y + lineHeight;
+}
+
+function formatAmountEUR(amount: number): string {
+  return `${amount.toFixed(2)} €`;
+}
+
 export function generateInvoicePDF(data: InvoiceData): Buffer {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = 210;
@@ -78,8 +146,7 @@ export function generateInvoicePDF(data: InvoiceData): Buffer {
   y += 6;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.text('19 rue Michelet – 06100 Nice', pageWidth / 2, y, { align: 'center' });
-  y += 5;
+  y = writeLine(doc, pageWidth / 2, y, '19 rue Michelet – 06100 Nice', 5, { align: 'center' });
   doc.setFontSize(9);
   doc.setTextColor(120);
   doc.text('TVA non applicable – art. 293 B du CGI', pageWidth / 2, y, { align: 'center' });
@@ -87,9 +154,7 @@ export function generateInvoicePDF(data: InvoiceData): Buffer {
 
   // --------------- LIGNE DE SÉPARATION ---------------
   y += 8;
-  doc.setDrawColor(212, 163, 115);
-  doc.setLineWidth(0.8);
-  doc.line(margin, y, pageWidth - margin, y);
+  drawHorizontalRule(doc, margin, pageWidth, y, [212, 163, 115], 0.8);
   y += 12;
 
   // --------------- BLOC GAUCHE : FACTURÉ À ---------------
@@ -99,48 +164,44 @@ export function generateInvoicePDF(data: InvoiceData): Buffer {
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.text('FACTURÉ À', leftCol, y);
-  y += 7;
+  y = writeLine(doc, leftCol, y, 'FACTURÉ À', 7);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.text(`Nom : ${data.nom}`, leftCol, y);
-  y += 5;
-  doc.text(`Prénom : ${data.prenom}`, leftCol, y);
-  y += 5;
+  const clientIdentity = `Mme/M. ${[data.prenom, data.nom].filter(Boolean).join(' ')}`.trim();
 
-  if (data.clientAdresse) {
-    const adresseLines = doc.splitTextToSize(`Adresse : ${data.clientAdresse}`, 85);
-    doc.text(adresseLines, leftCol, y);
-    y += adresseLines.length * 5;
-  }
+  const { streetLine, postalCityLine } = splitBillingAddress(data.clientAdresse);
+  const billingLines = [
+    clientIdentity,
+    streetLine,
+    postalCityLine,
+    data.clientSiret ? `SIRET : ${data.clientSiret}` : '',
+  ].filter(Boolean);
 
-  if (data.clientSiret) {
-    doc.text(`SIRET : ${data.clientSiret}`, leftCol, y);
-    y += 5;
+  for (const line of billingLines) {
+    y = writeLine(doc, leftCol, y, line);
   }
 
   // --------------- BLOC DROIT : FACTURE N° ---------------
   let yRight = yBlockStart;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.text(`FACTURE N° ${data.invoiceNumber}`, rightCol, yRight);
-  yRight += 7;
+  yRight = writeLine(doc, rightCol, yRight, `FACTURE N° ${data.invoiceNumber}`, 7);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.text(`Date d'émission : ${formatDateFR(data.dateEmission)}`, rightCol, yRight);
-  yRight += 5;
-  doc.text('Date de prestation :', rightCol, yRight);
-  yRight += 5;
-  doc.text(formatDateFR(data.datePrestation), rightCol, yRight);
+  const rightBlockLines = [
+    `Date d'émission : ${formatDateFR(data.dateEmission)}`,
+    `Date de prestation : ${formatDateFR(data.datePrestation)}`,
+  ];
+  for (const line of rightBlockLines) {
+    yRight = writeLine(doc, rightCol, yRight, line);
+  }
 
-  y = Math.max(y, yRight + 5) + 8;
+  y = Math.max(y, yRight) + 8;
 
   // --------------- LIGNE DE SÉPARATION ---------------
-  doc.setDrawColor(212, 163, 115);
-  doc.setLineWidth(0.4);
-  doc.line(margin, y, pageWidth - margin, y);
+  drawHorizontalRule(doc, margin, pageWidth, y, [212, 163, 115], 0.4);
   y += 10;
 
   // --------------- DÉTAIL DE LA PRESTATION ---------------
@@ -149,35 +210,25 @@ export function generateInvoicePDF(data: InvoiceData): Buffer {
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.text('DÉTAIL DE LA PRESTATION', leftCol, y);
-  y += 8;
+  y = writeLine(doc, leftCol, y, 'DÉTAIL DE LA PRESTATION', 8);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  const descriptionLines = doc.splitTextToSize(
+  const serviceDetailLines = [
     `Mise à disposition temporaire d'espace professionnel – ${roomLabel}`,
-    contentWidth
-  );
-  doc.text(descriptionLines, leftCol, y);
-  y += descriptionLines.length * 5 + 2;
-
-  doc.text(`- ${formatDateFR(data.datePrestation)} – ${slotLabel}`, leftCol, y);
-  y += 14;
+    `- ${formatDateFR(data.datePrestation)} – ${slotLabel}`,
+  ];
+  y = writeLine(doc, leftCol, y, serviceDetailLines[0], 7);
+  y = writeLine(doc, leftCol, y, serviceDetailLines[1], 14);
 
   // --------------- MONTANTS ---------------
   doc.setFontSize(10);
-  doc.text('Montant HT :', leftCol, y);
-  doc.text(`${data.amountHT.toFixed(2)} €`, pageWidth - margin, y, { align: 'right' });
-  y += 7;
-
-  doc.text('TVA :', leftCol, y);
-  doc.text('Non applicable – art. 293 B du CGI', pageWidth - margin, y, { align: 'right' });
-  y += 7;
+  const amountLabelX = pageWidth - margin;
+  y = writeAmountRow(doc, leftCol, amountLabelX, y, 'Montant HT :', formatAmountEUR(data.amountHT));
+  y = writeAmountRow(doc, leftCol, amountLabelX, y, 'TVA :', 'Non applicable – art. 293 B du CGI');
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Total TTC :', leftCol, y);
-  doc.text(`${data.amountHT.toFixed(2)} €`, pageWidth - margin, y, { align: 'right' });
-  y += 14;
+  y = writeAmountRow(doc, leftCol, amountLabelX, y, 'Total TTC :', formatAmountEUR(data.amountHT), 14);
 
   // --------------- RÈGLEMENT ---------------
   doc.setFont('helvetica', 'normal');
@@ -190,9 +241,7 @@ export function generateInvoicePDF(data: InvoiceData): Buffer {
 
   // --------------- ENGAGEMENT SOLIDAIRE ---------------
   y += 16;
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.3);
-  doc.line(margin, y, pageWidth - margin, y);
+  drawHorizontalRule(doc, margin, pageWidth, y, [200, 200, 200], 0.3);
   y += 8;
   doc.setFontSize(9);
   doc.setTextColor(120);
