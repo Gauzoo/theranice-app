@@ -23,7 +23,10 @@ export async function GET() {
     if (error) {
       console.error('Error fetching profiles:', error);
       return NextResponse.json(
-        { error: 'Erreur lors de la récupération des membres' },
+        {
+          error: 'Erreur lors de la récupération des membres',
+          debug: { code: error.code, message: error.message, details: error.details, hint: error.hint },
+        },
         { status: 500 }
       );
     }
