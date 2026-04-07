@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 // Liste des emails administrateurs (configurable via variable d'environnement)
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'gauthier.guerin@gmail.com')
   .split(',')
-  .map(email => email.trim())
+  .map(email => email.trim().toLowerCase())
   .filter(Boolean);
 
 export async function checkAdminPermission() {
@@ -14,5 +14,5 @@ export async function checkAdminPermission() {
     return false;
   }
 
-  return ADMIN_EMAILS.includes(user.email);
+  return ADMIN_EMAILS.includes(user.email.toLowerCase());
 }
