@@ -474,7 +474,7 @@ export default function AdminDashboard() {
       return { label: 'Refusé', className: 'bg-[#B12F2E] text-white' };
     }
     if (status === 'pending') {
-      return { label: 'En attente', className: 'bg-orange-100 text-orange-800' };
+      return { label: 'En attente', className: 'bg-[#A97244] text-white' };
     }
     return { label: 'Manquant', className: 'bg-slate-200 text-slate-700' };
   };
@@ -1237,7 +1237,7 @@ export default function AdminDashboard() {
               </button>
             </div>
             {pendingValidations.length > 0 && (
-              <span className="inline-flex w-fit bg-orange-100 text-orange-800 px-3 py-1 text-sm font-semibold">
+              <span className="inline-flex w-fit bg-[#A97244] text-white px-3 py-1 text-sm font-semibold">
                 {pendingValidations.length} en attente
               </span>
             )}
@@ -1267,7 +1267,7 @@ export default function AdminDashboard() {
                     <tr key={validation.id} className="border-b border-slate-200 hover:bg-slate-50">
                       <td className="px-1 py-3">
                         {validation.account_status === 'pending' ? (
-                          <span className="bg-orange-100 text-orange-800 px-2 py-1 text-sm font-semibold">Documents manquants</span>
+                          <span className="bg-[#A97244] text-white px-2 py-1 text-sm font-semibold">Documents manquants</span>
                         ) : (
                           <span className="bg-[#D4A373] text-white px-2 py-1 text-xs font-medium">En cours de validation</span>
                         )}
@@ -1293,7 +1293,7 @@ export default function AdminDashboard() {
                               </a>
                               {validation.carte_identite_status === 'pending' && (
                                 <>
-                                  <span className="bg-orange-100 text-orange-800 px-2 py-1 text-xs font-semibold">En attente</span>
+                                  <span className="bg-[#A97244] text-white px-2 py-1 text-xs font-semibold">En attente</span>
                                   <button
                                     onClick={() => handleValidateDocument(validation.id, 'carte', 'approve')}
                                     className="bg-[#56862F] hover:bg-[#456d25] text-white px-2 py-0.5 text-xs cursor-pointer"
@@ -1334,7 +1334,7 @@ export default function AdminDashboard() {
                               </a>
                               {validation.kbis_status === 'pending' && (
                                 <>
-                                  <span className="bg-orange-100 text-orange-800 px-2 py-1 text-xs font-semibold">En attente</span>
+                                  <span className="bg-[#A97244] text-white px-2 py-1 text-xs font-semibold">En attente</span>
                                   <button
                                     onClick={() => handleValidateDocument(validation.id, 'kbis', 'approve')}
                                     className="bg-[#56862F] hover:bg-[#456d25] text-white px-2 py-0.5 text-xs cursor-pointer"
@@ -1375,7 +1375,7 @@ export default function AdminDashboard() {
                               </a>
                               {validation.rc_pro_status === 'pending' && (
                                 <>
-                                  <span className="bg-orange-100 text-orange-800 px-2 py-1 text-xs font-semibold">En attente</span>
+                                  <span className="bg-[#A97244] text-white px-2 py-1 text-xs font-semibold">En attente</span>
                                   <button
                                     onClick={() => handleValidateDocument(validation.id, 'rc_pro', 'approve')}
                                     className="bg-[#56862F] hover:bg-[#456d25] text-white px-2 py-0.5 text-xs cursor-pointer"
@@ -1474,7 +1474,7 @@ export default function AdminDashboard() {
                           <span className="bg-[#56862F] text-white px-2 py-1 text-xs font-medium">Validé</span>
                         )}
                         {member.account_status === 'pending' && (
-                          <span className="bg-yellow-500 text-white px-2 py-1 text-xs font-medium">En attente</span>
+                          <span className="bg-[#A97244] text-white px-2 py-1 text-xs font-medium">En attente</span>
                         )}
                         {member.account_status === 'documents_submitted' && (
                           <span className="bg-[#D4A373] text-white px-2 py-1 text-xs font-medium">À valider</span>
@@ -1660,7 +1660,7 @@ export default function AdminDashboard() {
                       <span className="bg-[#56862F] text-white px-2 py-1 font-medium">Compte validé</span>
                     )}
                     {editingMember.account_status === 'pending' && (
-                      <span className="bg-yellow-500 text-white px-2 py-1 font-medium">Documents manquants</span>
+                      <span className="bg-[#A97244] text-white px-2 py-1 font-medium">Documents manquants</span>
                     )}
                     {editingMember.account_status === 'documents_submitted' && (
                       <span className="bg-[#D4A373] text-white px-2 py-1 font-medium">Documents en validation</span>

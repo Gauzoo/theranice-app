@@ -109,7 +109,7 @@ const normalizeDocumentReference = (storedValue?: string | null): string => {
 const STATUS_LABELS: Record<AccountStatus, { label: string; color: string; description: string }> = {
   pending: {
     label: "En attente de documents",
-    color: "bg-[#FEFAE0] text-[#333333] border-[#cad5e2]",
+    color: "bg-[#A97244] text-white border-[#A97244]",
     description: "Merci de compléter vos documents pour pouvoir réserver."
   },
   documents_submitted: {
@@ -908,7 +908,7 @@ export default function ProfilPage() {
       </section>
 
       {/* Section formulaire de profil */}
-      <section className="bg-slate-50 py-16">
+      <section className="bg-slate-50 pt-10 pb-16">
         <div className="mx-auto max-w-3xl px-6">
           <div className="flex items-center justify-between mb-8">
             <h2 className={`${garamond.className} text-4xl font-semibold text-[#D4A373]`}>▸ Mes informations</h2>
@@ -1079,7 +1079,7 @@ export default function ProfilPage() {
                     </button>
                     <div className="flex items-center gap-2 flex-wrap">
                       {formData.carte_identite_status === 'pending' && (
-                        <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 text-xs font-medium">En attente</span>
+                        <span className="bg-[#A97244] text-white px-2 py-0.5 text-xs font-medium">En attente</span>
                       )}
                       {formData.carte_identite_status === 'approved' && (
                         <span className="bg-[#56862F] text-white px-2 py-0.5 text-xs font-medium">Validé</span>
@@ -1139,7 +1139,7 @@ export default function ProfilPage() {
                     </button>
                     <div className="flex items-center gap-2 flex-wrap">
                       {formData.kbis_status === 'pending' && (
-                        <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 text-xs font-medium">En attente</span>
+                        <span className="bg-[#A97244] text-white px-2 py-0.5 text-xs font-medium">En attente</span>
                       )}
                       {formData.kbis_status === 'approved' && (
                         <span className="bg-[#56862F] text-white px-2 py-0.5 text-xs font-medium">Validé</span>
@@ -1199,7 +1199,7 @@ export default function ProfilPage() {
                     </button>
                     <div className="flex items-center gap-2 flex-wrap">
                       {formData.rc_pro_status === 'pending' && (
-                        <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 text-xs font-medium">En attente</span>
+                        <span className="bg-[#A97244] text-white px-2 py-0.5 text-xs font-medium">En attente</span>
                       )}
                       {formData.rc_pro_status === 'approved' && (
                         <span className="bg-[#56862F] text-white px-2 py-0.5 text-xs font-medium">Validé</span>

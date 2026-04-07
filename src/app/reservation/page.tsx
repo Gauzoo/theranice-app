@@ -60,6 +60,13 @@ const ROOM_IMAGES: Record<string, string> = {
   room2: "/photos/2.jpg",
 };
 
+const ACCOUNT_STATUS_ALERT_STYLES: Record<AccountStatus, string> = {
+  pending: "bg-[#A97244]",
+  documents_submitted: "bg-[#D4A373]",
+  approved: "bg-[#56862F]",
+  rejected: "bg-[#B12F2E]",
+};
+
 export default function ReservationPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
@@ -465,7 +472,7 @@ export default function ReservationPage() {
           ) : accountStatus !== 'approved' ? (
             /* Compte non approuvé */
             <div className="mb-6">
-              <div className="bg-[#B12F2E] text-white px-6 py-4 rounded mb-4">
+              <div className={`${ACCOUNT_STATUS_ALERT_STYLES[accountStatus]} text-white px-6 py-4 rounded mb-4`}>
                 <h3 className="font-semibold text-lg mb-2">
                   {(accountStatus === 'pending') && 'Documents manquants'}
                   {accountStatus === 'documents_submitted' && 'En attente de validation de l\'administrateur'}
