@@ -14,6 +14,16 @@ const garamond = EB_Garamond({
   weight: ["400", "500", "600", "700"],
 });
 
+const ADMIN_EMAILS_CLIENT = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+const isAdminEmail = (email: string | null | undefined): boolean => {
+  if (!email) return false;
+  return ADMIN_EMAILS_CLIENT.includes(email.toLowerCase());
+};
+
 const NAV_LINKS = [
   { href: "/#hero", label: "Accueil", id: "hero" },
   { href: "/#nos-espaces", label: "Nos espaces", id: "nos-espaces" },
@@ -354,7 +364,7 @@ export default function SiteHeader() {
                     >
                       Mon profil
                     </Link>
-                    {user?.email === 'gauthier.guerin@gmail.com' && (
+                    {isAdminEmail(user?.email) && (
                       <Link
                         href="/admin"
                         onClick={() => setIsDropdownOpen(false)}
@@ -491,7 +501,7 @@ export default function SiteHeader() {
                 >
                   Mon profil
                 </Link>
-                {user?.email === 'gauthier.guerin@gmail.com' && (
+                {isAdminEmail(user?.email) && (
                   <Link
                     href="/admin"
                     onClick={() => setIsMobileMenuOpen(false)}
