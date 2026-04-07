@@ -9,11 +9,18 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+      return NextResponse.json(
+        { error: 'Config serveur manquante', debug: { hasUrl: !!url, hasKey: !!key } },
+        { status: 500 }
+      );
+    }
+
+    const supabaseAdmin = createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     const { data: members, error } = await supabaseAdmin
       .from('profiles')
@@ -52,7 +59,10 @@ export async function GET() {
     return NextResponse.json({ members: membersWithEmail });
   } catch (error) {
     console.error('Error in GET /api/admin/members:', error);
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Erreur serveur', debug: { message: error instanceof Error ? error.message : String(error) } },
+      { status: 500 }
+    );
   }
 }
 

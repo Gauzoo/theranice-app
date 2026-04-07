@@ -221,11 +221,11 @@ export default function AdminDashboard() {
       const result = await response.json().catch(() => ({} as { members?: unknown; error?: string }));
 
       if (!response.ok) {
+        console.error('Error fetching members — full response:', JSON.stringify(result));
         const apiError = typeof result.error === 'string'
           ? result.error
           : 'Erreur lors de la récupération des membres';
         setMembersError(apiError);
-        console.error('Error fetching members:', apiError);
         return null;
       }
 
