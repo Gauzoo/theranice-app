@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const newStatus = action === 'approve' ? 'approved' : 'rejected';
     const updateData: Record<string, string | null> = {
       account_status: newStatus,
-      validated_at: new Date().toISOString(),
+      validated_at: action === 'approve' ? new Date().toISOString() : null,
     };
 
     if (notes) {

@@ -2,12 +2,17 @@
 
 import Image from "next/image";
 import { EB_Garamond } from "next/font/google";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  deriveProfileVerificationState,
+  toDocumentLabels,
+  type AccountStatus,
+} from "@/lib/profileVerification";
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -55,8 +60,6 @@ const ROOM_IMAGES: Record<string, string> = {
   room2: "/photos/2.jpg",
 };
 
-type AccountStatus = 'pending' | 'documents_submitted' | 'approved' | 'rejected';
-
 export default function ReservationPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
@@ -67,6 +70,42 @@ export default function ReservationPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const accountStatus: AccountStatus =
+    profile?.account_status === 'approved'
+    || profile?.account_status === 'pending'
+    || profile?.account_status === 'documents_submitted'
+    || profile?.account_status === 'rejected'
+      ? profile.account_status
+      : 'pending';
+
+  const profileVerificationState = useMemo(
+    () => deriveProfileVerificationState({
+      activite_exercee: profile?.activite_exercee,
+      carte_identite_url: profile?.carte_identite_url,
+      kbis_url: profile?.kbis_url,
+      rc_pro_url: profile?.rc_pro_url,
+      carte_identite_status: profile?.carte_identite_status,
+      kbis_status: profile?.kbis_status,
+      rc_pro_status: profile?.rc_pro_status,
+    }),
+    [
+      profile?.activite_exercee,
+      profile?.carte_identite_url,
+      profile?.kbis_url,
+      profile?.rc_pro_url,
+      profile?.carte_identite_status,
+      profile?.kbis_status,
+      profile?.rc_pro_status,
+    ]
+  );
+
+  const missingRequirementLabels = [
+    ...toDocumentLabels(profileVerificationState.missingDocuments),
+    ...(profileVerificationState.hasActivity ? [] : ['Activite exercee']),
+  ];
+  const pendingDocumentLabels = toDocumentLabels(profileVerificationState.pendingDocuments);
+  const rejectedDocumentLabels = toDocumentLabels(profileVerificationState.rejectedDocuments);
 
   // Fonction pour récupérer les réservations
   const fetchBookings = async () => {
@@ -423,20 +462,35 @@ export default function ReservationPage() {
             <div className="text-center py-8">
               <p className="text-slate-600">Chargement de votre profil...</p>
             </div>
-          ) : profile.account_status !== 'approved' ? (
+          ) : accountStatus !== 'approved' ? (
             /* Compte non approuvé */
             <div className="mb-6">
               <div className="bg-[#B12F2E] text-white px-6 py-4 rounded mb-4">
                 <h3 className="font-semibold text-lg mb-2">
-                  {(!profile.account_status || profile.account_status === 'pending') && 'Documents manquants'}
-                  {profile.account_status === 'documents_submitted' && 'Validation en cours'}
-                  {profile.account_status === 'rejected' && 'Compte non validé'}
+                  {(accountStatus === 'pending') && 'Documents manquants'}
+                  {accountStatus === 'documents_submitted' && 'En attente de validation de l\'administrateur'}
+                  {accountStatus === 'rejected' && 'Compte non validé'}
                 </h3>
                 <p>
-                  {(!profile.account_status || profile.account_status === 'pending') && 'Merci de compléter vos documents (carte d\'identité, KBIS, activité exercée) dans votre profil avant de pouvoir réserver.'}
-                  {profile.account_status === 'documents_submitted' && 'Vos documents sont en cours de vérification par l\'administrateur. Vous pourrez réserver une fois votre compte validé.'}
-                  {profile.account_status === 'rejected' && 'Votre compte a été rejeté. Veuillez contacter l\'administrateur pour plus d\'informations.'}
+                  {accountStatus === 'pending' && 'Merci de compléter votre profil avant de pouvoir réserver.'}
+                  {accountStatus === 'documents_submitted' && 'Vos documents sont en cours de vérification par l\'administrateur. Vous pourrez réserver une fois votre compte validé.'}
+                  {accountStatus === 'rejected' && 'Votre compte a été rejeté. Veuillez contacter l\'administrateur pour plus d\'informations.'}
                 </p>
+                {accountStatus === 'pending' && missingRequirementLabels.length > 0 && (
+                  <p className="mt-2 text-sm font-medium">
+                    Elements manquants : {missingRequirementLabels.join(', ')}
+                  </p>
+                )}
+                {accountStatus === 'documents_submitted' && pendingDocumentLabels.length > 0 && (
+                  <p className="mt-2 text-sm font-medium">
+                    Documents en attente : {pendingDocumentLabels.join(', ')}
+                  </p>
+                )}
+                {accountStatus === 'rejected' && rejectedDocumentLabels.length > 0 && (
+                  <p className="mt-2 text-sm font-medium">
+                    Documents refuses : {rejectedDocumentLabels.join(', ')}
+                  </p>
+                )}
               </div>
               <button
                 onClick={() => router.push('/profil')}

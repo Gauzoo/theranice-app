@@ -1,9 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermission } from '@/lib/adminAuth';
+import {
+  buildAccountStatusFields,
+  buildDocumentStatusPatch,
+  deriveProfileVerificationState,
+} from '@/lib/profileVerification';
 
 type DocumentType = 'carte' | 'kbis' | 'rc_pro';
-type AccountStatus = 'pending' | 'documents_submitted' | 'approved' | 'rejected';
 
 const DOCUMENT_BUCKET = 'user-documents';
 const MAX_FILE_SIZE_BYTES = 6 * 1024 * 1024;
@@ -109,42 +113,6 @@ const extractStoragePath = (rawReference: string | null | undefined) => {
   }
 };
 
-const deriveAccountStatus = (profile: {
-  carte_identite_url: string | null;
-  kbis_url: string | null;
-  rc_pro_url: string | null;
-  carte_identite_status: string | null;
-  kbis_status: string | null;
-  rc_pro_status: string | null;
-}): { accountStatus: AccountStatus; validatedAt: string | null } => {
-  const hasAllDocuments = Boolean(
-    profile.carte_identite_url && profile.kbis_url && profile.rc_pro_url
-  );
-
-  if (!hasAllDocuments) {
-    return { accountStatus: 'pending', validatedAt: null };
-  }
-
-  const documentStatuses = [
-    profile.carte_identite_status,
-    profile.kbis_status,
-    profile.rc_pro_status,
-  ];
-
-  if (documentStatuses.every((status) => status === 'approved')) {
-    return {
-      accountStatus: 'approved',
-      validatedAt: new Date().toISOString(),
-    };
-  }
-
-  if (documentStatuses.some((status) => status === 'rejected')) {
-    return { accountStatus: 'rejected', validatedAt: null };
-  }
-
-  return { accountStatus: 'documents_submitted', validatedAt: null };
-};
-
 const parseDocumentType = (value: unknown): DocumentType | null => {
   if (value === 'carte' || value === 'kbis' || value === 'rc_pro') {
     return value;
@@ -158,7 +126,7 @@ const fetchProfileForDocuments = async (
 ) => {
   const { data, error } = await supabaseAdmin
     .from('profiles')
-    .select('id, carte_identite_url, kbis_url, rc_pro_url, carte_identite_status, kbis_status, rc_pro_status')
+    .select('id, activite_exercee, documents_submitted_at, carte_identite_url, kbis_url, rc_pro_url, carte_identite_status, kbis_status, rc_pro_status')
     .eq('id', userId)
     .single();
 
@@ -173,6 +141,8 @@ const updateAccountStatusFromProfile = async (
   supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
   userId: string,
   profile: {
+    activite_exercee: string | null;
+    documents_submitted_at: string | null;
     carte_identite_url: string | null;
     kbis_url: string | null;
     rc_pro_url: string | null;
@@ -181,17 +151,22 @@ const updateAccountStatusFromProfile = async (
     rc_pro_status: string | null;
   }
 ) => {
-  const { accountStatus, validatedAt } = deriveAccountStatus(profile);
+  const derivedState = deriveProfileVerificationState(profile);
+  const normalizedStatuses = buildDocumentStatusPatch(derivedState);
+  const accountStatusFields = buildAccountStatusFields(
+    derivedState,
+    profile.documents_submitted_at
+  );
 
   const { error } = await supabaseAdmin
     .from('profiles')
     .update({
-      account_status: accountStatus,
-      validated_at: validatedAt,
+      ...normalizedStatuses,
+      ...accountStatusFields,
     })
     .eq('id', userId);
 
-  return { accountStatus, error };
+  return { accountStatus: accountStatusFields.account_status, error };
 };
 
 export async function POST(request: NextRequest) {
@@ -295,7 +270,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .update(profileUpdatePayload)
       .eq('id', userId)
-      .select('carte_identite_url, kbis_url, rc_pro_url, carte_identite_status, kbis_status, rc_pro_status')
+      .select('activite_exercee, documents_submitted_at, carte_identite_url, kbis_url, rc_pro_url, carte_identite_status, kbis_status, rc_pro_status')
       .single();
 
     if (updateError || !updatedProfile) {
@@ -398,7 +373,7 @@ export async function DELETE(request: NextRequest) {
       .from('profiles')
       .update(profileUpdatePayload)
       .eq('id', userId)
-      .select('carte_identite_url, kbis_url, rc_pro_url, carte_identite_status, kbis_status, rc_pro_status')
+      .select('activite_exercee, documents_submitted_at, carte_identite_url, kbis_url, rc_pro_url, carte_identite_status, kbis_status, rc_pro_status')
       .single();
 
     if (updateError || !updatedProfile) {

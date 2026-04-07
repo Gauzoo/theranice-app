@@ -3,18 +3,24 @@
 import Image from "next/image";
 import Link from "next/link";
 import { EB_Garamond } from "next/font/google";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  buildAccountStatusFields,
+  buildDocumentStatusPatch,
+  deriveProfileVerificationState,
+  toDocumentLabels,
+  type AccountStatus,
+  type DocumentType,
+} from "@/lib/profileVerification";
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-type AccountStatus = 'pending' | 'documents_submitted' | 'approved' | 'rejected';
-type DocumentType = 'carte' | 'kbis' | 'rc_pro';
 type StorageDocumentType = 'carte-identite' | 'kbis' | 'rc-pro';
 
 const DOCUMENTS_BUCKET = 'user-documents';
@@ -107,7 +113,7 @@ const STATUS_LABELS: Record<AccountStatus, { label: string; color: string; descr
     description: "Merci de compléter vos documents pour pouvoir réserver."
   },
   documents_submitted: {
-    label: "Documents soumis - En cours de validation",
+    label: "En attente de validation de l'administrateur",
     color: "bg-[#D4A373] text-white border-[#D4A373]",
     description: "Vos documents sont en cours de vérification par l'administrateur."
   },
@@ -124,7 +130,7 @@ const STATUS_LABELS: Record<AccountStatus, { label: string; color: string; descr
 };
 
 export default function ProfilPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -158,6 +164,34 @@ export default function ProfilPage() {
   const [kbisFile, setKbisFile] = useState<File | null>(null);
   const [rcProFile, setRcProFile] = useState<File | null>(null);
 
+  const verificationState = useMemo(
+    () => deriveProfileVerificationState({
+      activite_exercee: formData.activite_exercee,
+      carte_identite_url: formData.carte_identite_url,
+      kbis_url: formData.kbis_url,
+      rc_pro_url: formData.rc_pro_url,
+      carte_identite_status: formData.carte_identite_status,
+      kbis_status: formData.kbis_status,
+      rc_pro_status: formData.rc_pro_status,
+    }),
+    [
+      formData.activite_exercee,
+      formData.carte_identite_url,
+      formData.kbis_url,
+      formData.rc_pro_url,
+      formData.carte_identite_status,
+      formData.kbis_status,
+      formData.rc_pro_status,
+    ]
+  );
+
+  const pendingDocumentLabels = toDocumentLabels(verificationState.pendingDocuments);
+  const rejectedDocumentLabels = toDocumentLabels(verificationState.rejectedDocuments);
+  const missingRequirementLabels = [
+    ...toDocumentLabels(verificationState.missingDocuments),
+    ...(verificationState.hasActivity ? [] : ['Activite exercee']),
+  ];
+
   // Récupère les données de l'utilisateur au chargement
   useEffect(() => {
     if (authLoading) return;
@@ -182,6 +216,22 @@ export default function ProfilPage() {
         const normalizedKbisRef = normalizeDocumentReference(profile.kbis_url);
         const normalizedRcProRef = normalizeDocumentReference(profile.rc_pro_url);
 
+        const derivedState = deriveProfileVerificationState({
+          activite_exercee: profile.activite_exercee,
+          documents_submitted_at: profile.documents_submitted_at,
+          carte_identite_url: normalizedCarteRef,
+          kbis_url: normalizedKbisRef,
+          rc_pro_url: normalizedRcProRef,
+          carte_identite_status: profile.carte_identite_status,
+          kbis_status: profile.kbis_status,
+          rc_pro_status: profile.rc_pro_status,
+        });
+        const normalizedStatuses = buildDocumentStatusPatch(derivedState);
+        const accountStatusFields = buildAccountStatusFields(
+          derivedState,
+          profile.documents_submitted_at
+        );
+
         setFormData({
           nom: profile.nom || user.user_metadata?.nom || "",
           prenom: profile.prenom || user.user_metadata?.prenom || "",
@@ -190,20 +240,20 @@ export default function ProfilPage() {
           activite_exercee: profile.activite_exercee || user.user_metadata?.activite_exercee || "",
           adresse: profile.adresse || user.user_metadata?.adresse || "",
           siret: profile.siret || user.user_metadata?.siret || "",
-          account_status: profile.account_status || "pending",
+          account_status: accountStatusFields.account_status,
           carte_identite_url: normalizedCarteRef,
           kbis_url: normalizedKbisRef,
           rc_pro_url: normalizedRcProRef,
-          carte_identite_status: profile.carte_identite_status || null,
-          kbis_status: profile.kbis_status || null,
-          rc_pro_status: profile.rc_pro_status || null,
+          carte_identite_status: normalizedStatuses.carte_identite_status,
+          kbis_status: normalizedStatuses.kbis_status,
+          rc_pro_status: normalizedStatuses.rc_pro_status,
           carte_identite_rejection_notes: profile.carte_identite_rejection_notes || "",
           kbis_rejection_notes: profile.kbis_rejection_notes || "",
           rc_pro_rejection_notes: profile.rc_pro_rejection_notes || "",
           validation_notes: profile.validation_notes || "",
         });
 
-        const normalizationUpdates: Record<string, string> = {};
+        const normalizationUpdates: Record<string, string | null> = {};
 
         if (normalizedCarteRef && normalizedCarteRef !== (profile.carte_identite_url || "")) {
           normalizationUpdates.carte_identite_url = normalizedCarteRef;
@@ -213,6 +263,25 @@ export default function ProfilPage() {
         }
         if (normalizedRcProRef && normalizedRcProRef !== (profile.rc_pro_url || "")) {
           normalizationUpdates.rc_pro_url = normalizedRcProRef;
+        }
+
+        if ((profile.carte_identite_status || null) !== normalizedStatuses.carte_identite_status) {
+          normalizationUpdates.carte_identite_status = normalizedStatuses.carte_identite_status;
+        }
+        if ((profile.kbis_status || null) !== normalizedStatuses.kbis_status) {
+          normalizationUpdates.kbis_status = normalizedStatuses.kbis_status;
+        }
+        if ((profile.rc_pro_status || null) !== normalizedStatuses.rc_pro_status) {
+          normalizationUpdates.rc_pro_status = normalizedStatuses.rc_pro_status;
+        }
+        if ((profile.account_status || 'pending') !== accountStatusFields.account_status) {
+          normalizationUpdates.account_status = accountStatusFields.account_status;
+        }
+        if ((profile.documents_submitted_at || null) !== accountStatusFields.documents_submitted_at) {
+          normalizationUpdates.documents_submitted_at = accountStatusFields.documents_submitted_at;
+        }
+        if ((profile.validated_at || null) !== accountStatusFields.validated_at) {
+          normalizationUpdates.validated_at = accountStatusFields.validated_at;
         }
 
         if (Object.keys(normalizationUpdates).length > 0) {
@@ -277,6 +346,193 @@ export default function ProfilPage() {
     }
   };
 
+  const buildDocumentFieldPatch = (
+    type: DocumentType,
+    filePath: string | null,
+    status: 'pending' | null
+  ): Record<string, string | null> => {
+    if (type === 'carte') {
+      return {
+        carte_identite_url: filePath,
+        carte_identite_status: status,
+        carte_identite_rejection_notes: null,
+      };
+    }
+
+    if (type === 'kbis') {
+      return {
+        kbis_url: filePath,
+        kbis_status: status,
+        kbis_rejection_notes: null,
+      };
+    }
+
+    return {
+      rc_pro_url: filePath,
+      rc_pro_status: status,
+      rc_pro_rejection_notes: null,
+    };
+  };
+
+  const clearSelectedDocumentFile = (type: DocumentType) => {
+    if (type === 'carte') {
+      setCarteIdentiteFile(null);
+      return;
+    }
+
+    if (type === 'kbis') {
+      setKbisFile(null);
+      return;
+    }
+
+    setRcProFile(null);
+  };
+
+  const syncAccountStatusFromProfile = async (
+    supabase: ReturnType<typeof createClient>,
+    userId: string
+  ) => {
+    const { data: profileSnapshot, error: snapshotError } = await supabase
+      .from('profiles')
+      .select('activite_exercee, documents_submitted_at, carte_identite_url, kbis_url, rc_pro_url, carte_identite_status, kbis_status, rc_pro_status')
+      .eq('id', userId)
+      .single();
+
+    if (snapshotError || !profileSnapshot) {
+      throw new Error('Impossible de recalculer le statut du compte');
+    }
+
+    const derivedState = deriveProfileVerificationState(profileSnapshot);
+    const normalizedStatuses = buildDocumentStatusPatch(derivedState);
+    const accountStatusFields = buildAccountStatusFields(
+      derivedState,
+      profileSnapshot.documents_submitted_at
+    );
+
+    const { error: syncError } = await supabase
+      .from('profiles')
+      .update({
+        ...normalizedStatuses,
+        ...accountStatusFields,
+      })
+      .eq('id', userId);
+
+    if (syncError) {
+      throw syncError;
+    }
+
+    return {
+      derivedState,
+      normalizedStatuses,
+      accountStatus: accountStatusFields.account_status,
+    };
+  };
+
+  const applyLocalDocumentState = (
+    type: DocumentType,
+    filePath: string | null,
+    normalizedStatuses: {
+      carte_identite_status: 'pending' | 'approved' | 'rejected' | null;
+      kbis_status: 'pending' | 'approved' | 'rejected' | null;
+      rc_pro_status: 'pending' | 'approved' | 'rejected' | null;
+    },
+    accountStatus: AccountStatus
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      account_status: accountStatus,
+      carte_identite_status: normalizedStatuses.carte_identite_status,
+      kbis_status: normalizedStatuses.kbis_status,
+      rc_pro_status: normalizedStatuses.rc_pro_status,
+      ...(type === 'carte'
+        ? {
+            carte_identite_url: filePath || '',
+            carte_identite_rejection_notes: '',
+          }
+        : type === 'kbis'
+          ? {
+              kbis_url: filePath || '',
+              kbis_rejection_notes: '',
+            }
+          : {
+              rc_pro_url: filePath || '',
+              rc_pro_rejection_notes: '',
+            }),
+    }));
+  };
+
+  const notifyAdminForSubmittedDocuments = async () => {
+    try {
+      await fetch('/api/emails/notify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userName: `${formData.prenom} ${formData.nom}`,
+          userEmail: formData.email,
+          userPhone: formData.telephone || 'Non renseigne',
+          userActivity: formData.activite_exercee,
+        }),
+      });
+    } catch (emailError) {
+      console.error("Erreur lors de l'envoi de l'email admin:", emailError);
+    }
+  };
+
+  const handleDocumentMutationError = (err: unknown, fallbackMessage: string) => {
+    const error = err as Error;
+    if (error.message?.includes('storage')) {
+      setError("Erreur lors de l'envoi du fichier. Verifiez votre connexion et reessayez.");
+      return;
+    }
+
+    if (error.message?.includes('row-level security') || error.message?.includes('policy')) {
+      setError("Vous n'avez pas la permission de modifier ce document.");
+      return;
+    }
+
+    setError(error.message || fallbackMessage);
+  };
+
+  const uploadAndSyncDocument = async (type: DocumentType, file: File) => {
+    const supabase = createClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      throw new Error('Utilisateur non connecte');
+    }
+
+    const previousAccountStatus = formData.account_status;
+    const documentType: StorageDocumentType =
+      type === 'carte' ? 'carte-identite' : type === 'kbis' ? 'kbis' : 'rc-pro';
+
+    const filePath = await uploadDocument(file, documentType);
+    const updateData = buildDocumentFieldPatch(type, filePath, 'pending');
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', authUser.id);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    const { derivedState, normalizedStatuses, accountStatus } = await syncAccountStatusFromProfile(
+      supabase,
+      authUser.id
+    );
+
+    applyLocalDocumentState(type, filePath, normalizedStatuses, accountStatus);
+    clearSelectedDocumentFile(type);
+    await refreshProfile();
+
+    if (previousAccountStatus !== 'documents_submitted' && accountStatus === 'documents_submitted' && derivedState.pendingDocuments.length > 0) {
+      await notifyAdminForSubmittedDocuments();
+    }
+
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: DocumentType) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -319,82 +575,9 @@ export default function ProfilPage() {
     // Upload automatiquement le fichier
     setUploadingDoc(true);
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Utilisateur non connecté");
-
-      const documentType: StorageDocumentType = type === 'carte' ? 'carte-identite' : type === 'kbis' ? 'kbis' : 'rc-pro';
-      const filePath = await uploadDocument(file, documentType);
-
-      // Mettre à jour le profil avec la nouvelle URL ET le statut 'pending'
-      const updateData = type === 'carte' 
-        ? { 
-            carte_identite_url: filePath,
-            carte_identite_status: 'pending',
-            carte_identite_rejection_notes: null
-          }
-        : type === 'kbis'
-        ? { 
-            kbis_url: filePath,
-            kbis_status: 'pending',
-            kbis_rejection_notes: null
-          }
-        : {
-            rc_pro_url: filePath,
-            rc_pro_status: 'pending',
-            rc_pro_rejection_notes: null
-          };
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-
-      // Mettre à jour l'état local
-      setFormData(prev => ({
-        ...prev,
-        ...(type === 'carte' 
-          ? { 
-              carte_identite_url: filePath,
-              carte_identite_status: 'pending',
-              carte_identite_rejection_notes: ""
-            }
-          : type === 'kbis'
-          ? { 
-              kbis_url: filePath,
-              kbis_status: 'pending',
-              kbis_rejection_notes: ""
-            }
-          : {
-              rc_pro_url: filePath,
-              rc_pro_status: 'pending',
-              rc_pro_rejection_notes: ""
-            })
-      }));
-
-      // Réinitialiser le fichier sélectionné
-      if (type === 'carte') {
-        setCarteIdentiteFile(null);
-      } else if (type === 'kbis') {
-        setKbisFile(null);
-      } else {
-        setRcProFile(null);
-      }
-
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-
+      await uploadAndSyncDocument(type, file);
     } catch (err) {
-      const error = err as Error;
-      if (error.message?.includes('storage')) {
-        setError("Erreur lors de l'envoi du fichier. Vérifiez votre connexion et réessayez.");
-      } else if (error.message?.includes('row-level security') || error.message?.includes('policy')) {
-        setError("Vous n'avez pas la permission de modifier ce document.");
-      } else {
-        setError(error.message || "Erreur lors de l'upload du document. Veuillez réessayer.");
-      }
+      handleDocumentMutationError(err, "Erreur lors de l'upload du document. Veuillez reessayer.");
     } finally {
       setUploadingDoc(false);
     }
@@ -410,8 +593,8 @@ export default function ProfilPage() {
 
     try {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Utilisateur non connecté");
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("Utilisateur non connecte");
 
       // Supprimer le fichier du storage
       const storedRef = getDocumentRefByType(type);
@@ -432,64 +615,23 @@ export default function ProfilPage() {
         }
       }
 
-      // Déterminer le nouveau statut du compte
-      // Si on supprime un document alors que le compte est approuvé, on le repasse en "documents_submitted"
-      let newAccountStatus = formData.account_status;
-      if (formData.account_status === 'approved') {
-        newAccountStatus = 'documents_submitted';
-      }
-
-      // Mettre à jour le profil pour retirer l'URL, le statut du document, et potentiellement le statut du compte
-      const updateData = type === 'carte'
-        ? {
-            carte_identite_url: null,
-            carte_identite_status: null,
-            carte_identite_rejection_notes: null,
-            account_status: newAccountStatus
-          }
-        : type === 'kbis'
-          ? {
-              kbis_url: null,
-              kbis_status: null,
-              kbis_rejection_notes: null,
-              account_status: newAccountStatus
-            }
-          : {
-              rc_pro_url: null,
-              rc_pro_status: null,
-              rc_pro_rejection_notes: null,
-              account_status: newAccountStatus
-            };
+      const updateData = buildDocumentFieldPatch(type, null, null);
 
       const { error: updateError } = await supabase
         .from('profiles')
         .update(updateData)
-        .eq('id', user.id);
+        .eq('id', authUser.id);
 
       if (updateError) throw updateError;
 
-      // Mettre à jour l'état local
-      setFormData(prev => ({
-        ...prev,
-        account_status: newAccountStatus,
-        ...(type === 'carte'
-          ? {
-              carte_identite_url: "",
-              carte_identite_status: null,
-              carte_identite_rejection_notes: ""
-            }
-          : type === 'kbis'
-            ? {
-                kbis_url: "",
-                kbis_status: null,
-                kbis_rejection_notes: ""
-              }
-            : {
-                rc_pro_url: "",
-                rc_pro_status: null,
-                rc_pro_rejection_notes: ""
-              })
-      }));
+      const { normalizedStatuses, accountStatus } = await syncAccountStatusFromProfile(
+        supabase,
+        authUser.id
+      );
+
+      applyLocalDocumentState(type, null, normalizedStatuses, accountStatus);
+      clearSelectedDocumentFile(type);
+      await refreshProfile();
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -510,82 +652,9 @@ export default function ProfilPage() {
     setError(null);
 
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Utilisateur non connecté");
-
-      const documentType: StorageDocumentType = type === 'carte' ? 'carte-identite' : type === 'kbis' ? 'kbis' : 'rc-pro';
-      const filePath = await uploadDocument(file, documentType);
-
-      // Mettre à jour le profil avec la nouvelle URL ET le statut 'pending'
-      const updateData = type === 'carte' 
-        ? { 
-            carte_identite_url: filePath,
-            carte_identite_status: 'pending',
-            carte_identite_rejection_notes: null
-          }
-        : type === 'kbis'
-        ? { 
-            kbis_url: filePath,
-            kbis_status: 'pending',
-            kbis_rejection_notes: null
-          }
-        : {
-            rc_pro_url: filePath,
-            rc_pro_status: 'pending',
-            rc_pro_rejection_notes: null
-          };
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-
-      // Mettre à jour l'état local
-      setFormData(prev => ({
-        ...prev,
-        ...(type === 'carte' 
-          ? { 
-              carte_identite_url: filePath,
-              carte_identite_status: 'pending',
-              carte_identite_rejection_notes: ""
-            }
-          : type === 'kbis'
-          ? { 
-              kbis_url: filePath,
-              kbis_status: 'pending',
-              kbis_rejection_notes: ""
-            }
-          : {
-              rc_pro_url: filePath,
-              rc_pro_status: 'pending',
-              rc_pro_rejection_notes: ""
-            })
-      }));
-
-      // Réinitialiser le fichier sélectionné
-      if (type === 'carte') {
-        setCarteIdentiteFile(null);
-      } else if (type === 'kbis') {
-        setKbisFile(null);
-      } else {
-        setRcProFile(null);
-      }
-
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-
+      await uploadAndSyncDocument(type, file);
     } catch (err) {
-      const error = err as Error;
-      if (error.message?.includes('storage')) {
-        setError("Erreur lors de l'envoi du fichier. Vérifiez votre connexion et réessayez.");
-      } else if (error.message?.includes('row-level security') || error.message?.includes('policy')) {
-        setError("Vous n'avez pas la permission de modifier ce document.");
-      } else {
-        setError(error.message || "Erreur lors de l'upload du document. Veuillez réessayer.");
-      }
+      handleDocumentMutationError(err, "Erreur lors de l'upload du document. Veuillez reessayer.");
     } finally {
       setUploadingDoc(false);
     }
@@ -624,47 +693,37 @@ export default function ProfilPage() {
 
     try {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Utilisateur non connecté");
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("Utilisateur non connecte");
+
+      const previousAccountStatus = formData.account_status;
 
       let carteUrl = formData.carte_identite_url;
       let kbisUrl = formData.kbis_url;
       let rcProUrl = formData.rc_pro_url;
+      const profileUpdatePayload: Record<string, string | null> = {
+        activite_exercee: formData.activite_exercee,
+      };
 
       // Upload des fichiers si présents
       if (carteIdentiteFile) {
         carteUrl = await uploadDocument(carteIdentiteFile, 'carte-identite');
+        Object.assign(profileUpdatePayload, buildDocumentFieldPatch('carte', carteUrl, 'pending'));
       }
       if (kbisFile) {
         kbisUrl = await uploadDocument(kbisFile, 'kbis');
+        Object.assign(profileUpdatePayload, buildDocumentFieldPatch('kbis', kbisUrl, 'pending'));
       }
       if (rcProFile) {
         rcProUrl = await uploadDocument(rcProFile, 'rc-pro');
+        Object.assign(profileUpdatePayload, buildDocumentFieldPatch('rc_pro', rcProUrl, 'pending'));
       }
-
-      // Déterminer le nouveau statut
-      const hasAllDocuments = (carteUrl && kbisUrl && rcProUrl && formData.activite_exercee);
-      const newStatus: AccountStatus = hasAllDocuments ? 'documents_submitted' : 'pending';
-
-      console.log('📤 Données AVANT UPDATE:', {
-        activite_exercee: formData.activite_exercee,
-        userId: user.id,
-        hasAllDocuments,
-        newStatus
-      });
 
       // Mise à jour du profil
       const { data: updateData, error: updateError } = await supabase
         .from('profiles')
-        .update({
-          activite_exercee: formData.activite_exercee,
-          carte_identite_url: carteUrl,
-          kbis_url: kbisUrl,
-          rc_pro_url: rcProUrl,
-          account_status: newStatus,
-          documents_submitted_at: hasAllDocuments ? new Date().toISOString() : null,
-        })
-        .eq('id', user.id)
+        .update(profileUpdatePayload)
+        .eq('id', authUser.id)
         .select();
 
       if (updateError) {
@@ -675,37 +734,36 @@ export default function ProfilPage() {
         throw new Error('La mise à jour a été bloquée par les règles de sécurité');
       }
 
+      const { derivedState, normalizedStatuses, accountStatus } = await syncAccountStatusFromProfile(
+        supabase,
+        authUser.id
+      );
+
       // Mettre à jour l'état local avec les nouvelles valeurs
       setFormData(prev => ({
         ...prev,
         activite_exercee: formData.activite_exercee,
-        account_status: newStatus,
+        account_status: accountStatus,
         carte_identite_url: carteUrl || "",
         kbis_url: kbisUrl || "",
         rc_pro_url: rcProUrl || "",
+        carte_identite_status: normalizedStatuses.carte_identite_status,
+        kbis_status: normalizedStatuses.kbis_status,
+        rc_pro_status: normalizedStatuses.rc_pro_status,
       }));
 
       setCarteIdentiteFile(null);
       setKbisFile(null);
       setRcProFile(null);
+      await refreshProfile();
       setSuccess(true);
 
-      // Envoyer l'email à l'admin si tous les documents sont soumis
-      if (hasAllDocuments) {
-        try {
-          await fetch('/api/emails/notify-admin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userName: `${formData.prenom} ${formData.nom}`,
-              userEmail: formData.email,
-              userPhone: formData.telephone || 'Non renseigné',
-              userActivity: formData.activite_exercee,
-            }),
-          });
-        } catch (emailError) {
-          console.error('Erreur lors de l\'envoi de l\'email admin:', emailError);
-        }
+      if (
+        previousAccountStatus !== 'documents_submitted'
+        && accountStatus === 'documents_submitted'
+        && derivedState.pendingDocuments.length > 0
+      ) {
+        await notifyAdminForSubmittedDocuments();
       }
 
       setTimeout(() => setSuccess(false), 3000);
@@ -731,7 +789,7 @@ export default function ProfilPage() {
       }
 
       // Met à jour le profil dans la table profiles
-      const { data: updateData, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({
           nom: formData.nom,
@@ -747,6 +805,21 @@ export default function ProfilPage() {
       if (updateError) {
         throw updateError;
       }
+
+      const { normalizedStatuses, accountStatus } = await syncAccountStatusFromProfile(
+        supabase,
+        user.id
+      );
+
+      setFormData((prev) => ({
+        ...prev,
+        account_status: accountStatus,
+        carte_identite_status: normalizedStatuses.carte_identite_status,
+        kbis_status: normalizedStatuses.kbis_status,
+        rc_pro_status: normalizedStatuses.rc_pro_status,
+      }));
+
+      await refreshProfile();
 
       setSuccess(true);
       setIsEditing(false);
@@ -807,6 +880,21 @@ export default function ProfilPage() {
                   <p className="text-sm">
                     {STATUS_LABELS[formData.account_status].description}
                   </p>
+                  {formData.account_status === 'documents_submitted' && pendingDocumentLabels.length > 0 && (
+                    <p className="text-sm mt-2 font-medium">
+                      Documents en attente : {pendingDocumentLabels.join(', ')}
+                    </p>
+                  )}
+                  {formData.account_status === 'pending' && missingRequirementLabels.length > 0 && (
+                    <p className="text-sm mt-2 font-medium">
+                      Elements manquants : {missingRequirementLabels.join(', ')}
+                    </p>
+                  )}
+                  {formData.account_status === 'rejected' && rejectedDocumentLabels.length > 0 && (
+                    <p className="text-sm mt-2 font-medium">
+                      Documents refuses : {rejectedDocumentLabels.join(', ')}
+                    </p>
+                  )}
                   {formData.account_status === 'rejected' && formData.validation_notes && (
                     <p className="text-sm mt-2 font-medium">
                       Note : {formData.validation_notes}

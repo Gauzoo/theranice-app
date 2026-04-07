@@ -10,18 +10,29 @@ interface Profile {
   prenom?: string;
   telephone?: string;
   account_status?: string;
+  activite_exercee?: string | null;
+  carte_identite_url?: string | null;
+  kbis_url?: string | null;
+  rc_pro_url?: string | null;
+  carte_identite_status?: string | null;
+  kbis_status?: string | null;
+  rc_pro_status?: string | null;
+  documents_submitted_at?: string | null;
+  validation_notes?: string | null;
 }
 
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   loading: true,
+  refreshProfile: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -30,6 +41,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
+
+  const refreshProfile = async () => {
+    if (!user) {
+      setProfile(null);
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (data) {
+        setProfile(data);
+      }
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    }
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -122,7 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [pathname, router, user?.id]);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading }}>
+    <AuthContext.Provider value={{ user, profile, loading, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

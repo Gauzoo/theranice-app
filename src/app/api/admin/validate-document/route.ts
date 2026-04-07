@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermission } from '@/lib/adminAuth';
+import {
+  buildAccountStatusFields,
+  buildDocumentStatusPatch,
+  deriveProfileVerificationState,
+} from '@/lib/profileVerification';
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,29 +78,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier si les trois documents sont approuvés pour mettre à jour account_status
+    // Recalcule le statut global et normalise les statuts documentaires
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('carte_identite_status, kbis_status, rc_pro_status')
+      .select('activite_exercee, documents_submitted_at, carte_identite_url, kbis_url, rc_pro_url, carte_identite_status, kbis_status, rc_pro_status')
       .eq('id', userId)
       .single();
 
     if (profile) {
-      const allApproved = profile.carte_identite_status === 'approved' && profile.kbis_status === 'approved' && profile.rc_pro_status === 'approved';
-      const anyRejected = profile.carte_identite_status === 'rejected' || profile.kbis_status === 'rejected' || profile.rc_pro_status === 'rejected';
-
-      let accountStatus = 'documents_submitted';
-      if (allApproved) {
-        accountStatus = 'approved';
-      } else if (anyRejected) {
-        accountStatus = 'rejected';
-      }
+      const derivedState = deriveProfileVerificationState(profile);
+      const normalizedStatuses = buildDocumentStatusPatch(derivedState);
+      const accountStatusFields = buildAccountStatusFields(
+        derivedState,
+        profile.documents_submitted_at
+      );
 
       await supabaseAdmin
         .from('profiles')
-        .update({ 
-          account_status: accountStatus,
-          validated_at: allApproved ? new Date().toISOString() : null
+        .update({
+          ...normalizedStatuses,
+          ...accountStatusFields,
         })
         .eq('id', userId);
     }
