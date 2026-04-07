@@ -2,16 +2,80 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { checkAdminPermission } from '@/lib/adminAuth';
 
-const createSupabaseAdminClient = () => createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+const PROFILES_SELECT_FULL =
+  'id, nom, prenom, telephone, created_at, account_status, activite_exercee, adresse, siret, carte_identite_url, kbis_url, rc_pro_url, carte_identite_status, kbis_status, rc_pro_status, carte_identite_rejection_notes, kbis_rejection_notes, rc_pro_rejection_notes, documents_submitted_at, validation_notes';
+
+const PROFILES_SELECT_REDUCED =
+  'id, nom, prenom, telephone, created_at, account_status, activite_exercee, adresse, siret, carte_identite_url, kbis_url, rc_pro_url, carte_identite_status, kbis_status, rc_pro_status';
+
+const PROFILES_SELECT_MINIMAL =
+  'id, nom, prenom, telephone, created_at, account_status, activite_exercee, adresse, siret';
+
+const PROFILE_SELECT_FALLBACKS = [
+  PROFILES_SELECT_FULL,
+  PROFILES_SELECT_REDUCED,
+  PROFILES_SELECT_MINIMAL,
+] as const;
+
+const createSupabaseAdminClient = () => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return {
+      client: null,
+      error: 'Configuration Supabase serveur incomplète',
+    };
   }
-);
+
+  return {
+    client: createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }),
+    error: null,
+  };
+};
+
+const fetchMembersWithSchemaFallback = async (
+  supabaseAdmin: any
+) => {
+  let lastError: { code?: string; message?: string; details?: string; hint?: string } | null = null;
+
+  for (const [index, selectClause] of PROFILE_SELECT_FALLBACKS.entries()) {
+    const { data, error } = await supabaseAdmin
+      .from('profiles')
+      .select(selectClause)
+      .order('created_at', { ascending: false });
+
+    if (!error) {
+      if (index > 0) {
+        console.warn('[admin/members] fallback select applied', {
+          fallbackIndex: index,
+          selectClause,
+        });
+      }
+
+      return { members: data || [], error: null };
+    }
+
+    lastError = {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    };
+
+    console.warn('[admin/members] select failed, trying fallback', {
+      fallbackIndex: index,
+      error: lastError,
+    });
+  }
+
+  return { members: null, error: lastError };
+};
 
 const sanitizeOptionalString = (value: unknown) => {
   if (typeof value !== 'string') {
@@ -31,41 +95,56 @@ export async function GET() {
     }
 
     // Utilise la service_role_key pour bypasser RLS
-    const supabaseAdmin = createSupabaseAdminClient();
+    const { client: supabaseAdmin, error: clientError } = createSupabaseAdminClient();
+    if (!supabaseAdmin) {
+      console.error('[admin/members] missing server configuration', { clientError });
+      return NextResponse.json(
+        { error: clientError || 'Configuration serveur invalide' },
+        { status: 503 }
+      );
+    }
 
-    // Récupère tous les membres avec les champs de validation
-    const { data: members, error } = await supabaseAdmin
-      .from('profiles')
-      .select('id, nom, prenom, telephone, created_at, account_status, activite_exercee, adresse, siret, carte_identite_url, kbis_url, rc_pro_url, carte_identite_status, kbis_status, rc_pro_status, carte_identite_rejection_notes, kbis_rejection_notes, rc_pro_rejection_notes, documents_submitted_at, validation_notes')
-      .order('created_at', { ascending: false });
+    const { members, error } = await fetchMembersWithSchemaFallback(supabaseAdmin);
 
-    if (error) {
-      console.error('Error fetching members:', error);
+    if (error || !members) {
+      console.error('[admin/members] failed to fetch profiles', { error });
       return NextResponse.json(
         { error: 'Erreur lors de la récupération des membres' },
         { status: 500 }
       );
     }
 
-    // Récupère les emails depuis auth.users
-    const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+    // Récupère les emails depuis auth.users (non bloquant)
+    const emailMap = new Map<string, string>();
+    try {
+      const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
 
-    if (authError) {
-      console.error('Error fetching auth users:', authError);
-      return NextResponse.json(
-        { error: 'Erreur lors de la récupération des emails' },
-        { status: 500 }
-      );
+      if (authError) {
+        console.warn('[admin/members] auth.users email enrichment unavailable', {
+          code: authError.code,
+          message: authError.message,
+        });
+      } else {
+        for (const user of authUsers.users) {
+          if (user.email) {
+            emailMap.set(user.id, user.email);
+          }
+        }
+      }
+    } catch (authError) {
+      console.warn('[admin/members] auth.users email enrichment threw', {
+        authError,
+      });
     }
 
-    // Crée un map des emails par user_id
-    const emailMap = new Map(authUsers.users.map(u => [u.id, u.email]));
-
     // Ajoute l'email à chaque membre
-    const membersWithEmail = members?.map(member => ({
+    const membersWithEmail = (members as Array<Record<string, unknown>>).map((member) => ({
       ...member,
-      email: emailMap.get(member.id) || ''
-    })) || [];
+      email:
+        typeof member.id === 'string'
+          ? emailMap.get(member.id) || ''
+          : '',
+    }));
 
     return NextResponse.json({ members: membersWithEmail });
   } catch (error) {
@@ -129,7 +208,14 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const supabaseAdmin = createSupabaseAdminClient();
+    const { client: supabaseAdmin, error: clientError } = createSupabaseAdminClient();
+    if (!supabaseAdmin) {
+      console.error('[admin/members PATCH] missing server configuration', { clientError });
+      return NextResponse.json(
+        { error: clientError || 'Configuration serveur invalide' },
+        { status: 503 }
+      );
+    }
 
     const updatePayload = {
       nom,
@@ -140,12 +226,10 @@ export async function PATCH(request: Request) {
       siret: siret ? siret.replace(/\s+/g, '') : null,
     };
 
-    const { data: updatedMember, error: updateError } = await supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update(updatePayload)
-      .eq('id', memberId)
-      .select('id, nom, prenom, telephone, created_at, account_status, activite_exercee, adresse, siret, carte_identite_url, kbis_url, rc_pro_url, carte_identite_status, kbis_status, rc_pro_status, carte_identite_rejection_notes, kbis_rejection_notes, rc_pro_rejection_notes, documents_submitted_at, validation_notes')
-      .single();
+      .eq('id', memberId);
 
     if (updateError) {
       console.error('Error updating member profile:', updateError);
@@ -155,25 +239,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-
-    if (authError) {
-      console.error('Error fetching auth users after patch:', authError);
-      return NextResponse.json(
-        { error: 'Erreur lors de la récupération des emails' },
-        { status: 500 }
-      );
-    }
-
-    const emailMap = new Map(authUsers.users.map(u => [u.id, u.email]));
-
-    return NextResponse.json({
-      success: true,
-      member: {
-        ...updatedMember,
-        email: emailMap.get(updatedMember.id) || '',
-      },
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error in PATCH /api/admin/members:', error);
     return NextResponse.json(
@@ -201,7 +267,14 @@ export async function DELETE(request: Request) {
     }
 
     // Utilise la service_role_key pour bypasser RLS
-    const supabaseAdmin = createSupabaseAdminClient();
+    const { client: supabaseAdmin, error: clientError } = createSupabaseAdminClient();
+    if (!supabaseAdmin) {
+      console.error('[admin/members DELETE] missing server configuration', { clientError });
+      return NextResponse.json(
+        { error: clientError || 'Configuration serveur invalide' },
+        { status: 503 }
+      );
+    }
 
     // Vérifier si le membre a des réservations
     const { data: memberBookings } = await supabaseAdmin

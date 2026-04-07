@@ -112,6 +112,8 @@ export default function AdminDashboard() {
   
   // Section Membres
   const [members, setMembers] = useState<Member[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [membersError, setMembersError] = useState<string | null>(null);
   const [showEditMemberModal, setShowEditMemberModal] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [memberModalFeedback, setMemberModalFeedback] = useState<MemberModalFeedback>(null);
@@ -157,13 +159,16 @@ export default function AdminDashboard() {
 
     const loadInitialData = async () => {
       setLoading(true);
-      await Promise.all([
-        fetchBookings(),
-        fetchUsers(),
-        fetchMembers(),
-        fetchPendingValidations(),
-      ]);
-      setLoading(false);
+      try {
+        await Promise.all([
+          fetchBookings(),
+          fetchMembers(),
+        ]);
+      } catch (error) {
+        console.error('Error while loading admin dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadInitialData();
@@ -182,51 +187,79 @@ export default function AdminDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  const fetchPendingValidations = async () => {
-    try {
-      const response = await fetch('/api/admin/members');
-      const result = await response.json();
-      
-      if (result.members) {
-        // Filtrer les comptes qui ont des documents à valider
-        const pending = result.members.filter((m: PendingValidation) => {
-          // Exclure les comptes rejetés ou complètement approuvés
-          if (m.account_status === 'rejected' || m.account_status === 'approved') {
-            return false;
-          }
-          
-          // Vérifier si au moins un document est en attente de validation
-          const hasDocumentsToValidate = 
-            m.carte_identite_status === 'pending' || 
-            m.kbis_status === 'pending' ||
-            m.rc_pro_status === 'pending' ||
-            m.account_status === 'documents_submitted' || 
-            m.account_status === 'pending';
-          return hasDocumentsToValidate;
-        });
-        setPendingValidations(pending);
+  const getPendingValidationsFromMembers = (memberList: Member[]): PendingValidation[] => {
+    return memberList.filter((member): member is PendingValidation => {
+      if (
+        member.account_status !== 'pending'
+        && member.account_status !== 'documents_submitted'
+        && member.account_status !== 'approved'
+        && member.account_status !== 'rejected'
+      ) {
+        return false;
       }
-    } catch (error) {
-      console.error('Error fetching pending validations:', error);
-    }
+
+      if (member.account_status === 'rejected' || member.account_status === 'approved') {
+        return false;
+      }
+
+      return (
+        member.carte_identite_status === 'pending'
+        || member.kbis_status === 'pending'
+        || member.rc_pro_status === 'pending'
+        || member.account_status === 'documents_submitted'
+        || member.account_status === 'pending'
+      );
+    });
   };
 
   const fetchMembers = async (): Promise<Member[] | null> => {
+    setMembersLoading(true);
+    setMembersError(null);
+
     try {
-      const response = await fetch('/api/admin/members');
-      const result = await response.json();
-      
-      if (result.members) {
-        setMembers(result.members);
-        return result.members as Member[];
-      } else {
-        console.error('Error fetching members:', result.error);
+      const response = await fetch('/api/admin/members', { cache: 'no-store' });
+      const result = await response.json().catch(() => ({} as { members?: unknown; error?: string }));
+
+      if (!response.ok) {
+        const apiError = typeof result.error === 'string'
+          ? result.error
+          : 'Erreur lors de la récupération des membres';
+        setMembersError(apiError);
+        console.error('Error fetching members:', apiError);
+        return null;
       }
+
+      if (!Array.isArray(result.members)) {
+        const shapeError = 'Réponse invalide du serveur pour les membres';
+        setMembersError(shapeError);
+        console.error('Error fetching members:', shapeError);
+        return null;
+      }
+
+      const memberList = result.members as Member[];
+      setMembers(memberList);
+      setUsers(
+        memberList.map((member) => ({
+          id: member.id,
+          nom: member.nom,
+          prenom: member.prenom,
+          telephone: member.telephone,
+        }))
+      );
+      setPendingValidations(getPendingValidationsFromMembers(memberList));
+      return memberList;
     } catch (error) {
+      setMembersError('Erreur lors de la récupération des membres');
       console.error('Error fetching members:', error);
+    } finally {
+      setMembersLoading(false);
     }
 
     return null;
+  };
+
+  const fetchPendingValidations = async () => {
+    await fetchMembers();
   };
 
   const fetchBookings = async () => {
@@ -374,19 +407,6 @@ export default function AdminDashboard() {
       console.error('Erreur catch:', err);
       const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
       alert('Erreur : ' + errorMessage);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch('/api/admin/members');
-      const result = await response.json();
-      
-      if (result.members) {
-        setUsers(result.members);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
     }
   };
 
@@ -585,7 +605,6 @@ export default function AdminDashboard() {
       }
 
       await refreshEditingMember(editingMember.id);
-      await fetchPendingValidations();
 
       setMemberDocumentFiles((prev) => ({
         ...prev,
@@ -650,7 +669,6 @@ export default function AdminDashboard() {
       }
 
       await refreshEditingMember(editingMember.id);
-      await fetchPendingValidations();
 
       setMemberDocumentFiles((prev) => ({
         ...prev,
@@ -711,7 +729,6 @@ export default function AdminDashboard() {
       }
 
       await fetchMembers();
-      await fetchPendingValidations();
 
       setMemberModalFeedback({
         type: 'success',
@@ -752,7 +769,6 @@ export default function AdminDashboard() {
         closeEditMemberModal();
       }
       await fetchMembers();
-      await fetchPendingValidations();
     } catch (error) {
       console.error('Error deleting member:', error);
       alert('Erreur lors de la suppression du membre');
@@ -792,8 +808,7 @@ export default function AdminDashboard() {
         } */
 
         alert('Compte approuvé avec succès !');
-        fetchPendingValidations();
-        fetchMembers();
+        await fetchMembers();
       } else {
         alert('Erreur : ' + result.error);
       }
@@ -844,8 +859,7 @@ export default function AdminDashboard() {
         alert('Compte rejeté');
         setShowValidationModal(false);
         setValidationNotes('');
-        fetchPendingValidations();
-        fetchMembers();
+        await fetchMembers();
       } else {
         alert('Erreur : ' + result.error);
       }
@@ -885,8 +899,7 @@ export default function AdminDashboard() {
 
         if (response.ok) {
           alert(`${docName} rejeté avec succès`);
-          fetchPendingValidations();
-          fetchMembers();
+          await fetchMembers();
         } else {
           alert('Erreur : ' + result.error);
         }
@@ -910,8 +923,7 @@ export default function AdminDashboard() {
 
         if (response.ok) {
           alert(`${docName} validé avec succès`);
-          fetchPendingValidations();
-          fetchMembers();
+          await fetchMembers();
         } else {
           alert('Erreur : ' + result.error);
         }
@@ -1058,6 +1070,21 @@ export default function AdminDashboard() {
             <p className="text-3xl font-bold text-[#B12F2E]">{stats.upcomingBookings}</p>
           </div>
         </div>
+
+        {membersError && (
+          <div className="mb-8 rounded border border-[#B12F2E] bg-red-50 px-4 py-3 text-[#7f2120]">
+            <p className="text-sm font-medium">Erreur membres: {membersError}</p>
+            <button
+              onClick={fetchMembers}
+              disabled={membersLoading}
+              className={`mt-2 rounded px-3 py-1.5 text-xs font-semibold text-white ${
+                membersLoading ? 'bg-[#B12F2E]/70 cursor-wait' : 'bg-[#B12F2E] hover:bg-[#8e2424] cursor-pointer'
+              }`}
+            >
+              {membersLoading ? 'Rechargement...' : 'Réessayer'}
+            </button>
+          </div>
+        )}
 
         {/* Filtres */}
         <div className="bg-white p-6 shadow-md mb-8">
@@ -1227,13 +1254,16 @@ export default function AdminDashboard() {
               </h2>
               <button
                 onClick={fetchPendingValidations}
-                className="w-full sm:w-auto bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded font-medium text-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
+                disabled={membersLoading}
+                className={`w-full sm:w-auto bg-slate-200 text-slate-700 px-3 py-2 rounded font-medium text-sm transition-colors flex items-center justify-center gap-2 ${
+                  membersLoading ? 'cursor-wait opacity-70' : 'hover:bg-slate-300 cursor-pointer'
+                }`}
                 title="Rafraîchir les comptes en attente"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-4 h-4 ${membersLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Rafraîchir
+                {membersLoading ? 'Rafraîchissement...' : 'Rafraîchir'}
               </button>
             </div>
             {pendingValidations.length > 0 && (
@@ -1430,13 +1460,16 @@ export default function AdminDashboard() {
               </h2>
               <button
                 onClick={fetchMembers}
-                className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded font-medium text-sm transition-colors cursor-pointer flex items-center gap-2"
+                disabled={membersLoading}
+                className={`bg-slate-200 text-slate-700 px-3 py-2 rounded font-medium text-sm transition-colors flex items-center gap-2 ${
+                  membersLoading ? 'cursor-wait opacity-70' : 'hover:bg-slate-300 cursor-pointer'
+                }`}
                 title="Rafraîchir les membres"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-4 h-4 ${membersLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Rafraîchir
+                {membersLoading ? 'Rafraîchissement...' : 'Rafraîchir'}
               </button>
             </div>
           </div>
