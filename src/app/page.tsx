@@ -187,7 +187,7 @@ export default function Home() {
             </p>
 
             <div className="mt-6 inline-flex items-center gap-3 border border-white/15 bg-white/10 px-5 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-white/90 backdrop-blur-sm">
-              <span className="text-base" aria-hidden="true">♥</span>
+              <span className="text-base text-[#D4A373]" aria-hidden="true">♥</span>
               Pour chaque réservation confirmée, 1&nbsp;€ est reversé à la Ligue contre le Cancer.
             </div>
 
