@@ -18,6 +18,7 @@ const spaces = [
       "Un espace lumineux et structurant, idéal pour les consultations individuelles.",
     details:
       "Le Salon Athéna convient particulièrement aux psychologues, coachs, sophrologues, hypnothérapeutes et praticiens en accompagnement individuel.",
+    alt: "Salon Athéna — espace de consultation individuelle pour thérapeutes à Nice",
     equipment: [
       "Deux fauteuils de consultation",
       "Un bureau",
@@ -39,6 +40,7 @@ const spaces = [
       "Un espace plus intimiste, parfaitement adapté aux pratiques nécessitant une table de massage.",
     details:
       "La Salle Gaïa est idéale pour les praticiens en soins corporels et thérapies manuelles.",
+    alt: "Salle Gaïa — salle de massage et soins corporels pour praticiens à Nice",
     equipment: [
       "Table de massage et accessoires",
       "Bureau pliable",
@@ -82,7 +84,7 @@ export default function Home() {
           postalCode: "06100",
           addressCountry: "FR",
         },
-        image: "https://theranice.fr/photos/photo1.jpg",
+        image: "https://theranice.fr/photos/covers1.jpg",
         priceRange: "8€–35€/h",
         openingHours: "Mo-Sa 08:00-20:00",
       },
@@ -92,18 +94,58 @@ export default function Home() {
         mainEntity: [
           {
             "@type": "Question",
-            name: "Comment réserver une salle ?",
+            name: "Quel est le prix d'une demi-journée ou d'une journée ?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "Créez un compte, soumettez vos documents professionnels, puis réservez en ligne après validation de votre profil.",
+              text: "Les tarifs sont indiqués directement sur la plateforme de réservation lors du choix du créneau. Les prix sont exprimés en euros. TVA non applicable – article 293 B du CGI. Chaque réservation inclut l'accès aux espaces communs ainsi qu'aux équipements mentionnés dans la description des salles.",
             },
           },
           {
             "@type": "Question",
-            name: "Quels sont les tarifs ?",
+            name: "Comment pratiquer chez THÉRANICE ?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "Les tarifs varient de 8€/h pour une demi-journée à 35€/h pour une journée complète selon la salle choisie.",
+              text: "Pour exercer au sein de THÉRANICE : 1) Créez votre profil professionnel sur la plateforme, 2) Attendez la validation de votre profil, 3) Réservez le créneau souhaité, 4) Procédez au paiement en ligne. Une fois le paiement confirmé, vous recevez les informations d'accès ainsi que le code de la serrure connectée pour la période réservée.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "THÉRANICE a-t-il un engagement solidaire ?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Oui. Pour chaque réservation effectuée, 1 € est reversé à la Ligue contre le Cancer. Cet engagement s'inscrit dans la volonté de THÉRANICE de soutenir une démarche responsable et solidaire.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Quelles sont les règles d'utilisation des cabinets ?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Les espaces doivent être utilisés dans le respect du cadre professionnel du lieu, du matériel mis à disposition et des horaires réservés. Le cabinet doit être restitué propre, rangé et dans son état initial. Toute dégradation engage la responsabilité du professionnel utilisateur.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Comment réserver un créneau ?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Depuis votre espace personnel : sélectionnez la salle souhaitée, choisissez un créneau disponible, validez et procédez au paiement. La réservation est confirmée après règlement. Un email de confirmation vous est immédiatement adressé.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Y a-t-il un délai d'utilisation après réservation ?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "La réservation est valable uniquement pour le créneau sélectionné. Toute annulation doit intervenir au minimum 14 jours avant la date réservée pour donner lieu à remboursement, conformément aux Conditions de mise à disposition.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Quand recevrai-je ma facture ?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "La facture est émise automatiquement à l'issue de la période de mise à disposition. Elle est transmise par email et reste disponible dans votre espace personnel.",
             },
           },
         ],
@@ -123,7 +165,7 @@ export default function Home() {
       >
         <Image
           src="/photos/covers1.jpg"
-          alt="Salle Theranice lumineuse et chaleureuse"
+          alt="Espace Théranice — salle de consultation pour thérapeutes à Nice, lumineuse et chaleureuse"
           fill
           className="absolute inset-0 object-cover"
           priority
@@ -210,7 +252,7 @@ export default function Home() {
                     <div className="relative aspect-[4/3] overflow-hidden rounded-[1.25rem] bg-slate-200">
                       <Image
                         src={space.images[0]}
-                        alt={space.name}
+                        alt={space.alt}
                         fill
                         className="object-cover"
                         sizes="(max-width: 1024px) 100vw, 48vw"

@@ -48,7 +48,7 @@ export default function PolitiqueConfidentialitePage() {
               06100 Nice – France<br />
               Représentée par ses gérants en exercice<br />
               <br />
-              <strong>Email de contact :</strong> (à compléter)
+              <strong>Email de contact :</strong> contact@theranice.fr
             </p>
 
             {/* 2. Données collectées */}
@@ -167,7 +167,7 @@ export default function PolitiqueConfidentialitePage() {
               <li>D&apos;un droit à la limitation du traitement</li>
               <li>D&apos;un droit à la portabilité</li>
             </ul>
-            <p className="mb-4">Toute demande peut être adressée à : <strong>(email à compléter)</strong></p>
+            <p className="mb-4">Toute demande peut être adressée à : <strong>contact@theranice.fr</strong></p>
             <p className="mb-2">Une réclamation peut être introduite auprès de :</p>
             <p className="mb-6 pl-4 border-l-4 border-[#D4A373]/30">
               <strong>Commission nationale de l&apos;informatique et des libertés (CNIL)</strong><br />
@@ -199,7 +199,7 @@ export default function PolitiqueConfidentialitePage() {
             </p>
 
             <p className="text-sm text-slate-500 mt-12">
-              Dernière mise à jour : (à compléter)
+              Dernière mise à jour : {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </div>
         </div>

@@ -51,7 +51,7 @@ export default function MentionsLegalesPage() {
               Immatriculée au Registre du Commerce et des Sociétés de Nice<br />
               <strong>SIRET :</strong> 990 302 887<br />
               Non assujettie à la TVA<br />
-              <strong>Email :</strong> (à compléter)
+              <strong>Email :</strong> contact@theranice.fr
             </p>
 
             {/* Directeur de publication */}
