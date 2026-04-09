@@ -471,40 +471,63 @@ export default function ReservationPage() {
             </div>
           ) : accountStatus !== 'approved' ? (
             /* Compte non approuvé */
-            <div className="mb-6">
-              <div className={`${ACCOUNT_STATUS_ALERT_STYLES[accountStatus]} text-white px-6 py-4 rounded mb-4`}>
-                <h3 className="font-semibold text-lg mb-2">
-                  {(accountStatus === 'pending') && 'Documents manquants'}
-                  {accountStatus === 'documents_submitted' && 'En attente de validation de l\'administrateur'}
-                  {accountStatus === 'rejected' && 'Compte non validé'}
-                </h3>
-                <p>
-                  {accountStatus === 'pending' && 'Merci de compléter votre profil avant de pouvoir réserver.'}
-                  {accountStatus === 'documents_submitted' && 'Vos documents sont en cours de vérification par l\'administrateur. Vous pourrez réserver une fois votre compte validé.'}
-                  {accountStatus === 'rejected' && 'Votre compte a été rejeté. Veuillez contacter l\'administrateur pour plus d\'informations.'}
-                </p>
-                {accountStatus === 'pending' && missingRequirementLabels.length > 0 && (
-                  <p className="mt-2 text-sm font-medium">
-                    Elements manquants : {missingRequirementLabels.join(', ')}
+            <div className="mb-10 rounded-lg border border-[#D4A373] px-6 py-8 shadow-sm">
+              <div className="grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start">
+                <div>
+                  <h3 className="mb-3 text-xl font-semibold text-yellow-900">
+                    {accountStatus === 'pending' && 'Documents manquants'}
+                    {accountStatus === 'documents_submitted' && 'Validation en cours'}
+                    {accountStatus === 'rejected' && 'Compte non validé'}
+                  </h3>
+                  <p className="text-yellow-900/90 text-justify">
+                    {accountStatus === 'pending' && 'Merci de compléter votre profil avant de pouvoir réserver.'}
+                    {accountStatus === 'documents_submitted' && 'Vos documents sont en cours de vérification par l\'équipe Théranice. Vous pourrez réserver une fois votre compte validé.'}
+                    {accountStatus === 'rejected' && 'Votre compte n\'a pas été validé. Veuillez contacter l\'administrateur pour plus d\'informations.'}
                   </p>
-                )}
-                {accountStatus === 'documents_submitted' && pendingDocumentLabels.length > 0 && (
-                  <p className="mt-2 text-sm font-medium">
-                    Documents en attente : {pendingDocumentLabels.join(', ')}
-                  </p>
-                )}
-                {accountStatus === 'rejected' && rejectedDocumentLabels.length > 0 && (
-                  <p className="mt-2 text-sm font-medium">
-                    Documents refuses : {rejectedDocumentLabels.join(', ')}
-                  </p>
-                )}
+                  {accountStatus === 'pending' && missingRequirementLabels.length > 0 && (
+                    <p className="mt-3 text-sm font-medium text-yellow-800">
+                      Éléments manquants : {missingRequirementLabels.join(', ')}
+                    </p>
+                  )}
+                  {accountStatus === 'documents_submitted' && pendingDocumentLabels.length > 0 && (
+                    <p className="mt-3 text-sm font-medium text-yellow-800">
+                      Documents en attente : {pendingDocumentLabels.join(', ')}
+                    </p>
+                  )}
+                  {accountStatus === 'rejected' && rejectedDocumentLabels.length > 0 && (
+                    <p className="mt-3 text-sm font-medium text-yellow-800">
+                      Documents refusés : {rejectedDocumentLabels.join(', ')}
+                    </p>
+                  )}
+                  <div className="mt-6">
+                    <button
+                      onClick={() => router.push('/profil')}
+                      className="cursor-pointer bg-[#D4A373] px-6 py-3 font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#c49363]"
+                    >
+                      Aller à mon profil
+                    </button>
+                  </div>
+                </div>
+                <div className="rounded-md border border-yellow-200 bg-white/70 p-5">
+                  <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-yellow-700">
+                    Comment ça marche ?
+                  </h4>
+                  <ul className="space-y-3 text-sm text-yellow-800">
+                    <li className="flex items-start gap-3">
+                      <span className="mt-2 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#D4A373]" aria-hidden />
+                      <span>Complétez votre profil praticien et ajoutez vos documents réglementaires.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-2 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#D4A373]" aria-hidden />
+                      <span>Recevez la validation de l&apos;équipe Théranice.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-2 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#D4A373]" aria-hidden />
+                      <span>Choisissez une salle, un créneau et réglez en ligne en toute sécurité. Recevez votre code d&apos;accès par email.</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
-              <button
-                onClick={() => router.push('/profil')}
-                className="bg-[#D4A373] text-white px-6 py-2 font-semibold uppercase tracking-wide hover:bg-[#c49363] transition-colors"
-              >
-                Aller à mon profil
-              </button>
             </div>
           ) : (
             /* Compte approuvé - afficher le formulaire */

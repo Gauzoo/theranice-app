@@ -282,8 +282,8 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="mt-10 grid gap-8 lg:grid-cols-2">
-            <div className="flex h-full flex-col border border-slate-200 bg-[#FCFAF7] p-8 shadow-sm">
+          <div className="mt-10 flex flex-col gap-8">
+            <div className="flex flex-col border border-slate-200 bg-[#FCFAF7] p-8 shadow-sm">
               <h3 className={`${garamond.className} text-3xl font-semibold text-[#D4A373]`}>
                 Grande Salle
               </h3>
@@ -291,7 +291,7 @@ export default function Home() {
                 Configuration modulable avec possibilité d&apos;ouverture de la porte coulissante permettant l&apos;utilisation conjointe du Salon Athéna et de la Salle Gaïa, selon disponibilité et réservation.
               </p>
               <p className="mt-6 text-slate-600">Cette configuration est adaptée :</p>
-              <ul className="mt-4 grid gap-3 text-slate-600 sm:grid-cols-2">
+              <ul className="mt-4 grid gap-3 text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
                 <li className="flex gap-3"><span className="text-[#D4A373]">●</span><span>Aux ateliers</span></li>
                 <li className="flex gap-3"><span className="text-[#D4A373]">●</span><span>Aux formations</span></li>
                 <li className="flex gap-3"><span className="text-[#D4A373]">●</span><span>Aux pratiques en petit groupe</span></li>
@@ -299,16 +299,16 @@ export default function Home() {
               </ul>
             </div>
 
-            <div className="flex h-full flex-col border border-slate-200 bg-white p-8 shadow-sm">
+            <div className="flex flex-col border border-slate-200 bg-white p-8 shadow-sm">
               <h3 className={`${garamond.className} text-3xl font-semibold text-[#D4A373]`}>
                 Espaces communs
               </h3>
               <p className="mt-4 text-justify text-lg leading-8 text-slate-700">
                 Toutes les réservations incluent l&apos;accès aux espaces partagés.
               </p>
-              <ul className="mt-6 grid gap-4 text-slate-600">
+              <ul className="mt-6 grid gap-4 text-slate-600 sm:grid-cols-3">
                 {sharedSpaces.map((item) => (
-                  <li key={item} className="flex gap-3 border-b border-slate-100 pb-4 last:border-b-0 last:pb-0">
+                  <li key={item} className="flex gap-3 border-b border-slate-100 pb-4 last:border-b-0 last:pb-0 sm:border-b-0 sm:pb-0">
                     <span className="text-[#D4A373]">●</span>
                     <span>{item}</span>
                   </li>
