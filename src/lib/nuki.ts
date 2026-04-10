@@ -13,9 +13,9 @@ const NUKI_API_BASE = 'https://api.nuki.io';
 // Mapping des créneaux horaires vers des minutes depuis minuit
 // Avec 30 min de marge avant et après pour arrivée/départ
 const SLOT_TIMES: Record<string, { from: number; until: number }> = {
-  morning:   { from: 450, until: 750 },   // 7h30 - 12h30
-  afternoon: { from: 750, until: 1050 },  // 12h30 - 17h30
-  fullday:   { from: 450, until: 1050 },  // 7h30 - 17h30
+  morning:   { from: 420, until: 810 },   // 7h00 - 13h30
+  afternoon: { from: 780, until: 1260 },  // 13h00 - 21h00
+  fullday:   { from: 420, until: 1260 },  // 7h00 - 21h00
 };
 
 /**

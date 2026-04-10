@@ -223,7 +223,7 @@ export default function Home() {
                   Des espaces pensés pour les professionnels de l&apos;accompagnement, dans un environnement calme, soigné et confidentiel.
                 </p>
                 <p className="mt-4 text-justify text-lg leading-8 text-slate-600">
-                  THÉRANICE propose une solution souple et sécurisée, permettant aux thérapeutes d&apos;exercer sans les contraintes d&apos;un bail traditionnel. Vous réservez uniquement lorsque vous en avez besoin.
+                  THÉRANICE propose une solution souple et sécurisée, permettant aux thérapeutes d&apos;exercer sans les contraintes d&apos;un bail traditionnel. Vous réservez uniquement lorsque vous en avez besoin (à la journée ou à la demi-journée).
                 </p>
               </div>
 

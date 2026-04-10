@@ -70,7 +70,7 @@ const faqData = [
   {
     question: "Où se situe THÉRANICE ?",
     answer:
-      "THÉRANICE est situé au 19 rue Michelet, 06100 Nice, dans le quartier de la Libération. Les locaux sont accessibles PMR et ouverts du lundi au samedi de 8h à 20h.",
+      "THÉRANICE est situé au 19 rue Michelet, 06100 Nice, dans le quartier de la Libération. Les locaux sont accessibles PMR et ouverts du lundi au samedi de 7h30 à 20h30.",
   },
 ];
 

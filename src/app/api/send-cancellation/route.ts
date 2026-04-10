@@ -23,9 +23,9 @@ export async function POST(request: NextRequest) {
 
     // Labels des créneaux et salles
     const slotLabels: Record<string, string> = {
-      morning: 'Matin (8h-12h)',
-      afternoon: 'Après-midi (13h-17h)',
-      fullday: 'Journée complète (8h-17h)'
+      morning: 'Matin (7h30-13h)',
+      afternoon: 'Après-midi (13h30-20h30)',
+      fullday: 'Journée complète (7h30-20h30)'
     };
     const slotLabel = slotLabels[slot] || slot;
     const roomLabels: Record<string, string> = {

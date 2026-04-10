@@ -23,9 +23,9 @@ const ROOM_LABELS: Record<string, string> = {
 };
 
 const SLOT_LABELS: Record<string, string> = {
-  morning: '8h – 12h',
-  afternoon: '13h – 17h',
-  fullday: '8h – 17h',
+  morning: '7h30 – 13h',
+  afternoon: '13h30 – 20h30',
+  fullday: '7h30 – 20h30',
 };
 
 function formatDateFR(dateStr: string): string {

@@ -10,9 +10,9 @@ import { deleteNukiKeypadCode } from '@/lib/nuki';
 
 // Heure de fin par créneau (avec 30 min de marge)
 const SLOT_END_HOURS: Record<string, number> = {
-  morning: 13,    // matin finit à 12h → on révoque à 13h
-  afternoon: 18,  // après-midi finit à 17h → on révoque à 18h
-  fullday: 18,    // journée finit à 17h → on révoque à 18h
+  morning: 14,    // matin finit à 13h → on révoque à 14h
+  afternoon: 22,  // après-midi finit à 20h30 → on révoque à 22h
+  fullday: 22,    // journée finit à 20h30 → on révoque à 22h
 };
 
 export async function GET(request: Request) {

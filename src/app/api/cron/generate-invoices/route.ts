@@ -5,8 +5,8 @@ import { generateInvoicePDF } from '@/lib/invoice';
 
 // Heure de fin par créneau (identique à cleanup-nuki-codes)
 const SLOT_END_HOURS: Record<string, number> = {
-  morning: 13,
-  afternoon: 18,
+  morning: 14,
+  afternoon: 22,
   fullday: 18,
 };
 

@@ -37,15 +37,21 @@ interface CartItem {
   price: number;
 }
 
-const ROOM_PRICES = {
-  room1: 35,
-  room2: 35,
+const MORNING_PRICES = {
+  room1: 30,
+  room2: 30,
+  large: 70,
+};
+
+const AFTERNOON_PRICES = {
+  room1: 40,
+  room2: 40,
   large: 70,
 };
 
 const FULLDAY_PRICES = {
-  room1: 65,
-  room2: 65,
+  room1: 70,
+  room2: 70,
   large: 130,
 };
 
@@ -185,15 +191,15 @@ export default function ReservationPage() {
       
       if (isToday) {
         const currentHour = now.getHours();
-        // Bloque le matin si le créneau a déjà commencé (8h)
+        // Bloque le matin si le créneau a déjà commencé (7h30)
         if (slot === 'morning' && currentHour >= 8) {
           return false;
         }
-        // Bloque l'après-midi si le créneau a déjà commencé (13h)
-        if (slot === 'afternoon' && currentHour >= 13) {
+        // Bloque l'après-midi si le créneau a déjà commencé (13h30)
+        if (slot === 'afternoon' && currentHour >= 14) {
           return false;
         }
-        // Bloque la journée complète si le créneau a déjà commencé (8h)
+        // Bloque la journée complète si le créneau a déjà commencé (7h30)
         if (slot === 'fullday' && currentHour >= 8) {
           return false;
         }
@@ -258,7 +264,7 @@ export default function ReservationPage() {
     }
 
     // Vérifie si le créneau a déjà commencé (pour aujourd'hui)
-    const SLOT_START: Record<Slot, number> = { morning: 8, afternoon: 13, fullday: 8 };
+    const SLOT_START: Record<Slot, number> = { morning: 8, afternoon: 14, fullday: 8 };
     const now = new Date();
     const pastDate = selectedDates.find(date => {
       const isToday = date.toDateString() === now.toDateString();
@@ -297,7 +303,7 @@ export default function ReservationPage() {
         dateStr: dateStr,
         slot: selectedSlot,
         room: selectedRoom,
-        price: selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom]
+        price: selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : selectedSlot === 'morning' ? MORNING_PRICES[selectedRoom] : AFTERNOON_PRICES[selectedRoom]
       };
     });
 
@@ -325,7 +331,7 @@ export default function ReservationPage() {
     }
 
     // Vérifie si un créneau du panier a déjà commencé entre-temps
-    const CHECKOUT_SLOT_START: Record<Slot, number> = { morning: 8, afternoon: 13, fullday: 8 };
+    const CHECKOUT_SLOT_START: Record<Slot, number> = { morning: 8, afternoon: 14, fullday: 8 };
     const checkoutNow = new Date();
     const pastItem = cart.find(item => {
       const isToday = item.date.toDateString() === checkoutNow.toDateString();
@@ -615,7 +621,7 @@ export default function ReservationPage() {
                   2. Choisissez une salle
                 </h3>
                 <div className="space-y-3">
-                  {(Object.keys(ROOM_PRICES) as Room[]).map((room) => {
+                  {(Object.keys(ROOM_LABELS) as Room[]).map((room) => {
                     const isAvailable = isRoomAvailableForDates(room);
                     
                     return (
@@ -694,12 +700,12 @@ export default function ReservationPage() {
                         className="w-4 h-4 text-[#D4A373] disabled:opacity-50"
                       />
                       <span className="font-medium">
-                        Matin (8h-12h)
+                        Matin (7h30-13h)
                         {!isSlotAvailableForSelection('morning') && <span className="ml-2 text-sm text-red-600">(Indisponible)</span>}
                       </span>
                     </div>
                     <span className={`font-semibold ${isSlotAvailableForSelection('morning') ? 'text-[#D4A373]' : 'text-slate-400'}`}>
-                      {selectedRoom ? ROOM_PRICES[selectedRoom] : ROOM_PRICES.room1}€
+                      {selectedRoom ? MORNING_PRICES[selectedRoom] : MORNING_PRICES.room1}€
                     </span>
                   </label>
 
@@ -723,12 +729,12 @@ export default function ReservationPage() {
                         className="w-4 h-4 text-[#D4A373] disabled:opacity-50"
                       />
                       <span className="font-medium">
-                        Après-midi (13h-17h)
+                        Après-midi (13h30-20h30)
                         {!isSlotAvailableForSelection('afternoon') && <span className="ml-2 text-sm text-red-600">(Indisponible)</span>}
                       </span>
                     </div>
                     <span className={`font-semibold ${isSlotAvailableForSelection('afternoon') ? 'text-[#D4A373]' : 'text-slate-400'}`}>
-                      {selectedRoom ? ROOM_PRICES[selectedRoom] : ROOM_PRICES.room1}€
+                      {selectedRoom ? AFTERNOON_PRICES[selectedRoom] : AFTERNOON_PRICES.room1}€
                     </span>
                   </label>
 
@@ -752,7 +758,7 @@ export default function ReservationPage() {
                         className="w-4 h-4 text-[#D4A373] disabled:opacity-50"
                       />
                       <span className="font-medium">
-                        Journée complète (8h-17h)
+                        Journée complète (7h30-20h30)
                         {!isSlotAvailableForSelection('fullday') && <span className="ml-2 text-sm text-red-600">(Indisponible)</span>}
                       </span>
                     </div>

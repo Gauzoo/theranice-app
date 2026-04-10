@@ -73,9 +73,9 @@ const ROOM_LABELS: Record<string, string> = {
 };
 
 const SLOT_LABELS: Record<string, string> = {
-  morning: "Matin (8h-12h)",
-  afternoon: "Après-midi (13h-17h)",
-  fullday: "Journée complète (8h-17h)",
+  morning: "Matin (7h30-13h)",
+  afternoon: "Après-midi (13h30-20h30)",
+  fullday: "Journée complète (7h30-20h30)",
 };
 
 const MEMBER_DOCUMENTS: Array<{
@@ -1606,9 +1606,9 @@ export default function AdminDashboard() {
                   onChange={(e) => setNewBooking({ ...newBooking, slot: e.target.value as 'morning' | 'afternoon' | 'fullday' })}
                   className="w-full border border-slate-300 rounded px-3 py-2"
                 >
-                  <option value="morning">Matin (8h-12h)</option>
-                  <option value="afternoon">Après-midi (13h-17h)</option>
-                  <option value="fullday">Journée complète (8h-17h)</option>
+                  <option value="morning">Matin (7h30-13h)</option>
+                  <option value="afternoon">Après-midi (13h30-20h30)</option>
+                  <option value="fullday">Journée complète (7h30-20h30)</option>
                 </select>
               </div>
 

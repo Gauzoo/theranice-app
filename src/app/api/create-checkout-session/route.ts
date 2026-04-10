@@ -19,22 +19,30 @@ interface CheckoutPayload {
   userId?: string;
 }
 
-const ROOM_PRICES: Record<Room, number> = {
-  room1: 35,
-  room2: 35,
+const MORNING_PRICES: Record<Room, number> = {
+  room1: 30,
+  room2: 30,
+  large: 70,
+};
+
+const AFTERNOON_PRICES: Record<Room, number> = {
+  room1: 40,
+  room2: 40,
   large: 70,
 };
 
 const FULLDAY_PRICES: Record<Room, number> = {
-  room1: 65,
-  room2: 65,
+  room1: 70,
+  room2: 70,
   large: 130,
 };
 
 const STRIPE_EUR_MINIMUM_CENTS = 50;
 
 function getExpectedPrice(item: CartItem): number {
-  return item.slot === 'fullday' ? FULLDAY_PRICES[item.room] : ROOM_PRICES[item.room];
+  if (item.slot === 'fullday') return FULLDAY_PRICES[item.room];
+  if (item.slot === 'morning') return MORNING_PRICES[item.room];
+  return AFTERNOON_PRICES[item.room];
 }
 
 function parseAllowedEmails(rawValue?: string): Set<string> {
