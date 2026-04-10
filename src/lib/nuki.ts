@@ -130,12 +130,10 @@ export async function createNukiKeypadCode(
     // Pour récupérer l'authId, on doit lister les auths et trouver celui qu'on vient de créer
     // Ou si la réponse contient des données, on les utilise
     if (response.status === 204) {
-      // Pas de body retourné - on doit retrouver l'auth qu'on vient de créer
-      // Attendre que la synchro WiFi -> serrure -> keypad se termine
-      await new Promise(resolve => setTimeout(resolve, 15000));
-      const authId = await findAuthByCode(code);
-      console.log(`[Nuki] Keypad code created successfully, authId: ${authId}`);
-      return { success: true, authId: authId || undefined, code };
+      // API retourne 204 sans body - le code est créé et fonctionnel sur le keypad.
+      // L'attente de 15s a été supprimée : elle causait un timeout sur Vercel (limite 10s).
+      console.log(`[Nuki] Keypad code created successfully (204 No Content)`);
+      return { success: true, authId: undefined, code };
     }
 
     // Certaines versions de l'API retournent le résultat
