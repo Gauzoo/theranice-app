@@ -792,7 +792,7 @@ export default function ReservationPage() {
                       {selectedDates.length} date{selectedDates.length > 1 ? 's' : ''} sélectionnée{selectedDates.length > 1 ? 's' : ''}
                     </span>
                     <span className="font-semibold text-[#D4A373]">
-                      {(selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : ROOM_PRICES[selectedRoom]) * selectedDates.length}€
+                      {(selectedSlot === 'fullday' ? FULLDAY_PRICES[selectedRoom] : selectedSlot === 'morning' ? MORNING_PRICES[selectedRoom] : AFTERNOON_PRICES[selectedRoom]) * selectedDates.length}€
                     </span>
                   </div>
                 )}
