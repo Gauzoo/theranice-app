@@ -68,7 +68,12 @@ export async function GET(request: Request) {
       return createRecoveryErrorRedirect(siteOrigin, 'recovery_missing')
     }
 
-    const redirectUrl = new URL(nextPath, siteOrigin)
+    const isRecoveryFlow = type === 'recovery' || !!tokenHash || !!code
+    const resolvedNextPath = isRecoveryFlow && nextPath === '/'
+      ? FALLBACK_NEXT_PATH
+      : nextPath
+
+    const redirectUrl = new URL(resolvedNextPath, siteOrigin)
     return NextResponse.redirect(redirectUrl)
   } catch (error) {
     console.error('Recovery callback unexpected error:', error)

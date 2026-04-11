@@ -4,7 +4,7 @@ import { deleteNukiKeypadCode, findNukiAuthIdByAccessCode } from '@/lib/nuki';
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .split(',')
-  .map(email => email.trim())
+  .map(email => email.trim().toLowerCase())
   .filter(Boolean);
 
 export async function POST(request: NextRequest) {
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifie que l'utilisateur est le propriétaire OU admin
-    const isAdmin = user.email ? ADMIN_EMAILS.includes(user.email) : false;
+    const isAdmin = user.email ? ADMIN_EMAILS.includes(user.email.toLowerCase()) : false;
     if (booking.user_id !== user.id && !isAdmin) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
     }

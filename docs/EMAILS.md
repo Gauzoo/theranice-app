@@ -14,6 +14,10 @@ RESEND_API_KEY=re_xxxxxxxxxxxxx
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
+### Configuration des destinataires admin
+- Les emails admin sont configurés via `ADMIN_EMAILS` et `NEXT_PUBLIC_ADMIN_EMAILS`.
+- Guide complet: `docs/ADMIN-EMAILS.md`.
+
 ### 3. Configuration production (Vercel)
 1. Dans Resend Dashboard → Domains → Add Domain
 2. Vérifier votre domaine (theranice.com)

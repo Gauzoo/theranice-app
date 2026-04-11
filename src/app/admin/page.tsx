@@ -106,6 +106,7 @@ export default function AdminDashboard() {
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "today" | "upcoming" | "past">("upcoming");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const [users, setUsers] = useState<Array<{id: string, nom: string, prenom: string, telephone?: string}>>([]);
   
   // Section Membres
@@ -849,10 +850,16 @@ export default function AdminDashboard() {
   };
 
   const handleAddBooking = async () => {
+    if (bookingSubmitting) {
+      return;
+    }
+
     if (!newBooking.userId || !newBooking.date || !newBooking.slot || !newBooking.room) {
       alert('Veuillez remplir tous les champs');
       return;
     }
+
+    setBookingSubmitting(true);
 
     try {
       const response = await fetch('/api/admin/create-booking', {
@@ -887,10 +894,12 @@ export default function AdminDashboard() {
         room: 'room1',
         price: 30,
       });
-      fetchBookings();
+      await fetchBookings();
     } catch (err) {
       console.error('Erreur:', err);
       alert('Erreur lors de la création de la réservation');
+    } finally {
+      setBookingSubmitting(false);
     }
   };
 
@@ -1533,9 +1542,10 @@ export default function AdminDashboard() {
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={handleAddBooking}
-                  className="flex-1 bg-[#D4A373] hover:bg-[#c49363] text-white px-6 py-2 font-medium transition-colors cursor-pointer"
+                  disabled={bookingSubmitting}
+                  className="flex-1 bg-[#D4A373] hover:bg-[#c49363] text-white px-6 py-2 font-medium transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Créer la réservation
+                  {bookingSubmitting ? 'Création...' : 'Créer la réservation'}
                 </button>
                 <button
                   onClick={() => setShowAddModal(false)}

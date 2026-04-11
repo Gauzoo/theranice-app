@@ -50,7 +50,7 @@ Application Next.js de réservation de salles de thérapie avec paiement Stripe 
 - Envoie email d'annulation
 
 ### 6. **Dashboard Admin** (`src/app/admin/page.tsx`)
-- **Accès restreint**: Email admin = `gauthier.guerin@gmail.com`
+- **Accès restreint**: Emails admins via variables d'environnement `ADMIN_EMAILS` / `NEXT_PUBLIC_ADMIN_EMAILS`
 - **Statistiques**:
   - Revenus totaux
   - Revenus du mois
@@ -169,6 +169,7 @@ RESEND_API_KEY=re_...
 ### Avant Production
 - [ ] Ajouter colonne `email` dans table `profiles` (script SQL créé: `supabase-add-email-to-profiles.sql`)
 - [ ] Remplacer l'email admin hardcodé par un système de rôles
+- [ ] Appliquer `docs/BOOKINGS-UNIQUE-CONSTRAINT.sql` (anti-doublon manuel admin)
 - [ ] Configurer webhook Stripe en production (URL Vercel)
 - [ ] Remplacer clés Stripe test par clés live du client
 - [ ] Tester flux complet en production
@@ -183,7 +184,7 @@ RESEND_API_KEY=re_...
 
 ## 📝 Notes Importantes
 
-1. **Admin email**: Actuellement hardcodé `gauthier.guerin@gmail.com` dans `src/app/admin/page.tsx` ligne ~98
+1. **Admin email**: Configuré via `ADMIN_EMAILS` (serveur) et `NEXT_PUBLIC_ADMIN_EMAILS` (client), voir `docs/ADMIN-EMAILS.md`
 2. **Webhook local**: Nécessite Stripe CLI en cours d'exécution (`stripe listen`)
 3. **Service role key**: Utilisé UNIQUEMENT dans webhook serveur, JAMAIS côté client
 4. **Slot fullday**: Prix différents selon la salle (90€ vs 140€)
@@ -206,4 +207,4 @@ git push origin main  # Auto-deploy configuré
 ```
 
 ## 📞 Contact Client
-Email admin: gauthier.guerin@gmail.com
+Email admin: défini dans `ADMIN_EMAILS`

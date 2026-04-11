@@ -6,7 +6,36 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .map((email) => email.trim().toLowerCase())
   .filter(Boolean)
 
+const ROOT_PATH = '/'
+const AUTH_CALLBACK_PATH = '/auth/callback'
+const RESET_PASSWORD_PATH = '/reset-password'
+
+const hasRecoveryIntent = (request: NextRequest) => {
+  const searchParams = request.nextUrl.searchParams
+  const nextParam = searchParams.get('next')
+  const hasCodeWithoutOAuthState = searchParams.has('code') && !searchParams.has('state')
+
+  return (
+    searchParams.get('type') === 'recovery'
+    || searchParams.has('token_hash')
+    || nextParam === RESET_PASSWORD_PATH
+    || hasCodeWithoutOAuthState
+  )
+}
+
 export async function middleware(request: NextRequest) {
+  if (request.nextUrl.pathname === ROOT_PATH && hasRecoveryIntent(request)) {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = AUTH_CALLBACK_PATH
+
+    const nextParam = redirectUrl.searchParams.get('next')
+    if (!nextParam || nextParam === ROOT_PATH) {
+      redirectUrl.searchParams.set('next', RESET_PASSWORD_PATH)
+    }
+
+    return NextResponse.redirect(redirectUrl)
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,

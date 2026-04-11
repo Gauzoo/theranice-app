@@ -7,6 +7,8 @@ import { type Slot, type Room } from '@/lib/constants';
 const VALID_SLOTS: Slot[] = ['morning', 'afternoon', 'fullday'];
 const VALID_ROOMS: Room[] = ['room1', 'room2', 'large'];
 
+const isUniqueViolation = (error: { code?: string } | null) => error?.code === '23505';
+
 export async function POST(request: NextRequest) {
   try {
     const isAdmin = await checkAdminPermission();
@@ -73,7 +75,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Ce créneau n\'est pas disponible' }, { status: 409 });
     }
 
-    // Générer le code Nuki
+    // Insérer la réservation avant de provisionner Nuki pour éviter les codes gaspillés
+    // lors des requêtes concurrentes qui finissent en conflit.
+    const { data: booking, error: insertError } = await supabase
+      .from('bookings')
+      .insert({
+        user_id: userId,
+        date,
+        slot,
+        room,
+        price,
+        status: 'confirmed',
+        access_code: null,
+        nuki_auth_id: null,
+        nuki_code_status: 'none',
+      })
+      .select('id')
+      .single();
+
+    if (insertError) {
+      if (isUniqueViolation(insertError)) {
+        return NextResponse.json(
+          { error: 'Ce créneau est déjà réservé pour cette salle' },
+          { status: 409 }
+        );
+      }
+
+      console.error('Insert error:', insertError);
+      return NextResponse.json({ error: 'Erreur lors de la création : ' + insertError.message }, { status: 500 });
+    }
+
+    // Générer le code Nuki uniquement après création de la réservation
     let accessCode: string | null = null;
     let nukiAuthId: string | null = null;
     let nukiCodeStatus = 'none';
@@ -105,26 +137,17 @@ export async function POST(request: NextRequest) {
       nukiCodeStatus = 'error';
     }
 
-    // Insérer la réservation
-    const { data: booking, error: insertError } = await supabase
+    const { error: nukiUpdateError } = await supabase
       .from('bookings')
-      .insert({
-        user_id: userId,
-        date,
-        slot,
-        room,
-        price,
-        status: 'confirmed',
+      .update({
         access_code: accessCode,
         nuki_auth_id: nukiAuthId,
         nuki_code_status: nukiCodeStatus,
       })
-      .select('id')
-      .single();
+      .eq('id', booking.id);
 
-    if (insertError) {
-      console.error('Insert error:', insertError);
-      return NextResponse.json({ error: 'Erreur lors de la création : ' + insertError.message }, { status: 500 });
+    if (nukiUpdateError) {
+      console.error('Nuki update error:', nukiUpdateError);
     }
 
     return NextResponse.json({
