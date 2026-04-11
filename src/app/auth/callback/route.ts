@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 
 const FALLBACK_NEXT_PATH = '/reset-password'
 const RESET_REQUEST_PATH = '/mot-de-passe-oublie'
+const RECOVERY_GRANT_COOKIE = 'trn_recovery_grant'
+const RECOVERY_GRANT_MAX_AGE_SECONDS = 600
 
 const sanitizeNextPath = (rawNext: string | null) => {
   if (!rawNext) {
@@ -74,7 +76,20 @@ export async function GET(request: Request) {
       : nextPath
 
     const redirectUrl = new URL(resolvedNextPath, siteOrigin)
-    return NextResponse.redirect(redirectUrl)
+    const response = NextResponse.redirect(redirectUrl)
+
+    if (isRecoveryFlow) {
+      response.cookies.set({
+        name: RECOVERY_GRANT_COOKIE,
+        value: '1',
+        maxAge: RECOVERY_GRANT_MAX_AGE_SECONDS,
+        path: FALLBACK_NEXT_PATH,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      })
+    }
+
+    return response
   } catch (error) {
     console.error('Recovery callback unexpected error:', error)
     return createRecoveryErrorRedirect(siteOrigin, 'recovery_failed')

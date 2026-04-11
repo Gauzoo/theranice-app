@@ -7,7 +7,6 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .filter(Boolean)
 
 const ROOT_PATH = '/'
-const AUTH_CALLBACK_PATH = '/auth/callback'
 const RESET_PASSWORD_PATH = '/reset-password'
 
 const hasRecoveryIntent = (request: NextRequest) => {
@@ -26,12 +25,8 @@ const hasRecoveryIntent = (request: NextRequest) => {
 export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === ROOT_PATH && hasRecoveryIntent(request)) {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = AUTH_CALLBACK_PATH
-
-    const nextParam = redirectUrl.searchParams.get('next')
-    if (!nextParam || nextParam === ROOT_PATH) {
-      redirectUrl.searchParams.set('next', RESET_PASSWORD_PATH)
-    }
+    redirectUrl.pathname = RESET_PASSWORD_PATH
+    redirectUrl.searchParams.delete('next')
 
     return NextResponse.redirect(redirectUrl)
   }

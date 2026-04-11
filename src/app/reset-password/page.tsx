@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
+const RECOVERY_GRANT_COOKIE = "trn_recovery_grant";
+
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -22,6 +24,17 @@ export default function ResetPassword() {
 
     const clearRecoveryUrl = () => {
       window.history.replaceState({}, document.title, "/reset-password");
+    };
+
+    const hasRecoveryGrantCookie = () => {
+      return document.cookie
+        .split(";")
+        .map((cookie) => cookie.trim())
+        .some((cookie) => cookie === `${RECOVERY_GRANT_COOKIE}=1`);
+    };
+
+    const consumeRecoveryGrantCookie = () => {
+      document.cookie = `${RECOVERY_GRANT_COOKIE}=; Max-Age=0; Path=/reset-password; SameSite=Lax`;
     };
 
     const hasRecoveryPayload = () => {
@@ -76,20 +89,32 @@ export default function ResetPassword() {
 
     const initializeRecoverySession = async () => {
       try {
-        const isRecoveryFlow = hasRecoveryPayload();
+        const hasRecoveryPayloadInUrl = hasRecoveryPayload();
+        const hasRecoveryGrant = hasRecoveryGrantCookie();
+        const isRecoveryFlow = hasRecoveryPayloadInUrl || hasRecoveryGrant;
 
-        if (isRecoveryFlow) {
-          await supabase.auth.initialize();
-        }
-
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-        if (!active) {
+        if (!isRecoveryFlow) {
+          setHasSession(false);
+          setError("Cette page est accessible uniquement depuis le lien de réinitialisation envoyé par email.");
           return;
         }
 
-        if (currentSession) {
-          setHasSession(true);
+        if (hasRecoveryPayloadInUrl) {
+          await supabase.auth.initialize();
+        }
+
+        if (hasRecoveryGrant && !hasRecoveryPayloadInUrl) {
+          const { data: { session: grantedSession } } = await supabase.auth.getSession();
+
+          if (!active) {
+            return;
+          }
+
+          consumeRecoveryGrantCookie();
+          setHasSession(!!grantedSession);
+          if (!grantedSession) {
+            setError("Session de réinitialisation expirée. Veuillez demander un nouveau lien.");
+          }
           return;
         }
 
@@ -137,7 +162,7 @@ export default function ResetPassword() {
           clearRecoveryUrl();
         }
 
-        if (!sessionEstablished && isRecoveryFlow) {
+        if (!sessionEstablished && hasRecoveryPayloadInUrl) {
           sessionEstablished = await waitForRecoverySession(4500);
         }
 
@@ -146,6 +171,10 @@ export default function ResetPassword() {
 
         if (!active) {
           return;
+        }
+
+        if (hasActiveSession) {
+          consumeRecoveryGrantCookie();
         }
 
         setHasSession(hasActiveSession);

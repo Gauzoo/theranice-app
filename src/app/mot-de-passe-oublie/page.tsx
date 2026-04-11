@@ -43,11 +43,10 @@ export default function MotDePasseOublie() {
 
     try {
       const supabase = createClient();
-      const callbackUrl = new URL("/auth/callback", getPublicSiteOrigin());
-      callbackUrl.searchParams.set("next", "/reset-password");
+      const resetUrl = new URL("/reset-password", getPublicSiteOrigin());
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: callbackUrl.toString(),
+        redirectTo: resetUrl.toString(),
       });
 
       if (error) throw error;
