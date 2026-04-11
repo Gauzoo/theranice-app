@@ -27,22 +27,8 @@ interface ProfileValidationRow {
   rc_pro_rejection_notes: string | null;
 }
 
-const PROFILE_VALIDATION_SELECT = [
-  'nom',
-  'prenom',
-  'account_status',
-  'documents_submitted_at',
-  'activite_exercee',
-  'carte_identite_url',
-  'kbis_url',
-  'rc_pro_url',
-  'carte_identite_status',
-  'kbis_status',
-  'rc_pro_status',
-  'carte_identite_rejection_notes',
-  'kbis_rejection_notes',
-  'rc_pro_rejection_notes',
-].join(',');
+const PROFILE_VALIDATION_SELECT =
+  'nom,prenom,account_status,documents_submitted_at,activite_exercee,carte_identite_url,kbis_url,rc_pro_url,carte_identite_status,kbis_status,rc_pro_status,carte_identite_rejection_notes,kbis_rejection_notes,rc_pro_rejection_notes' as const;
 
 function getDocumentRejectionNote(profile: ProfileValidationRow, type: DocumentType): string {
   if (type === 'carte') {
