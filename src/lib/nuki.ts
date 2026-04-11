@@ -9,14 +9,19 @@
  */
 
 const NUKI_API_BASE = 'https://api.nuki.io';
+const FIND_AUTH_RETRY_DELAYS_MS = [200, 400, 700];
+const AVAILABILITY_RETRY_DELAYS_MS = [200, 400];
 
-// Mapping des créneaux horaires vers des minutes depuis minuit
-// Avec 30 min de marge avant et après pour arrivée/départ
-const SLOT_TIMES: Record<string, { from: number; until: number }> = {
-  morning:   { from: 420, until: 810 },   // 7h00 - 13h30
-  afternoon: { from: 780, until: 1260 },  // 13h00 - 21h00
-  fullday:   { from: 420, until: 1260 },  // 7h00 - 21h00
-};
+import { NUKI_SLOT_TIMES } from '@/lib/constants';
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalizePinCode(code: number | string): string {
+  const digits = String(code).replace(/\D/g, '');
+  return digits.padStart(6, '0');
+}
 
 /**
  * Génère un code PIN aléatoire de 6 chiffres.
@@ -53,6 +58,14 @@ interface NukiAuthResult {
   error?: string;
 }
 
+interface NukiProvisionResult {
+  success: boolean;
+  code?: number;
+  authId?: string;
+  error?: string;
+  attempts: number;
+}
+
 /**
  * Crée une autorisation keypad temporaire sur la serrure Nuki.
  * 
@@ -76,7 +89,7 @@ export async function createNukiKeypadCode(
     return { success: false, error: 'Nuki API not configured' };
   }
 
-  const slotTime = SLOT_TIMES[slot];
+  const slotTime = NUKI_SLOT_TIMES[slot as keyof typeof NUKI_SLOT_TIMES];
   if (!slotTime) {
     return { success: false, error: `Invalid slot: ${slot}` };
   }
@@ -130,10 +143,14 @@ export async function createNukiKeypadCode(
     // Pour récupérer l'authId, on doit lister les auths et trouver celui qu'on vient de créer
     // Ou si la réponse contient des données, on les utilise
     if (response.status === 204) {
-      // API retourne 204 sans body - le code est créé et fonctionnel sur le keypad.
-      // L'attente de 15s a été supprimée : elle causait un timeout sur Vercel (limite 10s).
       console.log(`[Nuki] Keypad code created successfully (204 No Content)`);
-      return { success: true, authId: undefined, code };
+      const resolvedAuthId = await findAuthByCode(code);
+
+      if (!resolvedAuthId) {
+        console.warn(`[Nuki] Code ${formatPinCode(code)} created but authId could not be resolved yet`);
+      }
+
+      return { success: true, authId: resolvedAuthId || undefined, code };
     }
 
     // Certaines versions de l'API retournent le résultat
@@ -141,15 +158,19 @@ export async function createNukiKeypadCode(
     if (contentType?.includes('application/json')) {
       const result = await response.json();
       console.log(`[Nuki] Keypad code created successfully:`, result);
+      const directAuthId = result.id || result.authId;
+      const authId = directAuthId ? String(directAuthId) : await findAuthByCode(code);
+
       return { 
         success: true, 
-        authId: result.id || result.authId || undefined,
+        authId: authId || undefined,
         code 
       };
     }
 
     console.log(`[Nuki] Keypad code created (status ${response.status})`);
-    return { success: true, code };
+    const fallbackAuthId = await findAuthByCode(code);
+    return { success: true, authId: fallbackAuthId || undefined, code };
 
   } catch (error) {
     console.error('[Nuki] Network error creating keypad code:', error);
@@ -169,27 +190,57 @@ async function findAuthByCode(code: number): Promise<string | null> {
 
   if (!apiToken || !smartlockId) return null;
 
-  try {
-    const response = await fetch(
-      `${NUKI_API_BASE}/smartlock/${smartlockId}/auth?types=13`,
-      {
-        headers: {
-          'Authorization': `Bearer ${apiToken}`,
-        },
+  const normalizedCode = normalizePinCode(code);
+
+  for (let attempt = 0; attempt < FIND_AUTH_RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      const response = await fetch(
+        `${NUKI_API_BASE}/smartlock/${smartlockId}/auth?types=13`,
+        {
+          headers: {
+            'Authorization': `Bearer ${apiToken}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const auths = await response.json();
+        const match = Array.isArray(auths)
+          ? auths.find((a: { code?: number | string; id?: string | number }) => {
+              if (a.code == null) return false;
+              return normalizePinCode(a.code) === normalizedCode;
+            })
+          : null;
+
+        if (match?.id != null) {
+          return String(match.id);
+        }
       }
-    );
+    } catch {
+      // Best effort only, we'll retry shortly.
+    }
 
-    if (!response.ok) return null;
-
-    const auths = await response.json();
-    const match = Array.isArray(auths) 
-      ? auths.find((a: { code?: number }) => a.code === code)
-      : null;
-    
-    return match?.id || null;
-  } catch {
-    return null;
+    const delay = FIND_AUTH_RETRY_DELAYS_MS[attempt];
+    if (attempt < FIND_AUTH_RETRY_DELAYS_MS.length - 1 && delay > 0) {
+      await wait(delay);
+    }
   }
+
+  return null;
+}
+
+export async function findNukiAuthIdByAccessCode(
+  accessCode: string | number | null | undefined
+): Promise<string | null> {
+  if (accessCode == null) return null;
+
+  const digits = String(accessCode).replace(/\D/g, '');
+  if (!digits) return null;
+
+  const numericCode = Number.parseInt(digits, 10);
+  if (!Number.isFinite(numericCode)) return null;
+
+  return findAuthByCode(numericCode);
 }
 
 /**
@@ -242,27 +293,45 @@ export async function isCodeAvailableOnNuki(code: number): Promise<boolean> {
 
   if (!apiToken || !smartlockId) return true; // Skip check if not configured
 
-  try {
-    const response = await fetch(
-      `${NUKI_API_BASE}/smartlock/${smartlockId}/auth?types=13`,
-      {
-        headers: {
-          'Authorization': `Bearer ${apiToken}`,
-        },
+  let lastError: string | null = null;
+  const normalizedCode = normalizePinCode(code);
+
+  for (let attempt = 0; attempt <= AVAILABILITY_RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      const response = await fetch(
+        `${NUKI_API_BASE}/smartlock/${smartlockId}/auth?types=13`,
+        {
+          headers: {
+            'Authorization': `Bearer ${apiToken}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const auths = await response.json();
+        const codeExists = Array.isArray(auths) && auths.some(
+          (a: { code?: number | string; enabled?: boolean }) => {
+            if (a.code == null) return false;
+            const enabled = a.enabled !== false;
+            return enabled && normalizePinCode(a.code) === normalizedCode;
+          }
+        );
+
+        return !codeExists;
       }
-    );
 
-    if (!response.ok) return true; // En cas d'erreur, on tente quand même
+      lastError = `Nuki availability check failed with status ${response.status}`;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : 'Unknown availability check error';
+    }
 
-    const auths = await response.json();
-    const codeExists = Array.isArray(auths) && auths.some(
-      (a: { code?: number; enabled?: boolean }) => a.code === code && a.enabled
-    );
-    
-    return !codeExists;
-  } catch {
-    return true;
+    const delay = AVAILABILITY_RETRY_DELAYS_MS[attempt];
+    if (delay) {
+      await wait(delay);
+    }
   }
+
+  throw new Error(lastError || 'Unable to verify code availability on Nuki');
 }
 
 /**
@@ -275,7 +344,7 @@ export async function isCodeAvailableOnNuki(code: number): Promise<boolean> {
 export async function generateUniquePinCode(
   supabase: any
 ): Promise<number> {
-  const maxAttempts = 10;
+  const maxAttempts = 20;
   
   for (let i = 0; i < maxAttempts; i++) {
     const code = generatePinCode();
@@ -284,21 +353,97 @@ export async function generateUniquePinCode(
     const { data: existing } = await supabase
       .from('bookings')
       .select('access_code')
-      .eq('nuki_code_status', 'active')
+      .in('nuki_code_status', ['active', 'error', 'revoke_failed'])
       .not('access_code', 'is', null);
     
-    const codeStr = String(code);
-    const dbConflict = existing?.some((b: { access_code: string }) => b.access_code === codeStr);
+    const codeStr = normalizePinCode(code);
+    const dbConflict = existing?.some((b: { access_code: string }) => {
+      if (!b.access_code) return false;
+      return normalizePinCode(b.access_code) === codeStr;
+    });
     
     if (!dbConflict) {
-      // Vérifie aussi sur Nuki (codes actifs sur la serrure)
-      const nukiAvailable = await isCodeAvailableOnNuki(code);
-      if (nukiAvailable) {
-        return code;
+      try {
+        const nukiAvailable = await isCodeAvailableOnNuki(code);
+        if (nukiAvailable) {
+          return code;
+        }
+      } catch (error) {
+        if (i === maxAttempts - 1) {
+          throw new Error(
+            `[Nuki] Impossible de vérifier l'unicité du code PIN: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+          );
+        }
       }
     }
   }
   
-  // Fallback: retourne un code sans vérification complète
-  return generatePinCode();
+  throw new Error('[Nuki] Impossible de générer un code PIN unique après plusieurs tentatives');
+}
+
+function isNukiCodeConflictError(errorMessage?: string): boolean {
+  if (!errorMessage) return false;
+
+  const lowerError = errorMessage.toLowerCase();
+  return (
+    lowerError.includes("parameter 'code' is not valid") ||
+    (lowerError.includes('code') && lowerError.includes('not valid')) ||
+    (lowerError.includes('code') && lowerError.includes('already')) ||
+    lowerError.includes('duplicate')
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function provisionNukiKeypadCode(
+  supabase: any,
+  name: string,
+  date: string,
+  slot: string,
+  maxAttempts = 4
+): Promise<NukiProvisionResult> {
+  let lastError: string | undefined;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let pinCode: number;
+
+    try {
+      pinCode = await generateUniquePinCode(supabase);
+    } catch (error) {
+      const generationError = error instanceof Error ? error.message : 'PIN generation failed';
+      return {
+        success: false,
+        error: generationError,
+        attempts: attempt,
+      };
+    }
+
+    const createResult = await createNukiKeypadCode(name, pinCode, date, slot);
+
+    if (createResult.success) {
+      return {
+        success: true,
+        code: pinCode,
+        authId: createResult.authId,
+        attempts: attempt,
+      };
+    }
+
+    lastError = createResult.error;
+    if (!isNukiCodeConflictError(createResult.error)) {
+      return {
+        success: false,
+        code: pinCode,
+        error: createResult.error,
+        attempts: attempt,
+      };
+    }
+
+    console.warn(`[Nuki] PIN ${formatPinCode(pinCode)} rejected by API, retrying (${attempt}/${maxAttempts})`);
+  }
+
+  return {
+    success: false,
+    error: lastError || '[Nuki] Failed to create keypad code after retries',
+    attempts: maxAttempts,
+  };
 }

@@ -4,6 +4,7 @@ import Carousel from "@/components/Carousel";
 import FAQ from "@/components/FAQ";
 import ContactForm from "@/components/ContactForm";
 import { EB_Garamond } from "next/font/google";
+import { BUSINESS_LEGAL_NAME, BUSINESS_NAME, BUSINESS_ADDRESS, BUSINESS_CITY, BUSINESS_POSTAL_CODE, BUSINESS_COUNTRY, BUSINESS_PHONE, CONTACT_EMAIL, SITE_URL, OPENING_HOURS_SCHEMA } from '@/lib/constants';
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -70,23 +71,23 @@ export default function Home() {
     "@graph": [
       {
         "@type": "LocalBusiness",
-        "@id": "https://theranice.fr/#organization",
-        name: "SCI THERA NICE",
-        alternateName: "Théranice",
+        "@id": `${SITE_URL}/#organization`,
+        name: BUSINESS_LEGAL_NAME,
+        alternateName: BUSINESS_NAME,
         description: "Location de salles thérapeutiques à Nice pour thérapeutes et praticiens bien-être.",
-        url: "https://theranice.fr",
-        telephone: "+33 6 65 46 26 42",
-        email: "contact@theranice.fr",
+        url: SITE_URL,
+        telephone: BUSINESS_PHONE,
+        email: CONTACT_EMAIL,
         address: {
           "@type": "PostalAddress",
-          streetAddress: "19 rue Michelet",
-          addressLocality: "Nice",
-          postalCode: "06100",
-          addressCountry: "FR",
+          streetAddress: BUSINESS_ADDRESS,
+          addressLocality: BUSINESS_CITY,
+          postalCode: BUSINESS_POSTAL_CODE,
+          addressCountry: BUSINESS_COUNTRY,
         },
-        image: "https://theranice.fr/photos/covers1.jpg",
-        priceRange: "8€–35€/h",
-        openingHours: "Mo-Sa 08:00-20:00",
+        image: `${SITE_URL}/photos/covers1.jpg`,
+        priceRange: "8€–40€/h",
+        openingHours: OPENING_HOURS_SCHEMA,
       },
       {
         "@type": "FAQPage",
@@ -436,7 +437,7 @@ export default function Home() {
         <h2 className={`${garamond.className} text-4xl text-[#D4A373] font-semibold`}>▸ Contact</h2>
         <p className="mt-6 text-slate-600">
           Besoin d&apos;infos supplémentaires ou d&apos;une visite ? Remplissez le formulaire ci-dessous et nous vous répondrons dans les plus brefs délais ou contactez-nous 
-          directement par email à <strong>contact@theranice.fr</strong>.
+          directement par email à <strong>{CONTACT_EMAIL}</strong>.
         </p>
         
         <ContactForm />

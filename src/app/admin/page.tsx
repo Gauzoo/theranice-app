@@ -6,6 +6,14 @@ import { useRouter } from "next/navigation";
 import { EB_Garamond } from "next/font/google";
 import Image from "next/image";
 
+import {
+  ROOM_LABELS,
+  SLOT_LABELS,
+  getPrice,
+  type Slot,
+  type Room,
+} from '@/lib/constants';
+
 const garamond = EB_Garamond({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -66,17 +74,7 @@ type MemberModalFeedback = {
   message: string;
 } | null;
 
-const ROOM_LABELS: Record<string, string> = {
-  room1: "Athéna",
-  room2: "Gaïa",
-  large: "Grande salle",
-};
 
-const SLOT_LABELS: Record<string, string> = {
-  morning: "Matin (7h30-13h)",
-  afternoon: "Après-midi (13h30-20h30)",
-  fullday: "Journée complète (7h30-20h30)",
-};
 
 const MEMBER_DOCUMENTS: Array<{
   type: AdminDocumentType;
@@ -131,9 +129,6 @@ export default function AdminDashboard() {
   
   // Section Validation de comptes
   const [pendingValidations, setPendingValidations] = useState<PendingValidation[]>([]);
-  const [showValidationModal, setShowValidationModal] = useState(false);
-  const [selectedValidation, setSelectedValidation] = useState<PendingValidation | null>(null);
-  const [validationNotes, setValidationNotes] = useState('');
   
   const router = useRouter();
 
@@ -775,105 +770,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleApproveAccount = async (userId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir approuver ce compte ?')) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/admin/validate-account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, action: 'approve' }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        // TODO: Réactiver l'envoi d'email une fois Resend configuré
-        /* const user = pendingValidations.find(v => v.id === userId);
-        if (user && user.email) {
-          try {
-            await fetch('/api/emails/account-approved', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userEmail: user.email,
-                userName: `${user.prenom} ${user.nom}`,
-              }),
-            });
-          } catch (emailError) {
-            console.error('Erreur lors de l\'envoi de l\'email:', emailError);
-          }
-        } */
-
-        alert('Compte approuvé avec succès !');
-        await fetchMembers();
-      } else {
-        alert('Erreur : ' + result.error);
-      }
-    } catch (error) {
-      alert('Erreur lors de l\'approbation du compte');
-      console.error(error);
-    }
-  };
-
-  const handleRejectAccount = async (userId: string, notes: string) => {
-    if (!notes.trim()) {
-      alert('Veuillez indiquer la raison du rejet');
-      return;
-    }
-
-    if (!confirm('Êtes-vous sûr de vouloir rejeter ce compte ?')) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/admin/validate-account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, action: 'reject', notes }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        // TODO: Réactiver l'envoi d'email une fois Resend configuré
-        /* const user = pendingValidations.find(v => v.id === userId);
-        if (user && user.email) {
-          try {
-            await fetch('/api/emails/account-rejected', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userEmail: user.email,
-                userName: `${user.prenom} ${user.nom}`,
-                rejectionNotes: notes,
-              }),
-            });
-          } catch (emailError) {
-            console.error('Erreur lors de l\'envoi de l\'email:', emailError);
-          }
-        } */
-
-        alert('Compte rejeté');
-        setShowValidationModal(false);
-        setValidationNotes('');
-        await fetchMembers();
-      } else {
-        alert('Erreur : ' + result.error);
-      }
-    } catch (error) {
-      alert('Erreur lors du rejet du compte');
-      console.error(error);
-    }
-  };
-
-  const openValidationModal = (validation: PendingValidation) => {
-    setSelectedValidation(validation);
-    setShowValidationModal(true);
-  };
-
   const handleValidateDocument = async (userId: string, documentType: 'carte' | 'kbis' | 'rc_pro', action: 'approve' | 'reject') => {
     const docName = documentType === 'carte' ? 'Carte d\'identité' : documentType === 'kbis' ? 'KBIS' : 'RC Pro';
     
@@ -898,7 +794,16 @@ export default function AdminDashboard() {
         const result = await response.json();
 
         if (response.ok) {
-          alert(`${docName} rejeté avec succès`);
+          let feedback = `${docName} rejete avec succes`;
+          if (result?.notification?.triggered) {
+            if (result.notification.emailSent) {
+              feedback += '\nEmail de decision envoye au client.';
+            } else {
+              feedback += `\nDecision enregistree, mais email non envoye: ${result.notification.emailError || 'erreur inconnue'}`;
+            }
+          }
+
+          alert(feedback);
           await fetchMembers();
         } else {
           alert('Erreur : ' + result.error);
@@ -922,7 +827,16 @@ export default function AdminDashboard() {
         const result = await response.json();
 
         if (response.ok) {
-          alert(`${docName} validé avec succès`);
+          let feedback = `${docName} valide avec succes`;
+          if (result?.notification?.triggered) {
+            if (result.notification.emailSent) {
+              feedback += '\nEmail de decision envoye au client.';
+            } else {
+              feedback += `\nDecision enregistree, mais email non envoye: ${result.notification.emailError || 'erreur inconnue'}`;
+            }
+          }
+
+          alert(feedback);
           await fetchMembers();
         } else {
           alert('Erreur : ' + result.error);
@@ -941,74 +855,39 @@ export default function AdminDashboard() {
     }
 
     try {
-      const supabase = createClient();
-      
-      // Vérifie la disponibilité
-      const { data: existingBookings } = await supabase
-        .from('bookings')
-        .select('slot, room')
-        .eq('date', newBooking.date)
-        .eq('status', 'confirmed');
-
-      // Logique de vérification de disponibilité (même que dans le webhook)
-      let isAvailable = true;
-      if (newBooking.slot === 'fullday') {
-        if (newBooking.room === 'large') {
-          isAvailable = !existingBookings || existingBookings.length === 0;
-        } else {
-          const roomBooked = existingBookings?.some(b => b.room === newBooking.room);
-          const largeBooked = existingBookings?.some(b => b.room === 'large');
-          isAvailable = !roomBooked && !largeBooked;
-        }
-      } else {
-        const fulldayBooked = existingBookings?.some(b => b.slot === 'fullday' && b.room === newBooking.room);
-        const largeFulldayBooked = existingBookings?.some(b => b.slot === 'fullday' && b.room === 'large');
-        
-        if (fulldayBooked || largeFulldayBooked) {
-          isAvailable = false;
-        } else {
-          const bookingsForSlot = existingBookings?.filter(b => b.slot === newBooking.slot);
-          if (newBooking.room === 'large') {
-            isAvailable = !bookingsForSlot || bookingsForSlot.length === 0;
-          } else {
-            const roomBooked = bookingsForSlot?.some(b => b.room === newBooking.room);
-            const largeBooked = bookingsForSlot?.some(b => b.room === 'large');
-            isAvailable = !roomBooked && !largeBooked;
-          }
-        }
-      }
-
-      if (!isAvailable) {
-        alert('Ce créneau n\'est pas disponible');
-        return;
-      }
-
-      // Crée la réservation
-      const { error } = await supabase
-        .from('bookings')
-        .insert({
-          user_id: newBooking.userId,
+      const response = await fetch('/api/admin/create-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: newBooking.userId,
           date: newBooking.date,
           slot: newBooking.slot,
           room: newBooking.room,
           price: newBooking.price,
-          status: 'confirmed',
-        });
+        }),
+      });
 
-      if (error) {
-        alert('Erreur lors de la création : ' + error.message);
-      } else {
-        alert('Réservation créée avec succès');
-        setShowAddModal(false);
-        setNewBooking({
-          userId: '',
-          date: '',
-          slot: 'morning',
-          room: 'room1',
-          price: 50,
-        });
-        fetchBookings();
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert('Erreur : ' + (result.error || 'Erreur inconnue'));
+        return;
       }
+
+      const codeMsg = result.accessCode
+        ? `\nCode d'accès Nuki : ${result.accessCode}`
+        : '\n⚠️ Le code Nuki n\'a pas pu être généré.';
+      
+      alert('Réservation créée avec succès !' + codeMsg);
+      setShowAddModal(false);
+      setNewBooking({
+        userId: '',
+        date: '',
+        slot: 'morning',
+        room: 'room1',
+        price: 30,
+      });
+      fetchBookings();
     } catch (err) {
       console.error('Erreur:', err);
       alert('Erreur lors de la création de la réservation');
@@ -1184,10 +1063,10 @@ export default function AdminDashboard() {
                         {formatDate(booking.date)}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-600">
-                        {SLOT_LABELS[booking.slot]}
+                        {SLOT_LABELS[booking.slot as Slot]}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-600">
-                        {ROOM_LABELS[booking.room]}
+                        {ROOM_LABELS[booking.room as Room]}
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-900">
                         {booking.profiles?.prenom} {booking.profiles?.nom}
@@ -1289,7 +1168,6 @@ export default function AdminDashboard() {
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Nom</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Activité</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Documents</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1309,6 +1187,15 @@ export default function AdminDashboard() {
                       <td className="px-4 py-3">{validation.nom}</td>
                       <td className="px-4 py-3">{validation.activite_exercee || '-'}</td>
                       <td className="px-4 py-3">
+                        <p className="mb-2 text-xs font-medium text-slate-500">
+                          {
+                            [
+                              validation.carte_identite_status,
+                              validation.kbis_status,
+                              validation.rc_pro_status,
+                            ].filter((status) => status === 'approved' || status === 'rejected').length
+                          }/3 documents revus
+                        </p>
                         <div className="flex flex-col gap-2">
                           {/* Carte d'identité */}
                           {validation.carte_identite_url ? (
@@ -1433,15 +1320,6 @@ export default function AdminDashboard() {
                             <span className="text-slate-400 text-sm">Pas de RC Pro</span>
                           )}
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => openValidationModal(validation)}
-                          className="bg-[#B12F2E] hover:bg-[#8e2424] text-white px-3 py-1 text-sm font-medium cursor-pointer"
-                          title="Rejeter le compte"
-                        >
-                          Rejeter
-                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1603,7 +1481,11 @@ export default function AdminDashboard() {
                 </label>
                 <select
                   value={newBooking.slot}
-                  onChange={(e) => setNewBooking({ ...newBooking, slot: e.target.value as 'morning' | 'afternoon' | 'fullday' })}
+                  onChange={(e) => {
+                    const slot = e.target.value as Slot;
+                    const room = newBooking.room as Room;
+                    setNewBooking({ ...newBooking, slot, price: getPrice(slot, room) });
+                  }}
                   className="w-full border border-slate-300 rounded px-3 py-2"
                 >
                   <option value="morning">Matin (7h30-13h)</option>
@@ -1620,17 +1502,9 @@ export default function AdminDashboard() {
                 <select
                   value={newBooking.room}
                   onChange={(e) => {
-                    const room = e.target.value as 'room1' | 'room2' | 'large';
-                    const slot = newBooking.slot;
-                    let price = 50;
-                    
-                    if (slot === 'fullday') {
-                      price = room === 'large' ? 140 : 90;
-                    } else {
-                      price = room === 'large' ? 80 : 50;
-                    }
-                    
-                    setNewBooking({ ...newBooking, room, price });
+                    const room = e.target.value as Room;
+                    const slot = newBooking.slot as Slot;
+                    setNewBooking({ ...newBooking, room, price: getPrice(slot, room) });
                   }}
                   className="w-full border border-slate-300 rounded px-3 py-2"
                 >
@@ -1907,98 +1781,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal de rejet de compte */}
-      {showValidationModal && selectedValidation && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h3 className={`text-2xl font-bold text-[#D4A373] mb-4 ${garamond.className}`}>
-                Rejeter le compte de {selectedValidation.prenom} {selectedValidation.nom}
-              </h3>
-
-              {/* Informations du compte */}
-              <div className="bg-slate-50 p-4 rounded mb-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="font-semibold">Email:</span> {selectedValidation.email}
-                  </div>
-                  <div>
-                    <span className="font-semibold">Téléphone:</span> {selectedValidation.telephone}
-                  </div>
-                  <div className="col-span-2">
-                    <span className="font-semibold">Activité:</span> {selectedValidation.activite_exercee || 'Non renseignée'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Documents */}
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">Documents soumis :</h4>
-                <div className="flex gap-4">
-                  {selectedValidation.carte_identite_url ? (
-                    <a
-                      href={`/api/admin/view-document?userId=${selectedValidation.id}&fileType=carte`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#D4A373] hover:text-[#c49363] underline text-sm"
-                    >
-                      📄 Voir la carte d&apos;identité
-                    </a>
-                  ) : (
-                    <span className="text-slate-400 text-sm">Pas de carte d&apos;identité</span>
-                  )}
-                  {selectedValidation.kbis_url ? (
-                    <a
-                      href={`/api/admin/view-document?userId=${selectedValidation.id}&fileType=kbis`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#D4A373] hover:text-[#c49363] underline text-sm"
-                    >
-                      📄 Voir le KBIS
-                    </a>
-                  ) : (
-                    <span className="text-slate-400 text-sm">Pas de KBIS</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Raison du rejet */}
-              <div className="mb-4">
-                <label className="block font-semibold mb-2">
-                  Raison du rejet <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={validationNotes}
-                  onChange={(e) => setValidationNotes(e.target.value)}
-                  placeholder="Ex: Documents illisibles, KBIS expiré, activité non conforme..."
-                  rows={4}
-                  className="w-full border border-slate-300 rounded px-3 py-2 focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
-                />
-              </div>
-
-              {/* Boutons */}
-              <div className="flex gap-4">
-                <button
-                  onClick={() => handleRejectAccount(selectedValidation.id, validationNotes)}
-                  className="flex-1 bg-[#B12F2E] hover:bg-[#8e2424] text-white px-6 py-2 font-medium transition-colors cursor-pointer rounded"
-                >
-                  Confirmer le rejet
-                </button>
-                <button
-                  onClick={() => {
-                    setShowValidationModal(false);
-                    setSelectedValidation(null);
-                    setValidationNotes('');
-                  }}
-                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-2 font-medium transition-colors cursor-pointer rounded"
-                >
-                  Annuler
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

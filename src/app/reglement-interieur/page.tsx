@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { EB_Garamond } from "next/font/google";
+import { BUSINESS_LEGAL_NAME, BUSINESS_ADDRESS, BUSINESS_POSTAL_CODE, BUSINESS_CITY } from '@/lib/constants';
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -39,8 +40,8 @@ export default function ReglementInterieurPage() {
 
             <p className="text-lg font-semibold mb-2">THÉRANICE</p>
             <p className="mb-8 text-slate-600">
-              Exploité par SCI THERA NICE<br />
-              19 rue Michelet – 06100 Nice
+              Exploité par {BUSINESS_LEGAL_NAME}<br />
+              {BUSINESS_ADDRESS} – {BUSINESS_POSTAL_CODE} {BUSINESS_CITY}
             </p>
 
             {/* Article 1 */}

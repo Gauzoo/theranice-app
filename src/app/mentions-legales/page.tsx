@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { EB_Garamond } from "next/font/google";
+import { CONTACT_EMAIL, BUSINESS_LEGAL_NAME, BUSINESS_ADDRESS, BUSINESS_POSTAL_CODE, BUSINESS_CITY, BUSINESS_COUNTRY } from '@/lib/constants';
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -43,15 +44,15 @@ export default function MentionsLegalesPage() {
             </h2>
             <p className="mb-2">Le site THÉRANICE est édité par :</p>
             <p className="mb-6 pl-4 border-l-4 border-[#D4A373]/30 space-y-1">
-              <strong>SCI THERA NICE</strong><br />
-              19 rue Michelet<br />
-              06100 Nice – France<br />
+              <strong>{BUSINESS_LEGAL_NAME}</strong><br />
+              {BUSINESS_ADDRESS}<br />
+              {BUSINESS_POSTAL_CODE} {BUSINESS_CITY} – {BUSINESS_COUNTRY === 'FR' ? 'France' : BUSINESS_COUNTRY}<br />
               <br />
               Société Civile Immobilière<br />
               Immatriculée au Registre du Commerce et des Sociétés de Nice<br />
               <strong>SIRET :</strong> 990 302 887<br />
               Non assujettie à la TVA<br />
-              <strong>Email :</strong> contact@theranice.fr
+              <strong>Email :</strong> {CONTACT_EMAIL}
             </p>
 
             {/* Directeur de publication */}
@@ -59,7 +60,7 @@ export default function MentionsLegalesPage() {
               ▸ Directeur de la publication
             </h2>
             <p className="mb-6">
-              SCI THERA NICE, représentée par sa gérante en exercice.
+              {BUSINESS_LEGAL_NAME}, représentée par sa gérante en exercice.
             </p>
 
             {/* Hébergement */}
@@ -96,7 +97,7 @@ export default function MentionsLegalesPage() {
               ▸ Responsabilité
             </h2>
             <p className="mb-4">
-              La SCI THERA NICE s&apos;efforce d&apos;assurer l&apos;exactitude des informations publiées.
+              La {BUSINESS_LEGAL_NAME} s&apos;efforce d&apos;assurer l&apos;exactitude des informations publiées.
               Elle ne saurait être tenue responsable :
             </p>
             <ul className="list-disc pl-6 mb-6 space-y-2">

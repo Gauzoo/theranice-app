@@ -114,9 +114,12 @@ export function deriveProfileVerificationState(
 
   let accountStatus: AccountStatus = 'pending';
   const allRequiredDocumentsPresent = missingDocuments.length === 0;
+  const isReviewComplete = pendingDocuments.length === 0;
 
   if (hasActivity && allRequiredDocumentsPresent) {
-    if (approvedDocuments.length === 3) {
+    if (!isReviewComplete) {
+      accountStatus = 'documents_submitted';
+    } else if (approvedDocuments.length === 3) {
       accountStatus = 'approved';
     } else if (rejectedDocuments.length > 0) {
       accountStatus = 'rejected';

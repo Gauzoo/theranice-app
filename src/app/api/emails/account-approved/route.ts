@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { EMAIL_FROM } from '@/lib/constants';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     const safeUserName = escapeHtml(userName);
 
     const { data, error } = await resend.emails.send({
-      from: 'Theranice <onboarding@resend.dev>',
+      from: EMAIL_FROM,
       to: [userEmail],
       subject: '✅ Votre compte Theranice a été validé !',
       html: `
@@ -91,7 +92,6 @@ export async function POST(request: NextRequest) {
               <p>Bonjour ${safeUserName},</p>
               
               <div class="success-box">
-                <h2 style="margin: 0 0 10px 0; color: #10b981;">🎉 Félicitations !</h2>
                 <p style="margin: 0; font-size: 16px;">Votre compte Theranice a été approuvé.</p>
               </div>
 
@@ -99,16 +99,16 @@ export async function POST(request: NextRequest) {
 
               <p><strong>Nos salles disponibles :</strong></p>
               <ul>
-                <li>Athéna – 35€ la demi-journée / 65€ la journée</li>
-                <li>Gaïa – 35€ la demi-journée / 65€ la journée</li>
+                <li>Athéna – 30€ le matin / 40€ l'après-midi / 65€ la journée</li>
+                <li>Gaïa – 30€ le matin / 40€ l'après-midi / 65€ la journée</li>
                 <li>Grande salle – 70€ la demi-journée / 130€ la journée</li>
               </ul>
 
               <p><strong>Créneaux horaires :</strong></p>
               <ul>
-                <li>Matin : 8h-12h</li>
-                <li>Après-midi : 13h-17h</li>
-                <li>Journée complète : 8h-17h (tarif réduit)</li>
+                <li>Matin : 7h30 – 13h</li>
+                <li>Après-midi : 13h30 – 20h30</li>
+                <li>Journée complète : 7h30 – 20h30</li>
               </ul>
 
               <div style="text-align: center;">

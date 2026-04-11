@@ -6,6 +6,11 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  ROOM_LABELS,
+  SLOT_LABELS,
+  SLOT_ACCESS_TIMES,
+} from '@/lib/constants';
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -28,23 +33,7 @@ interface Booking {
   nuki_code_status: string | null;
 }
 
-const ROOM_LABELS = {
-  room1: "Athéna",
-  room2: "Gaïa",
-  large: "Grande salle",
-};
 
-const SLOT_LABELS = {
-  morning: "Matin (7h30-13h)",
-  afternoon: "Après-midi (13h30-20h30)",
-  fullday: "Journée complète (7h30-20h30)",
-};
-
-const SLOT_ACCESS_TIMES = {
-  morning: "7h – 13h30",
-  afternoon: "13h – 21h",
-  fullday: "7h – 21h",
-};
 
 export default function MesReservationsPage() {
   const { user, loading: authLoading } = useAuth();

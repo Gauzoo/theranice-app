@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { generateUniquePinCode, createNukiKeypadCode } from '@/lib/nuki';
+import { provisionNukiKeypadCode } from '@/lib/nuki';
 
 // Désactive le body parser de Next.js pour Stripe webhooks
 export const dynamic = 'force-dynamic';
@@ -115,25 +115,25 @@ export async function POST(request: NextRequest) {
             let nukiCodeStatus = 'none';
 
             try {
-              const pinCode = await generateUniquePinCode(supabase);
               const authName = `Resa ${booking.id.substring(0, 8)} ${session.metadata?.prenom || ''}`.trim();
-              
-              const nukiResult = await createNukiKeypadCode(
+
+              const nukiResult = await provisionNukiKeypadCode(
+                supabase,
                 authName,
-                pinCode,
                 date,
                 slot
               );
 
-              if (nukiResult.success) {
-                accessCode = String(pinCode);
+              if (nukiResult.success && nukiResult.code != null) {
+                accessCode = String(nukiResult.code);
                 nukiAuthId = nukiResult.authId || null;
                 nukiCodeStatus = 'active';
-                console.log(`[Nuki] Code created for booking ${booking.id.substring(0, 8)}...`);
+                console.log(`[Nuki] Code created for booking ${booking.id.substring(0, 8)}... (${nukiResult.attempts} attempt(s))`);
               } else {
                 console.error(`[Nuki] Failed to create code for booking ${booking.id}:`, nukiResult.error);
-                // On sauvegarde quand même le code pour référence, statut = error
-                accessCode = String(pinCode);
+                if (nukiResult.code != null) {
+                  accessCode = String(nukiResult.code);
+                }
                 nukiCodeStatus = 'error';
               }
             } catch (nukiError) {
@@ -277,17 +277,23 @@ export async function POST(request: NextRequest) {
         let nukiCodeStatus = 'none';
 
         try {
-          const pinCode = await generateUniquePinCode(supabase);
           const authName = `Resa ${nom || ''} ${prenom || ''}`.trim().substring(0, 32);
-          
-          const nukiResult = await createNukiKeypadCode(authName, pinCode, date, slot);
 
-          if (nukiResult.success) {
-            accessCode = String(pinCode);
+          const nukiResult = await provisionNukiKeypadCode(
+            supabase,
+            authName,
+            date,
+            slot
+          );
+
+          if (nukiResult.success && nukiResult.code != null) {
+            accessCode = String(nukiResult.code);
             nukiAuthId = nukiResult.authId || null;
             nukiCodeStatus = 'active';
           } else {
-            accessCode = String(pinCode);
+            if (nukiResult.code != null) {
+              accessCode = String(nukiResult.code);
+            }
             nukiCodeStatus = 'error';
           }
         } catch (nukiError) {

@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { deleteNukiKeypadCode } from '@/lib/nuki';
+import { deleteNukiKeypadCode, findNukiAuthIdByAccessCode } from '@/lib/nuki';
+import { checkAdminPermission } from '@/lib/adminAuth';
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    
-    // Vérifie que l'utilisateur est admin
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user || user.email !== 'gauthier.guerin@gmail.com') {
+    const isAdmin = await checkAdminPermission();
+    if (!isAdmin) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
+
+    const supabase = await createClient();
 
     const { bookingId } = await request.json();
     if (!bookingId) {
@@ -20,7 +20,7 @@ export async function DELETE(request: NextRequest) {
     // Récupère la réservation pour vérifier le code Nuki
     const { data: booking, error: fetchError } = await supabase
       .from('bookings')
-      .select('id, nuki_auth_id, nuki_code_status')
+      .select('id, nuki_auth_id, nuki_code_status, access_code')
       .eq('id', bookingId)
       .single();
 
@@ -29,10 +29,23 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Révoque le code Nuki si actif
-    if (booking.nuki_auth_id && booking.nuki_code_status === 'active') {
+    let nukiAuthId = booking.nuki_auth_id as string | null;
+
+    if (!nukiAuthId && booking.nuki_code_status === 'active' && booking.access_code) {
+      nukiAuthId = await findNukiAuthIdByAccessCode(booking.access_code);
+      if (nukiAuthId) {
+        console.log(`Auth ID Nuki résolu via access_code pour réservation supprimée ${bookingId}`);
+      }
+    }
+
+    if (nukiAuthId && booking.nuki_code_status === 'active') {
       try {
-        await deleteNukiKeypadCode(booking.nuki_auth_id);
-        console.log(`Code Nuki révoqué pour la réservation supprimée ${bookingId}`);
+        const revoked = await deleteNukiKeypadCode(nukiAuthId);
+        if (revoked) {
+          console.log(`Code Nuki révoqué pour la réservation supprimée ${bookingId}`);
+        } else {
+          console.error(`Révocation Nuki non confirmée pour réservation ${bookingId}`);
+        }
       } catch (nukiError) {
         console.error(`Erreur révocation code Nuki pour réservation ${bookingId}:`, nukiError);
         // On continue la suppression

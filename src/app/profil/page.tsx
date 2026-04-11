@@ -125,7 +125,7 @@ const STATUS_LABELS: Record<AccountStatus, { label: string; color: string; descr
   rejected: {
     label: "Compte rejeté",
     color: "bg-[#B12F2E] text-white border-[#B12F2E]",
-    description: "Votre compte a été rejeté. Veuillez contacter l'administrateur."
+    description: "Cliquez sur la croix pour re-télécharger votre document."
   }
 };
 
@@ -187,9 +187,15 @@ export default function ProfilPage() {
 
   const pendingDocumentLabels = toDocumentLabels(verificationState.pendingDocuments);
   const rejectedDocumentLabels = toDocumentLabels(verificationState.rejectedDocuments);
+  const fallbackRejectionReasons = [
+    formData.carte_identite_status === 'rejected' ? formData.carte_identite_rejection_notes : '',
+    formData.kbis_status === 'rejected' ? formData.kbis_rejection_notes : '',
+    formData.rc_pro_status === 'rejected' ? formData.rc_pro_rejection_notes : '',
+  ].filter((reason) => reason && reason.trim().length > 0);
+  const rejectionReason = (formData.validation_notes || '').trim() || fallbackRejectionReasons.join('\n');
   const missingRequirementLabels = [
     ...toDocumentLabels(verificationState.missingDocuments),
-    ...(verificationState.hasActivity ? [] : ['Activite exercee']),
+    ...(verificationState.hasActivity ? [] : ['Activité exercée']),
   ];
 
   // Récupère les données de l'utilisateur au chargement
@@ -877,9 +883,11 @@ export default function ProfilPage() {
                   <h3 className="font-semibold text-lg mb-1">
                     Statut du compte : {STATUS_LABELS[formData.account_status].label}
                   </h3>
-                  <p className="text-sm">
-                    {STATUS_LABELS[formData.account_status].description}
-                  </p>
+                  {STATUS_LABELS[formData.account_status].description && (
+                    <p className="text-sm">
+                      {STATUS_LABELS[formData.account_status].description}
+                    </p>
+                  )}
                   {formData.account_status === 'documents_submitted' && pendingDocumentLabels.length > 0 && (
                     <p className="text-sm mt-2 font-medium">
                       Documents en attente : {pendingDocumentLabels.join(', ')}
@@ -887,17 +895,17 @@ export default function ProfilPage() {
                   )}
                   {formData.account_status === 'pending' && missingRequirementLabels.length > 0 && (
                     <p className="text-sm mt-2 font-medium">
-                      Elements manquants : {missingRequirementLabels.join(', ')}
+                      Éléments manquants : {missingRequirementLabels.join(', ')}
                     </p>
                   )}
                   {formData.account_status === 'rejected' && rejectedDocumentLabels.length > 0 && (
                     <p className="text-sm mt-2 font-medium">
-                      Documents refuses : {rejectedDocumentLabels.join(', ')}
+                      {rejectedDocumentLabels.length > 1 ? 'Documents refusés' : 'Document refusé'} : {rejectedDocumentLabels.join(', ')}
                     </p>
                   )}
-                  {formData.account_status === 'rejected' && formData.validation_notes && (
-                    <p className="text-sm mt-2 font-medium">
-                      Note : {formData.validation_notes}
+                  {formData.account_status === 'rejected' && rejectionReason && (
+                    <p className="text-sm mt-2 font-medium whitespace-pre-line">
+                      Raison de l'admin : {rejectionReason}
                     </p>
                   )}
                 </div>
@@ -1065,11 +1073,6 @@ export default function ProfilPage() {
                 </span>
                 {formData.carte_identite_url ? (
                   <>
-                    {formData.carte_identite_rejection_notes && formData.carte_identite_status === 'rejected' && (
-                      <div className="bg-[#B12F2E] rounded p-2 text-xs text-white">
-                        <strong>Refus :</strong> {formData.carte_identite_rejection_notes}
-                      </div>
-                    )}
                     <button
                       type="button"
                       onClick={() => handleOpenDocument('carte')}
@@ -1125,11 +1128,6 @@ export default function ProfilPage() {
                 </span>
                 {formData.kbis_url ? (
                   <>
-                    {formData.kbis_rejection_notes && formData.kbis_status === 'rejected' && (
-                      <div className="bg-[#B12F2E] rounded p-2 text-xs text-white">
-                        <strong>Refus :</strong> {formData.kbis_rejection_notes}
-                      </div>
-                    )}
                     <button
                       type="button"
                       onClick={() => handleOpenDocument('kbis')}
@@ -1185,11 +1183,6 @@ export default function ProfilPage() {
                 </span>
                 {formData.rc_pro_url ? (
                   <>
-                    {formData.rc_pro_rejection_notes && formData.rc_pro_status === 'rejected' && (
-                      <div className="bg-[#B12F2E] rounded p-2 text-xs text-white">
-                        <strong>Refus :</strong> {formData.rc_pro_rejection_notes}
-                      </div>
-                    )}
                     <button
                       type="button"
                       onClick={() => handleOpenDocument('rc_pro')}

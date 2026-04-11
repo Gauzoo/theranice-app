@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { EMAIL_FROM, CONTACT_EMAIL } from '@/lib/constants';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -27,9 +28,10 @@ export async function POST(request: NextRequest) {
     const { userEmail, userName, rejectionNotes } = result.data;
     const safeUserName = escapeHtml(userName);
     const safeRejectionNotes = escapeHtml(rejectionNotes);
+    const rejectionNotesHtml = safeRejectionNotes.replace(/\n/g, '<br />');
 
     const { data, error } = await resend.emails.send({
-      from: 'Theranice <onboarding@resend.dev>',
+      from: EMAIL_FROM,
       to: [userEmail],
       subject: 'Votre demande de compte Theranice',
       html: `
@@ -104,7 +106,7 @@ export async function POST(request: NextRequest) {
 
               <p><strong>Raison du refus :</strong></p>
               <div class="notes-box">
-                <p style="margin: 0;">${safeRejectionNotes}</p>
+                <p style="margin: 0;">${rejectionNotesHtml}</p>
               </div>
 
               <p>Nous vous invitons à :</p>
@@ -116,7 +118,7 @@ export async function POST(request: NextRequest) {
 
               <p>Si vous avez des questions ou besoin d'assistance, n'hésitez pas à nous contacter directement :</p>
               <p style="margin-left: 20px;">
-                📧 Email : <a href="mailto:gauthier.guerin@gmail.com">gauthier.guerin@gmail.com</a>
+                📧 Email : <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>
               </p>
 
               <div style="text-align: center;">

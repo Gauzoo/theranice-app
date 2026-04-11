@@ -2,6 +2,7 @@ import Image from "next/image";
 import { EB_Garamond } from "next/font/google";
 import FAQ from "@/components/FAQ";
 import type { Metadata } from "next";
+import { CONTACT_EMAIL } from '@/lib/constants';
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -141,10 +142,10 @@ export default function FAQPage() {
             <p className="mt-4 text-slate-600">
               Contactez-nous à{" "}
               <a
-                href="mailto:contact@theranice.fr"
+                href={`mailto:${CONTACT_EMAIL}`}
                 className="font-medium text-[#D4A373] hover:underline"
               >
-                contact@theranice.fr
+                {CONTACT_EMAIL}
               </a>{" "}
               ou consultez nos{" "}
               <a

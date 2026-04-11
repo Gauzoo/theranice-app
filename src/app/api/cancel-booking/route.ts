@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { deleteNukiKeypadCode } from '@/lib/nuki';
+import { deleteNukiKeypadCode, findNukiAuthIdByAccessCode } from '@/lib/nuki';
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'gauthier.guerin@gmail.com')
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .split(',')
   .map(email => email.trim())
   .filter(Boolean);
@@ -56,11 +56,24 @@ export async function POST(request: NextRequest) {
 
     // Révoque le code Nuki si actif
     let nukiRevoked = false;
-    if (booking.nuki_auth_id && booking.nuki_code_status === 'active') {
+    let nukiAuthId = booking.nuki_auth_id as string | null;
+
+    if (!nukiAuthId && booking.nuki_code_status === 'active' && booking.access_code) {
+      nukiAuthId = await findNukiAuthIdByAccessCode(booking.access_code);
+      if (nukiAuthId) {
+        console.log(`Auth ID Nuki résolu via access_code pour réservation ${booking.id.substring(0, 8)}...`);
+      }
+    }
+
+    if (nukiAuthId && booking.nuki_code_status === 'active') {
       try {
-        await deleteNukiKeypadCode(booking.nuki_auth_id);
-        nukiRevoked = true;
-        console.log(`Code Nuki révoqué pour la réservation ${booking.id.substring(0, 8)}...`);
+        const revoked = await deleteNukiKeypadCode(nukiAuthId);
+        if (revoked) {
+          nukiRevoked = true;
+          console.log(`Code Nuki révoqué pour la réservation ${booking.id.substring(0, 8)}...`);
+        } else {
+          console.error(`Révocation Nuki non confirmée pour la réservation ${booking.id.substring(0, 8)}...`);
+        }
       } catch (nukiError) {
         console.error(`Erreur révocation code Nuki pour réservation ${booking.id.substring(0, 8)}...:`, nukiError);
         // On continue l'annulation même si le code Nuki n'a pas pu être révoqué
@@ -72,6 +85,7 @@ export async function POST(request: NextRequest) {
       .from('bookings')
       .update({ 
         status: 'cancelled',
+        nuki_auth_id: nukiAuthId ?? booking.nuki_auth_id,
         nuki_code_status: nukiRevoked ? 'revoked' : booking.nuki_code_status === 'active' ? 'revoke_failed' : booking.nuki_code_status,
         cancelled_at: new Date().toISOString(),
         cancelled_by: user.id,

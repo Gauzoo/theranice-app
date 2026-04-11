@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { EMAIL_FROM } from '@/lib/constants';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -32,8 +33,8 @@ export async function POST(request: NextRequest) {
     const safeUserActivity = escapeHtml(userActivity || 'Non renseignée');
 
     const { data, error } = await resend.emails.send({
-      from: 'Theranice <onboarding@resend.dev>',
-      to: ['gauthier.guerin@gmail.com'], // Email de l'admin
+      from: EMAIL_FROM,
+      to: (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean),
       subject: '🔔 Nouveau compte à valider - Theranice',
       html: `
         <!DOCTYPE html>

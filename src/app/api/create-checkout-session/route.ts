@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-
-type Slot = 'morning' | 'afternoon' | 'fullday';
-type Room = 'room1' | 'room2' | 'large';
+import {
+  MORNING_PRICES,
+  AFTERNOON_PRICES,
+  FULLDAY_PRICES,
+  SLOT_LABELS,
+  ROOM_LABELS,
+  SLOT_START_HOURS,
+  getPrice,
+  type Slot,
+  type Room,
+} from '@/lib/constants';
 
 interface CartItem {
   date: string;
@@ -19,30 +27,12 @@ interface CheckoutPayload {
   userId?: string;
 }
 
-const MORNING_PRICES: Record<Room, number> = {
-  room1: 30,
-  room2: 30,
-  large: 70,
-};
 
-const AFTERNOON_PRICES: Record<Room, number> = {
-  room1: 40,
-  room2: 40,
-  large: 70,
-};
-
-const FULLDAY_PRICES: Record<Room, number> = {
-  room1: 70,
-  room2: 70,
-  large: 130,
-};
 
 const STRIPE_EUR_MINIMUM_CENTS = 50;
 
 function getExpectedPrice(item: CartItem): number {
-  if (item.slot === 'fullday') return FULLDAY_PRICES[item.room];
-  if (item.slot === 'morning') return MORNING_PRICES[item.room];
-  return AFTERNOON_PRICES[item.room];
+  return getPrice(item.slot, item.room);
 }
 
 function parseAllowedEmails(rawValue?: string): Set<string> {
@@ -76,12 +66,13 @@ function buildCheckoutUrls(siteUrl: string): { successUrl: string; cancelUrl: st
   const origin = parsedSiteUrl.origin;
 
   const success = new URL('/reservation/success', origin);
-  success.searchParams.set('session_id', '{CHECKOUT_SESSION_ID}');
+  // Ne pas utiliser searchParams.set() — il encode {} en %7B%7D que Stripe ne reconnaît pas
+  const successWithTemplate = success.toString() + '?session_id={CHECKOUT_SESSION_ID}';
 
   const cancel = new URL('/reservation/cancel', origin);
 
   return {
-    successUrl: success.toString(),
+    successUrl: successWithTemplate,
     cancelUrl: cancel.toString(),
     origin,
   };
@@ -214,7 +205,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérification que les créneaux n'ont pas déjà commencé (sécurité côté serveur)
-    const SLOT_START_HOURS: Record<string, number> = { morning: 8, afternoon: 13, fullday: 8 };
     const now = new Date();
     const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
     const todayStr = `${parisTime.getFullYear()}-${String(parisTime.getMonth() + 1).padStart(2, '0')}-${String(parisTime.getDate()).padStart(2, '0')}`;
@@ -222,27 +212,15 @@ export async function POST(request: NextRequest) {
 
     for (const item of cart) {
       if (item.date === todayStr && currentHour >= (SLOT_START_HOURS[item.slot] ?? 0)) {
-        const slotName = item.slot === 'morning' ? 'Matin (8h-12h)' 
-          : item.slot === 'afternoon' ? 'Après-midi (13h-17h)' 
-          : 'Journée complète (8h-17h)';
+        const slotName = SLOT_LABELS[item.slot] || item.slot;
         return NextResponse.json({ 
           error: `Le créneau "${slotName}" du ${item.date} a déjà commencé et ne peut plus être réservé.` 
         }, { status: 400 });
       }
     }
 
-    // Préparation des paramètres
-    const slotLabels: Record<string, string> = {
-      morning: 'Matin (8h-12h)',
-      afternoon: 'Après-midi (13h-17h)',
-      fullday: 'Journée complète (8h-17h)'
-    };
-    
-    const roomLabels: Record<string, string> = {
-      room1: 'Athéna',
-      room2: 'Gaïa',
-      large: 'Grande salle'
-    };
+    const slotLabels = SLOT_LABELS;
+    const roomLabels = ROOM_LABELS;
 
     // Construction de la description du panier pour Stripe
     // Comme on a potentiellement beaucoup d'items, on fait un résumé
@@ -250,7 +228,7 @@ export async function POST(request: NextRequest) {
     let description = `${itemCount} créneau${itemCount > 1 ? 'x' : ''} de réservation`;
     if (itemCount <= 3) {
       description = cart.map((item: any) => 
-        `${item.date} (${slotLabels[item.slot]})`
+        `${item.date} (${slotLabels[item.slot as Slot]})`
       ).join(', ');
     }
 

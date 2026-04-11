@@ -1,5 +1,10 @@
 import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  SLOT_LABELS,
+  ROOM_LABELS,
+  EMAIL_FROM,
+} from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,21 +27,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Labels des créneaux et salles
-    const slotLabels: Record<string, string> = {
-      morning: 'Matin (7h30-13h)',
-      afternoon: 'Après-midi (13h30-20h30)',
-      fullday: 'Journée complète (7h30-20h30)'
-    };
-    const slotLabel = slotLabels[slot] || slot;
-    const roomLabels: Record<string, string> = {
-      room1: 'Athéna',
-      room2: 'Gaïa',
-      large: 'Grande salle'
-    };
-    const roomLabel = roomLabels[room] || room;
+    const slotLabel = SLOT_LABELS[slot as keyof typeof SLOT_LABELS] || slot;
+    const roomLabel = ROOM_LABELS[room as keyof typeof ROOM_LABELS] || room;
 
     const { data, error } = await resend.emails.send({
-      from: 'Theranice <onboarding@resend.dev>', // Domaine de test Resend (gratuit)
+      from: EMAIL_FROM,
       to: [email],
       subject: '🔴 Annulation de votre réservation - Theranice',
       html: `

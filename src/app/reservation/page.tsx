@@ -9,6 +9,15 @@ import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import { useAuth } from "@/contexts/AuthContext";
 import {
+  MORNING_PRICES,
+  AFTERNOON_PRICES,
+  FULLDAY_PRICES,
+  ROOM_LABELS,
+  SLOT_LABELS,
+  type Slot,
+  type Room,
+} from '@/lib/constants';
+import {
   deriveProfileVerificationState,
   toDocumentLabels,
   type AccountStatus,
@@ -18,9 +27,6 @@ const garamond = EB_Garamond({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
-
-type Room = "room1" | "room2" | "large";
-type Slot = "morning" | "afternoon" | "fullday";
 
 interface Booking {
   date: string;
@@ -37,29 +43,7 @@ interface CartItem {
   price: number;
 }
 
-const MORNING_PRICES = {
-  room1: 30,
-  room2: 30,
-  large: 70,
-};
 
-const AFTERNOON_PRICES = {
-  room1: 40,
-  room2: 40,
-  large: 70,
-};
-
-const FULLDAY_PRICES = {
-  room1: 70,
-  room2: 70,
-  large: 130,
-};
-
-const ROOM_LABELS = {
-  room1: "Athéna",
-  room2: "Gaïa",
-  large: "Grande salle",
-};
 
 const ROOM_IMAGES: Record<string, string> = {
   room1: "/photos/1.jpg",

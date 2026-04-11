@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CONTACT_EMAIL, BUSINESS_ADDRESS, BUSINESS_CITY, BUSINESS_POSTAL_CODE } from '@/lib/constants';
 
 export default function SiteFooter() {
   return (
@@ -18,12 +19,12 @@ export default function SiteFooter() {
             <h3 className="text-lg font-semibold text-[#D4A373] mb-4">Contact</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="mailto:contact@theranice.fr" className="hover:text-[#D4A373] transition-colors">
-                  contact@theranice.fr
+                <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-[#D4A373] transition-colors">
+                  {CONTACT_EMAIL}
                 </a>
               </li>
               <li className="text-[#D4A373]">
-                19 rue Michelet, Nice
+                {BUSINESS_ADDRESS}, {BUSINESS_POSTAL_CODE} {BUSINESS_CITY}
               </li>
             </ul>
           </div>

@@ -1,19 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { deleteNukiKeypadCode } from '@/lib/nuki';
-
-// Cette route est appelée par Vercel Cron toutes les heures.
-// Elle révoque les codes Nuki des réservations dont le créneau est terminé.
-// Puisque l'abonnement Nuki B2C INACTIVE ne supporte pas les restrictions
-// temporelles natives (allowedFromDate, allowedUntilDate, etc. sont ignorés),
-// cette suppression logicielle est le seul moyen de limiter la validité des codes.
-
-// Heure de fin par créneau (avec 30 min de marge)
-const SLOT_END_HOURS: Record<string, number> = {
-  morning: 14,    // matin finit à 13h → on révoque à 14h
-  afternoon: 22,  // après-midi finit à 20h30 → on révoque à 22h
-  fullday: 22,    // journée finit à 20h30 → on révoque à 22h
-};
+import { deleteNukiKeypadCode, findNukiAuthIdByAccessCode } from '@/lib/nuki';
+import { SLOT_END_HOURS, type Slot } from '@/lib/constants';
 
 export async function GET(request: Request) {
   try {
@@ -48,9 +36,8 @@ export async function GET(request: Request) {
     const { data: activeBookings, error: fetchError } = await supabase
       .from('bookings')
       .select('id, date, slot, nuki_auth_id, nuki_code_status, access_code')
-      .eq('nuki_code_status', 'active')
-      .lte('date', todayStr) // date ≤ aujourd'hui
-      .not('nuki_auth_id', 'is', null);
+      .in('nuki_code_status', ['active', 'revoke_failed'])
+      .lte('date', todayStr); // date ≤ aujourd'hui
 
     if (fetchError) {
       console.error('Erreur récupération réservations:', fetchError);
@@ -68,7 +55,7 @@ export async function GET(request: Request) {
       
       // Si c'est aujourd'hui, vérifie l'heure de fin du créneau
       if (booking.date === todayStr) {
-        const slotEndHour = SLOT_END_HOURS[booking.slot] || 18;
+        const slotEndHour = SLOT_END_HOURS[booking.slot as Slot] || 18;
         return currentHour >= slotEndHour;
       }
       
@@ -84,13 +71,36 @@ export async function GET(request: Request) {
     const results: Array<{ id: string; success: boolean; error?: string }> = [];
 
     for (const booking of expiredBookings) {
+      let nukiAuthId = booking.nuki_auth_id as string | null;
+
+      if (!nukiAuthId && booking.access_code) {
+        nukiAuthId = await findNukiAuthIdByAccessCode(booking.access_code);
+      }
+
+      if (!nukiAuthId) {
+        await supabase
+          .from('bookings')
+          .update({ nuki_code_status: 'revoke_failed' })
+          .eq('id', booking.id);
+
+        results.push({
+          id: booking.id,
+          success: false,
+          error: 'nuki_auth_id introuvable pour cette réservation',
+        });
+        continue;
+      }
+
       try {
-        await deleteNukiKeypadCode(booking.nuki_auth_id!);
+        const revoked = await deleteNukiKeypadCode(nukiAuthId);
+        if (!revoked) {
+          throw new Error('Suppression Nuki non confirmée');
+        }
         
         // Met à jour le statut du code
         await supabase
           .from('bookings')
-          .update({ nuki_code_status: 'revoked' })
+          .update({ nuki_code_status: 'revoked', nuki_auth_id: nukiAuthId })
           .eq('id', booking.id);
 
         results.push({ id: booking.id, success: true });
@@ -101,7 +111,7 @@ export async function GET(request: Request) {
         // Marque l'échec mais ne bloque pas les autres
         await supabase
           .from('bookings')
-          .update({ nuki_code_status: 'revoke_failed' })
+          .update({ nuki_code_status: 'revoke_failed', nuki_auth_id: nukiAuthId })
           .eq('id', booking.id);
 
         results.push({ 

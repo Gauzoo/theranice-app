@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 
 // Liste des emails administrateurs (configurable via variable d'environnement)
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'gauthier.guerin@gmail.com')
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .split(',')
   .map(email => email.trim().toLowerCase())
   .filter(Boolean);

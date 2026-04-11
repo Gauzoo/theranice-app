@@ -2,19 +2,15 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { generateInvoicePDF } from '@/lib/invoice';
-
-// Heure de fin par créneau (identique à cleanup-nuki-codes)
-const SLOT_END_HOURS: Record<string, number> = {
-  morning: 14,
-  afternoon: 22,
-  fullday: 18,
-};
-
-const ROOM_LABELS: Record<string, string> = {
-  room1: 'Salon Athéna',
-  room2: 'Salle Gaïa',
-  large: 'Grande salle',
-};
+import {
+  SLOT_END_HOURS,
+  ROOM_LABELS_FORMAL,
+  EMAIL_FROM,
+  BUSINESS_ADDRESS,
+  BUSINESS_POSTAL_CODE,
+  BUSINESS_CITY,
+  type Slot,
+} from '@/lib/constants';
 
 export async function GET(request: Request) {
   try {
@@ -67,7 +63,7 @@ export async function GET(request: Request) {
     const eligibleBookings = bookings.filter((booking) => {
       if (booking.date < todayStr) return true; // Dates passées
       if (booking.date === todayStr) {
-        const slotEndHour = SLOT_END_HOURS[booking.slot] || 18;
+        const slotEndHour = SLOT_END_HOURS[booking.slot as Slot] || 18;
         return currentHour >= slotEndHour;
       }
       return false;
@@ -181,7 +177,7 @@ export async function GET(request: Request) {
 
         // Envoyer l'email avec le PDF
         if (resend && profile.email) {
-          const roomLabel = ROOM_LABELS[booking.room] || booking.room;
+          const roomLabel = ROOM_LABELS_FORMAL[booking.room as keyof typeof ROOM_LABELS_FORMAL] || booking.room;
           const prestationDate = new Date(booking.date + 'T00:00:00');
           const formattedDate = prestationDate.toLocaleDateString('fr-FR', {
             weekday: 'long',
@@ -196,7 +192,7 @@ export async function GET(request: Request) {
           });
 
           await resend.emails.send({
-            from: 'Theranice <onboarding@resend.dev>',
+            from: EMAIL_FROM,
             to: [profile.email],
             subject: `Votre facture – THÉRANICE`,
             attachments: [
@@ -240,8 +236,8 @@ export async function GET(request: Request) {
                     </p>
                     
                     <p style="font-size: 12px; color: #999; margin-top: 20px;">
-                      19 rue Michelet<br>
-                      06100 Nice
+                      ${BUSINESS_ADDRESS}<br>
+                      ${BUSINESS_POSTAL_CODE} ${BUSINESS_CITY}
                     </p>
                   </div>
                   

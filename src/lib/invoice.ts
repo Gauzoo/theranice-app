@@ -1,6 +1,12 @@
 import { jsPDF } from 'jspdf';
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  ROOM_LABELS_FORMAL,
+  SLOT_LABELS_SHORT,
+  BUSINESS_LEGAL_NAME,
+  BUSINESS_FULL_ADDRESS,
+} from '@/lib/constants';
 
 interface InvoiceData {
   invoiceNumber: string;
@@ -16,17 +22,7 @@ interface InvoiceData {
   amountHT: number;
 }
 
-const ROOM_LABELS: Record<string, string> = {
-  room1: 'Salon Athéna',
-  room2: 'Salle Gaïa',
-  large: 'Grande salle',
-};
 
-const SLOT_LABELS: Record<string, string> = {
-  morning: '7h30 – 13h',
-  afternoon: '13h30 – 20h30',
-  fullday: '7h30 – 20h30',
-};
 
 function formatDateFR(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
@@ -142,11 +138,11 @@ export function generateInvoicePDF(data: InvoiceData): Buffer {
   // --------------- EN-TÊTE SOCIÉTÉ ---------------
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.text('SCI THERA NICE', pageWidth / 2, y, { align: 'center' });
+  doc.text(BUSINESS_LEGAL_NAME, pageWidth / 2, y, { align: 'center' });
   y += 6;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  y = writeLine(doc, pageWidth / 2, y, '19 rue Michelet – 06100 Nice', 5, { align: 'center' });
+  y = writeLine(doc, pageWidth / 2, y, BUSINESS_FULL_ADDRESS, 5, { align: 'center' });
   doc.setFontSize(9);
   doc.setTextColor(120);
   doc.text('TVA non applicable – art. 293 B du CGI', pageWidth / 2, y, { align: 'center' });
@@ -205,8 +201,8 @@ export function generateInvoicePDF(data: InvoiceData): Buffer {
   y += 10;
 
   // --------------- DÉTAIL DE LA PRESTATION ---------------
-  const roomLabel = ROOM_LABELS[data.room] || data.room;
-  const slotLabel = SLOT_LABELS[data.slot] || data.slot;
+  const roomLabel = ROOM_LABELS_FORMAL[data.room as keyof typeof ROOM_LABELS_FORMAL] || data.room;
+  const slotLabel = SLOT_LABELS_SHORT[data.slot as keyof typeof SLOT_LABELS_SHORT] || data.slot;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);

@@ -3,6 +3,7 @@ import { Poppins } from "next/font/google";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { BUSINESS_LEGAL_NAME, BUSINESS_NAME, BUSINESS_ADDRESS, BUSINESS_CITY, BUSINESS_POSTAL_CODE, BUSINESS_REGION, BUSINESS_COUNTRY, BUSINESS_PHONE, CONTACT_EMAIL, SITE_URL } from '@/lib/constants';
 import "./globals.css";
 
 const poppins = Poppins({
@@ -62,20 +63,20 @@ export default function RootLayout({
   const organizationJsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "@id": "https://theranice.fr/#organization",
-    name: "Théranice",
-    legalName: "SCI THERA NICE",
-    url: "https://theranice.fr",
-    logo: "https://theranice.fr/logo6sombre.png",
-    email: "contact@theranice.fr",
-    telephone: "+33 6 65 46 26 42",
+    "@id": `${SITE_URL}/#organization`,
+    name: BUSINESS_NAME,
+    legalName: BUSINESS_LEGAL_NAME,
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo6sombre.png`,
+    email: CONTACT_EMAIL,
+    telephone: BUSINESS_PHONE,
     address: {
       "@type": "PostalAddress",
-      streetAddress: "19 rue Michelet",
-      addressLocality: "Nice",
-      postalCode: "06100",
-      addressRegion: "Provence-Alpes-Côte d'Azur",
-      addressCountry: "FR",
+      streetAddress: BUSINESS_ADDRESS,
+      addressLocality: BUSINESS_CITY,
+      postalCode: BUSINESS_POSTAL_CODE,
+      addressRegion: BUSINESS_REGION,
+      addressCountry: BUSINESS_COUNTRY,
     },
   };
 

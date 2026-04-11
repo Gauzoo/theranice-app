@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { EB_Garamond } from "next/font/google";
+import { BUSINESS_LEGAL_NAME, BUSINESS_ADDRESS, BUSINESS_POSTAL_CODE, BUSINESS_CITY, BUSINESS_COUNTRY } from '@/lib/constants';
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -38,8 +39,8 @@ export default function ConditionsGeneralesPage() {
           <div className="prose prose-slate max-w-none">
             <p className="mb-2 text-lg font-semibold">THÉRANICE</p>
             <p className="mb-8 text-slate-600">
-              Exploité par SCI THERA NICE<br />
-              19 rue Michelet – 06100 Nice
+              Exploité par {BUSINESS_LEGAL_NAME}<br />
+              {BUSINESS_ADDRESS} – {BUSINESS_POSTAL_CODE} {BUSINESS_CITY}
             </p>
 
             <h2 className={`${garamond.className} mb-4 text-3xl font-semibold text-[#D4A373]`}>
@@ -49,9 +50,9 @@ export default function ConditionsGeneralesPage() {
               Les espaces professionnels commercialisés sous le nom THÉRANICE sont exploités par :
             </p>
             <p className="mb-6 border-l-4 border-[#D4A373]/30 pl-4">
-              <strong>SCI THERA NICE</strong><br />
-              19 rue Michelet<br />
-              06100 Nice – France
+              <strong>{BUSINESS_LEGAL_NAME}</strong><br />
+              {BUSINESS_ADDRESS}<br />
+              {BUSINESS_POSTAL_CODE} {BUSINESS_CITY} – {BUSINESS_COUNTRY === 'FR' ? 'France' : BUSINESS_COUNTRY}
             </p>
             <p className="mb-6">Ci-après dénommée « l&apos;Exploitant ».</p>
 
@@ -59,7 +60,7 @@ export default function ConditionsGeneralesPage() {
               ▸ Article 2 – Objet
             </h2>
             <p className="mb-6">
-              Les présentes Conditions Générales de Mise à Disposition (CGMD) ont pour objet de définir les modalités de réservation et d&apos;utilisation ponctuelle des espaces professionnels équipés situés au 19 rue Michelet – 06100 Nice.
+              Les présentes Conditions Générales de Mise à Disposition (CGMD) ont pour objet de définir les modalités de réservation et d&apos;utilisation ponctuelle des espaces professionnels équipés situés au {BUSINESS_ADDRESS} – {BUSINESS_POSTAL_CODE} {BUSINESS_CITY}.
             </p>
             <p className="mb-6">
               Toute réservation implique l&apos;acceptation pleine et entière des présentes conditions ainsi que du Règlement Intérieur.
@@ -226,7 +227,7 @@ export default function ConditionsGeneralesPage() {
               Dans le cadre de son engagement sociétal, THÉRANICE s&apos;engage à reverser la somme de 1 euro par réservation confirmée à la Ligue contre le Cancer.
             </p>
             <p className="mb-4">
-              Ce versement est effectué par la SCI THERA NICE à titre volontaire et indépendant.
+              Ce versement est effectué par la {BUSINESS_LEGAL_NAME} à titre volontaire et indépendant.
             </p>
             <p className="mb-4">
               Il ne constitue pas un don effectué par le professionnel utilisateur et ne donne lieu à aucun reçu fiscal individuel.

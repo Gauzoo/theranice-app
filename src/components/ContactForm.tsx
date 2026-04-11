@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from "react";
+import { CONTACT_EMAIL } from '@/lib/constants';
 
 export default function ContactForm() {
   const [formData, setFormData] = useState({
@@ -48,7 +49,7 @@ export default function ContactForm() {
       )}
       {status === 'error' && (
         <div className="border border-red-200 bg-red-50 px-5 py-4 text-red-800">
-          Une erreur est survenue. Veuillez réessayer ou nous écrire directement à contact@theranice.fr.
+          Une erreur est survenue. Veuillez réessayer ou nous écrire directement à {CONTACT_EMAIL}.
         </div>
       )}
       <div className="grid gap-6 md:grid-cols-2">

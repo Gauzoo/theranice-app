@@ -1,6 +1,17 @@
 import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
 import { formatPinCode } from '@/lib/nuki';
+import {
+  SLOT_LABELS,
+  ROOM_LABELS_FORMAL,
+  SLOT_ACCESS_TIMES,
+  CONTACT_EMAIL,
+  EMAIL_FROM,
+  BUSINESS_LEGAL_NAME,
+  BUSINESS_ADDRESS,
+  BUSINESS_POSTAL_CODE,
+  BUSINESS_CITY,
+} from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,33 +34,18 @@ export async function POST(request: NextRequest) {
     });
 
     // Labels des créneaux et salles
-    const slotLabels: Record<string, string> = {
-      morning: 'Matin (7h30 – 13h)',
-      afternoon: 'Après-midi (13h30 – 20h30)',
-      fullday: 'Journée complète (7h30 – 20h30)'
-    };
-    const slotLabel = slotLabels[slot] || slot;
-    const roomLabels: Record<string, string> = {
-      room1: 'Salon Athéna',
-      room2: 'Salle Gaïa',
-      large: 'Grande salle'
-    };
-    const roomLabel = roomLabels[room] || room;
+    const slotLabel = SLOT_LABELS[slot as keyof typeof SLOT_LABELS] || slot;
+    const roomLabel = ROOM_LABELS_FORMAL[room as keyof typeof ROOM_LABELS_FORMAL] || room;
 
     // Horaires d'accès par créneau (avec 30 min de marge)
-    const slotAccessTimes: Record<string, string> = {
-      morning: '7h – 13h30',
-      afternoon: '13h – 21h',
-      fullday: '7h – 21h',
-    };
-    const accessTimeLabel = slotAccessTimes[slot] || '';
+    const accessTimeLabel = SLOT_ACCESS_TIMES[slot as keyof typeof SLOT_ACCESS_TIMES] || '';
 
     // Utilise le code réel Nuki passé par le webhook, ou fallback
     const displayCode = accessCode ? formatPinCode(accessCode) : null;
     const codeAvailable = !!accessCode;
 
     const { data, error } = await resend.emails.send({
-      from: 'Theranice <onboarding@resend.dev>',
+      from: EMAIL_FROM,
       to: [email],
       subject: 'Confirmation de votre réservation – THÉRANICE',
       html: `
@@ -133,7 +129,7 @@ export async function POST(request: NextRequest) {
               </p>
               
               <p style="font-size: 13px; color: #666;">
-                Dans le cadre de l'engagement solidaire de THÉRANICE, 1 € sera reversé par la SCI THERA NICE à la Ligue contre le Cancer au titre de cette réservation.
+                Dans le cadre de l'engagement solidaire de THÉRANICE, 1 € sera reversé par la ${BUSINESS_LEGAL_NAME} à la Ligue contre le Cancer au titre de cette réservation.
               </p>
               
               <p style="font-size: 13px; color: #999; margin-top: 20px;">
@@ -157,8 +153,8 @@ export async function POST(request: NextRequest) {
               </p>
               
               <p style="font-size: 12px; color: #999; margin-top: 20px;">
-                📍 19 rue Michelet, 06100 Nice<br>
-                ✉️ contact@theranice.fr
+                📍 ${BUSINESS_ADDRESS}, ${BUSINESS_POSTAL_CODE} ${BUSINESS_CITY}<br>
+                ✉️ ${CONTACT_EMAIL}
               </p>
             </div>
             

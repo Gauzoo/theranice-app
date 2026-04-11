@@ -6,7 +6,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
 
   const rawEnv = process.env.ADMIN_EMAILS || '(not set — fallback used)';
-  const adminEmails = (process.env.ADMIN_EMAILS || 'gauthier.guerin@gmail.com')
+  const adminEmails = (process.env.ADMIN_EMAILS || '')
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);

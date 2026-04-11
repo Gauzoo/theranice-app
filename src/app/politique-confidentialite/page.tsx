@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { EB_Garamond } from "next/font/google";
+import { CONTACT_EMAIL, BUSINESS_LEGAL_NAME, BUSINESS_ADDRESS, BUSINESS_POSTAL_CODE, BUSINESS_CITY, BUSINESS_COUNTRY } from '@/lib/constants';
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -43,12 +44,12 @@ export default function PolitiqueConfidentialitePage() {
             </h2>
             <p className="mb-2">Le responsable du traitement des données est :</p>
             <p className="mb-6 pl-4 border-l-4 border-[#D4A373]/30">
-              <strong>SCI THERA NICE</strong><br />
-              19 rue Michelet<br />
-              06100 Nice – France<br />
+              <strong>{BUSINESS_LEGAL_NAME}</strong><br />
+              {BUSINESS_ADDRESS}<br />
+              {BUSINESS_POSTAL_CODE} {BUSINESS_CITY} – {BUSINESS_COUNTRY === 'FR' ? 'France' : BUSINESS_COUNTRY}<br />
               Représentée par ses gérants en exercice<br />
               <br />
-              <strong>Email de contact :</strong> contact@theranice.fr
+              <strong>Email de contact :</strong> {CONTACT_EMAIL}
             </p>
 
             {/* 2. Données collectées */}
@@ -122,7 +123,7 @@ export default function PolitiqueConfidentialitePage() {
             </h2>
             <p className="mb-4">Les données sont exclusivement destinées :</p>
             <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li>À la SCI THERA NICE</li>
+              <li>À la {BUSINESS_LEGAL_NAME}</li>
               <li>Aux prestataires techniques nécessaires au fonctionnement du site (hébergeur, solution de paiement)</li>
             </ul>
             <p className="mb-2">Le site est hébergé par <strong>Vercel</strong>.</p>
@@ -167,7 +168,7 @@ export default function PolitiqueConfidentialitePage() {
               <li>D&apos;un droit à la limitation du traitement</li>
               <li>D&apos;un droit à la portabilité</li>
             </ul>
-            <p className="mb-4">Toute demande peut être adressée à : <strong>contact@theranice.fr</strong></p>
+            <p className="mb-4">Toute demande peut être adressée à : <strong>{CONTACT_EMAIL}</strong></p>
             <p className="mb-2">Une réclamation peut être introduite auprès de :</p>
             <p className="mb-6 pl-4 border-l-4 border-[#D4A373]/30">
               <strong>Commission nationale de l&apos;informatique et des libertés (CNIL)</strong><br />
