@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
               <p style="font-size: 14px; color: #666;">
                 <strong>📍 Adresse :</strong> [Votre adresse à Nice]<br>
                 <strong>📞 Contact :</strong> [Votre numéro de téléphone]<br>
-                <strong>✉️ Email :</strong> contact@theranice.com
+                <strong>✉️ Email :</strong> contact@theranice.fr
               </p>
             </div>
             
