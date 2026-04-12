@@ -46,7 +46,7 @@ interface CartItem {
 
 
 const ROOM_IMAGES: Record<string, string> = {
-  room1: "/photos/1.jpg",
+  room1: "/photos/athena.jpg",
   room2: "/photos/2.jpg",
 };
 

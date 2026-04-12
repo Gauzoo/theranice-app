@@ -14,7 +14,7 @@ const garamond = EB_Garamond({
 const spaces = [
   {
     name: "Salon Athéna",
-    images: ["/photos/1.jpg"],
+    images: ["/photos/athena.jpg"],
     description:
       "Un espace lumineux et structurant, idéal pour les consultations individuelles.",
     details:
