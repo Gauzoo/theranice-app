@@ -94,32 +94,6 @@ export default function MesReservationsPage() {
       if (!response.ok) {
         alert(result.error || "Erreur lors de l'annulation");
       } else {
-        // Récupère les infos pour l'email d'annulation
-        const supabase = createClient();
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('nom, prenom')
-          .eq('id', user?.id)
-          .single();
-
-        // Envoie l'email d'annulation
-        try {
-          await fetch('/api/send-cancellation', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: user?.email,
-              nom: profile?.nom || '',
-              prenom: profile?.prenom || '',
-              date: result.booking?.date,
-              slot: result.booking?.slot,
-              room: result.booking?.room,
-            })
-          });
-        } catch (emailError) {
-          console.error('Erreur envoi email:', emailError);
-        }
-
         // Rafraîchir la liste
         if (user) {
           fetchBookings(user.id);

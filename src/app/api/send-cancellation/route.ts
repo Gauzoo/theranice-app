@@ -1,13 +1,37 @@
 import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import {
   SLOT_LABELS,
   ROOM_LABELS,
   EMAIL_FROM,
 } from '@/lib/constants';
+import { isInternalApiRequest } from '@/lib/internalApiAuth';
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+const schema = z.object({
+  email: z.string().email().max(320),
+  nom: z.string().max(200).optional(),
+  prenom: z.string().max(200).optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  slot: z.enum(['morning', 'afternoon', 'fullday']),
+  room: z.enum(['room1', 'room2', 'large']),
+});
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isInternalApiRequest(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Vérifie que la clé API est configurée
     if (!process.env.RESEND_API_KEY) {
       console.warn('RESEND_API_KEY not configured');
@@ -15,7 +39,15 @@ export async function POST(request: NextRequest) {
     }
 
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const { email, nom, prenom, date, slot, room } = await request.json();
+    const body = await request.json();
+    const result = schema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json({ error: 'Données invalides' }, { status: 400 });
+    }
+
+    const { email, nom, prenom, date, slot, room } = result.data;
+    const safeNom = escapeHtml(nom || '');
+    const safePrenom = escapeHtml(prenom || '');
 
     // Formatage de la date
     const bookingDate = new Date(date + 'T00:00:00');
@@ -109,7 +141,7 @@ export async function POST(request: NextRequest) {
             </div>
             
             <div class="content">
-              <p>Bonjour ${prenom} ${nom},</p>
+              <p>Bonjour ${safePrenom} ${safeNom},</p>
               
               <p>Votre réservation a bien été annulée comme demandé.</p>
               

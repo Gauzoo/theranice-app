@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermission } from '@/lib/adminAuth';
+import { getInternalApiHeaders } from '@/lib/internalApiAuth';
 import {
   type AccountStatus,
   type DocumentType,
@@ -89,9 +90,13 @@ async function sendAccountDecisionEmail(
       };
 
   try {
+    const internalApiHeaders = getInternalApiHeaders();
     const response = await fetch(new URL(endpoint, request.nextUrl.origin), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...internalApiHeaders,
+      },
       body: JSON.stringify(payload),
     });
 

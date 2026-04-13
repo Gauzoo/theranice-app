@@ -15,9 +15,11 @@ import {
   ROOM_LABELS,
   SLOT_LABELS,
   SLOT_START_HOURS,
+  PENDING_PAYMENT_TTL_MINUTES,
   type Slot,
   type Room,
 } from '@/lib/constants';
+import { isSlotAvailableWithGlobalExclusion } from '@/lib/availability';
 import {
   deriveProfileVerificationState,
   toDocumentLabels,
@@ -33,6 +35,8 @@ interface Booking {
   date: string;
   slot: Slot;
   room: Room;
+  status?: string;
+  created_at?: string | null;
 }
 
 interface CartItem {
@@ -110,7 +114,7 @@ export default function ReservationPage() {
     const supabase = createClient();
     const { data } = await supabase
       .from('bookings')
-      .select('date, slot, room')
+      .select('date, slot, room, status, created_at')
       .in('status', ['confirmed', 'pending_payment']);
     
     if (data) {
@@ -123,34 +127,43 @@ export default function ReservationPage() {
     fetchBookings();
   }, []);
 
+  const isPendingBookingActive = (createdAt: string | null | undefined): boolean => {
+    if (!createdAt) return true;
+
+    const createdAtMs = Date.parse(createdAt);
+    if (Number.isNaN(createdAtMs)) return true;
+
+    const pendingCutoffMs = Date.now() - (PENDING_PAYMENT_TTL_MINUTES * 60 * 1000);
+    return createdAtMs >= pendingCutoffMs;
+  };
+
   // Vérifie si un créneau est disponible
-  // TEMPORAIRE : exclusion mutuelle — si n'importe quelle salle est réservée pour un créneau, toutes sont bloquées
-  const isSlotAvailable = (date: Date, slot: Slot, room: Room): boolean => {
+  // Règle métier unique: exclusion globale par date/créneau
+  const isSlotAvailable = (date: Date, slot: Slot, _room: Room): boolean => {
     // Utilise la date locale au lieu de UTC
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
     
-    // Trouve toutes les réservations pour cette date
-    const bookingsForDate = existingBookings.filter(b => b.date === dateStr);
+    // Trouve les réservations bloquantes pour cette date
+    const bookingsForDate = existingBookings.filter((booking) => {
+      if (booking.date !== dateStr) {
+        return false;
+      }
 
-    // Si on veut réserver la journée complète
-    if (slot === 'fullday') {
-      // Exclusion mutuelle : si n'importe quelle réservation existe pour cette date, c'est bloqué
-      return bookingsForDate.length === 0;
-    }
+      if (booking.status === 'confirmed') {
+        return true;
+      }
 
-    // Si on veut réserver matin ou après-midi
-    // Vérifie d'abord s'il y a une réservation journée (n'importe quelle salle)
-    const anyFulldayBooked = bookingsForDate.some(b => b.slot === 'fullday');
-    if (anyFulldayBooked) {
+      if (booking.status === 'pending_payment') {
+        return isPendingBookingActive(booking.created_at);
+      }
+
       return false;
-    }
+    });
 
-    // Exclusion mutuelle : si n'importe quelle salle est réservée pour ce créneau, tout est bloqué
-    const anyBookingForSlot = bookingsForDate.some(b => b.slot === slot);
-    return !anyBookingForSlot;
+    return isSlotAvailableWithGlobalExclusion(bookingsForDate, slot);
   };
 
   // Vérifie si une salle spécifique est disponible pour les dates sélectionnées (tous créneaux)
@@ -176,16 +189,7 @@ export default function ReservationPage() {
       
       if (isToday) {
         const currentHour = now.getHours();
-        // Bloque le matin si le créneau a déjà commencé (7h30)
-        if (slot === 'morning' && currentHour >= 8) {
-          return false;
-        }
-        // Bloque l'après-midi si le créneau a déjà commencé (13h30)
-        if (slot === 'afternoon' && currentHour >= 14) {
-          return false;
-        }
-        // Bloque la journée complète si le créneau a déjà commencé (7h30)
-        if (slot === 'fullday' && currentHour >= 8) {
+        if (currentHour >= (SLOT_START_HOURS[slot] ?? 0)) {
           return false;
         }
       }
@@ -202,8 +206,8 @@ export default function ReservationPage() {
   };
 
   // Vérifie si la sélection est en conflit avec le panier
-  // TEMPORAIRE : exclusion mutuelle — si n'importe quelle salle est dans le panier pour ce créneau, tout est bloqué
-  const isSelectionInCart = (date: Date, slot: Slot, room: Room): boolean => {
+  // Exclusion globale: si un créneau est dans le panier, il bloque ce créneau pour toutes les salles
+  const isSelectionInCart = (date: Date, slot: Slot, _room: Room): boolean => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');

@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 import {
-  MORNING_PRICES,
-  AFTERNOON_PRICES,
-  FULLDAY_PRICES,
   SLOT_LABELS,
-  ROOM_LABELS,
   SLOT_START_HOURS,
+  PENDING_PAYMENT_TTL_MINUTES,
   getPrice,
   type Slot,
   type Room,
 } from '@/lib/constants';
+import { isSlotAvailableWithGlobalExclusion } from '@/lib/availability';
 
 interface CartItem {
   date: string;
@@ -27,12 +26,31 @@ interface CheckoutPayload {
   userId?: string;
 }
 
+type AvailabilityBookingRow = {
+  slot: string;
+  status: string;
+  created_at: string | null;
+};
+
 
 
 const STRIPE_EUR_MINIMUM_CENTS = 50;
 
 function getExpectedPrice(item: CartItem): number {
   return getPrice(item.slot, item.room);
+}
+
+function isPendingPaymentActive(createdAt: string | null | undefined, pendingCutoffMs: number): boolean {
+  if (!createdAt) {
+    return true;
+  }
+
+  const parsed = Date.parse(createdAt);
+  if (Number.isNaN(parsed)) {
+    return true;
+  }
+
+  return parsed >= pendingCutoffMs;
 }
 
 function parseAllowedEmails(rawValue?: string): Set<string> {
@@ -142,64 +160,93 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const authSupabase = await createServerClient();
+    const {
+      data: { user: authUser },
+      error: authError,
+    } = await authSupabase.auth.getUser();
+
+    if (authError || !authUser) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    }
+
     const stripe = new Stripe(stripeSecretKey);
-    const supabase = createClient(
+    const supabase = createServiceClient(
       supabaseUrl,
       supabaseServiceKey
     );
 
     const { cart, email, nom, prenom, userId } = await request.json() as CheckoutPayload;
+    const resolvedUserId = authUser.id;
+    const resolvedEmail = authUser.email?.trim().toLowerCase() || email?.trim().toLowerCase();
+
+    if (userId && userId !== resolvedUserId) {
+      return NextResponse.json({ error: 'Utilisateur invalide' }, { status: 403 });
+    }
+
+    if (!resolvedEmail) {
+      return NextResponse.json({ error: 'Email utilisateur introuvable' }, { status: 400 });
+    }
+
+    const { data: profileIdentity } = await supabase
+      .from('profiles')
+      .select('nom, prenom')
+      .eq('id', resolvedUserId)
+      .maybeSingle();
+
+    const resolvedNom = profileIdentity?.nom?.trim() || nom || '';
+    const resolvedPrenom = profileIdentity?.prenom?.trim() || prenom || '';
 
     // Validation du panier
     if (!cart || !Array.isArray(cart) || cart.length === 0) {
       return NextResponse.json({ error: 'Le panier est vide' }, { status: 400 });
     }
 
+    const pendingCutoffMs = Date.now() - (PENDING_PAYMENT_TTL_MINUTES * 60 * 1000);
+    const pendingCutoffIso = new Date(pendingCutoffMs).toISOString();
+
+    const { error: pendingCleanupError } = await supabase
+      .from('bookings')
+      .update({ status: 'cancelled' })
+      .eq('status', 'pending_payment')
+      .lt('created_at', pendingCutoffIso);
+
+    if (pendingCleanupError) {
+      console.warn('Could not cleanup stale pending bookings before checkout:', pendingCleanupError.message);
+    }
+
     // 1. Vérification de la disponibilité pour tous les items du panier
     for (const item of cart) {
-      const { date, slot, room } = item;
+      const { date, slot } = item;
       
       const { data: existingBookings } = await supabase
         .from('bookings')
-        .select('slot, room')
+        .select('slot, status, created_at')
         .eq('date', date)
-        .eq('status', 'confirmed');
+        .in('status', ['confirmed', 'pending_payment']);
 
-      if (existingBookings) {
-        let isAvailable = true;
-        const bookings = existingBookings as any[];
+      if (existingBookings && existingBookings.length > 0) {
+        const blockingBookings = (existingBookings as AvailabilityBookingRow[]).filter((booking) => {
+          if (booking.status === 'confirmed') {
+            return true;
+          }
 
-        if (slot === 'fullday') {
-          if (room === 'large') {
-            isAvailable = bookings.length === 0;
-          } else {
-            const roomBooked = bookings.some(b => b.room === room);
-            const largeBooked = bookings.some(b => b.room === 'large');
-            isAvailable = !roomBooked && !largeBooked;
+          if (booking.status === 'pending_payment') {
+            return isPendingPaymentActive(booking.created_at, pendingCutoffMs);
           }
-        } else {
-          // Matin ou après-midi
-          const fulldayBooked = bookings.some(b => b.slot === 'fullday' && b.room === room);
-          const largeFulldayBooked = bookings.some(b => b.slot === 'fullday' && b.room === 'large');
-          
-          if (fulldayBooked || largeFulldayBooked) {
-            isAvailable = false;
-          } else {
-            const bookingsForSlot = bookings.filter(b => b.slot === slot);
-            if (room === 'large') {
-              isAvailable = bookingsForSlot.length === 0;
-            } else {
-              const roomBooked = bookingsForSlot.some(b => b.room === room);
-              const largeBooked = bookingsForSlot.some(b => b.room === 'large');
-              isAvailable = !roomBooked && !largeBooked;
-            }
-          }
-        }
+
+          return false;
+        });
+
+        const isAvailable = isSlotAvailableWithGlobalExclusion(blockingBookings, slot);
 
         if (!isAvailable) {
-          return NextResponse.json({ 
-            error: `Le créneau ${slot} du ${date} pour la salle ${room} n'est plus disponible.` 
-          }, { status: 409 });
+          return NextResponse.json(
+            {
+              error: `Le créneau ${slot} du ${date} n'est plus disponible.`,
+            },
+            { status: 409 }
+          );
         }
       }
     }
@@ -220,7 +267,6 @@ export async function POST(request: NextRequest) {
     }
 
     const slotLabels = SLOT_LABELS;
-    const roomLabels = ROOM_LABELS;
 
     // Construction de la description du panier pour Stripe
     // Comme on a potentiellement beaucoup d'items, on fait un résumé
@@ -245,7 +291,7 @@ export async function POST(request: NextRequest) {
 
     const totalPrice = cartWithSecurePrices.reduce((sum, entry) => sum + entry.expectedPrice, 0);
 
-    const normalizedEmail = email?.trim().toLowerCase();
+    const normalizedEmail = resolvedEmail;
     const liveTestEnabled = process.env.STRIPE_LIVE_TEST_ENABLED === 'true';
     const allowedLiveTestEmails = parseAllowedEmails(process.env.STRIPE_LIVE_TEST_EMAILS);
     const isLiveTestBooking =
@@ -266,10 +312,10 @@ export async function POST(request: NextRequest) {
       : Math.round(totalPrice * 100);
 
     const metadata: Record<string, string> = {
-      userId: userId || '',
+      userId: resolvedUserId,
       type: 'cart_checkout',
-      nom: nom || '',
-      prenom: prenom || '',
+      nom: resolvedNom,
+      prenom: resolvedPrenom,
     };
 
     if (isLiveTestBooking) {
@@ -296,7 +342,7 @@ export async function POST(request: NextRequest) {
       mode: 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
-      customer_email: email,
+      customer_email: resolvedEmail,
       metadata,
     });
 
@@ -305,7 +351,7 @@ export async function POST(request: NextRequest) {
       const securePrice = isLiveTestBooking ? liveTestAmountCents / 100 : expectedPrice;
 
       return {
-        user_id: userId,
+        user_id: resolvedUserId,
         date: item.date,
         slot: item.slot,
         room: item.room,

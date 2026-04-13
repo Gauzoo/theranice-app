@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { EMAIL_FROM, CONTACT_EMAIL } from '@/lib/constants';
+import { isInternalApiRequest } from '@/lib/internalApiAuth';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -17,6 +18,10 @@ const schema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isInternalApiRequest(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const result = schema.safeParse(body);
     if (!result.success) {

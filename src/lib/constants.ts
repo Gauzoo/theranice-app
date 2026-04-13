@@ -119,3 +119,6 @@ export const EMAIL_FROM = 'Theranice <contact@theranice.fr>';
 // --- Politiques ---
 
 export const CANCELLATION_PERIOD_DAYS = 14;
+
+/** Durée maximale (minutes) d'un verrou temporaire pending_payment avant nettoyage/fallback */
+export const PENDING_PAYMENT_TTL_MINUTES = 45;

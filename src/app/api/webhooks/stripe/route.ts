@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { provisionNukiKeypadCode } from '@/lib/nuki';
+import { isSlotAvailableWithGlobalExclusion } from '@/lib/availability';
+import { getInternalApiHeaders } from '@/lib/internalApiAuth';
 
 // Désactive le body parser de Next.js pour Stripe webhooks
 export const dynamic = 'force-dynamic';
@@ -40,10 +42,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
+    if (event.type === 'checkout.session.expired') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+      const supabase = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const { data: cancelledPending, error: cancelError } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled' })
+        .eq('stripe_session_id', session.id)
+        .eq('status', 'pending_payment')
+        .select('id');
+
+      if (cancelError) {
+        console.error('Failed to expire pending bookings for session:', session.id, cancelError);
+        return NextResponse.json({ error: 'Pending cleanup failed' }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        received: true,
+        expiredCancelled: cancelledPending?.length || 0,
+      });
+    }
+
     // Traite l'événement de paiement réussi
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const { type } = session.metadata || {};
+      const internalApiHeaders = getInternalApiHeaders();
 
       // VÉRIFICATION CRITIQUE : vérifie la disponibilité côté serveur
       const { createClient: createServiceClient } = await import('@supabase/supabase-js');
@@ -92,21 +121,8 @@ export async function POST(request: NextRequest) {
             .eq('date', date)
             .eq('status', 'confirmed');
 
-          let isAvailable = true;
           const bookings = confirmedBookings || [];
-
-          // Logique de vérification stricte
-          // TEMPORAIRE : exclusion mutuelle — si n'importe quelle salle est réservée, tout est bloqué
-          if (slot === 'fullday') {
-            isAvailable = bookings.length === 0;
-          } else {
-            const anyFulldayBooked = bookings.some(b => b.slot === 'fullday');
-            if (anyFulldayBooked) isAvailable = false;
-            else {
-               const anySlotBooked = bookings.some(b => b.slot === slot);
-               isAvailable = !anySlotBooked;
-            }
-          }
+          const isAvailable = isSlotAvailableWithGlobalExclusion(bookings, slot);
 
           if (isAvailable) {
             // Générer le code PIN Nuki AVANT de confirmer
@@ -160,7 +176,10 @@ export async function POST(request: NextRequest) {
               try {
                 await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-confirmation`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...internalApiHeaders,
+                  },
                   body: JSON.stringify({
                     email: session.customer_email,
                     nom: session.metadata?.nom,
@@ -181,7 +200,7 @@ export async function POST(request: NextRequest) {
           } else {
             // Conflit détecté
             console.error('CONFLIT: Réservation payée mais créneau plus disponible', booking);
-            const { error: failError } = await supabase
+            await supabase
               .from('bookings')
               .update({ status: 'conflict_paid' }) // Statut spécial pour gestion manuelle/remboursement
               .eq('id', booking.id);
@@ -234,35 +253,8 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Vérifie la disponibilité selon la logique métier
-        let isAvailable = true;
-
-        if (slot === 'fullday') {
-          if (room === 'large') {
-            isAvailable = existingBookings.length === 0;
-          } else {
-            const roomBooked = existingBookings.some(b => b.room === room);
-            const largeBooked = existingBookings.some(b => b.room === 'large');
-            isAvailable = !roomBooked && !largeBooked;
-          }
-        } else {
-          // Matin ou après-midi
-          const fulldayBooked = existingBookings.some(b => b.slot === 'fullday' && b.room === room);
-          const largeFulldayBooked = existingBookings.some(b => b.slot === 'fullday' && b.room === 'large');
-          
-          if (fulldayBooked || largeFulldayBooked) {
-            isAvailable = false;
-          } else {
-            const bookingsForSlot = existingBookings.filter(b => b.slot === slot);
-            if (room === 'large') {
-              isAvailable = bookingsForSlot.length === 0;
-            } else {
-              const roomBooked = bookingsForSlot.some(b => b.room === room);
-              const largeBooked = bookingsForSlot.some(b => b.room === 'large');
-              isAvailable = !roomBooked && !largeBooked;
-            }
-          }
-        }
+        // Vérifie la disponibilité selon la règle métier unique (exclusion globale)
+        const isAvailable = isSlotAvailableWithGlobalExclusion(existingBookings || [], slot as 'morning' | 'afternoon' | 'fullday');
 
         if (!isAvailable) {
           console.error('Slot no longer available:', { date, slot, room, session: session.id });
@@ -330,7 +322,10 @@ export async function POST(request: NextRequest) {
         try {
           await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-confirmation`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...internalApiHeaders,
+            },
             body: JSON.stringify({
               email: session.customer_email,
               nom,

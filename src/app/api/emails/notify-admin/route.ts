@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { EMAIL_FROM } from '@/lib/constants';
+import { createClient } from '@/lib/supabase/server';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -11,13 +12,23 @@ function escapeHtml(str: string): string {
 
 const schema = z.object({
   userName: z.string().min(1).max(200),
-  userEmail: z.string().email().max(320),
+  userEmail: z.string().email().max(320).optional(),
   userPhone: z.string().max(30).optional(),
   userActivity: z.string().max(500).optional(),
 });
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const result = schema.safeParse(body);
     if (!result.success) {
@@ -26,9 +37,14 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { userName, userEmail, userPhone, userActivity } = result.data;
+    const { userName, userPhone, userActivity } = result.data;
+    const verifiedEmail = user.email || result.data.userEmail;
+    if (!verifiedEmail) {
+      return NextResponse.json({ error: 'Email utilisateur introuvable' }, { status: 400 });
+    }
+
     const safeUserName = escapeHtml(userName);
-    const safeUserEmail = escapeHtml(userEmail);
+    const safeUserEmail = escapeHtml(verifiedEmail);
     const safeUserPhone = escapeHtml(userPhone || 'Non renseigné');
     const safeUserActivity = escapeHtml(userActivity || 'Non renseignée');
 

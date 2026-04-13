@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { deleteNukiKeypadCode, findNukiAuthIdByAccessCode } from '@/lib/nuki';
+import { getInternalApiHeaders } from '@/lib/internalApiAuth';
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .split(',')
@@ -94,6 +95,37 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       return NextResponse.json({ error: 'Erreur lors de l\'annulation' }, { status: 500 });
+    }
+
+    // Déclenche l'email d'annulation côté serveur (endpoint interne protégé)
+    if (user.email) {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('nom, prenom')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        const internalHeaders = getInternalApiHeaders();
+
+        await fetch(new URL('/api/send-cancellation', request.nextUrl.origin), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...internalHeaders,
+          },
+          body: JSON.stringify({
+            email: user.email,
+            nom: profile?.nom || '',
+            prenom: profile?.prenom || '',
+            date: booking.date,
+            slot: booking.slot,
+            room: booking.room,
+          }),
+        });
+      } catch (emailError) {
+        console.error('Cancellation email error:', emailError);
+      }
     }
 
     return NextResponse.json({ 

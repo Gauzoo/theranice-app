@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { checkAdminPermission } from '@/lib/adminAuth';
 import { provisionNukiKeypadCode } from '@/lib/nuki';
 import { type Slot, type Room } from '@/lib/constants';
+import { isSlotAvailableWithGlobalExclusion } from '@/lib/availability';
 
 const VALID_SLOTS: Slot[] = ['morning', 'afternoon', 'fullday'];
 const VALID_ROOMS: Room[] = ['room1', 'room2', 'large'];
@@ -35,41 +36,14 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Vérification de la disponibilité
+    // Vérification de la disponibilité (règle unique: exclusion globale)
     const { data: existingBookings } = await supabase
       .from('bookings')
       .select('slot, room')
       .eq('date', date)
       .eq('status', 'confirmed');
 
-    let isAvailable = true;
-    const bookings = existingBookings || [];
-
-    if (slot === 'fullday') {
-      if (room === 'large') {
-        isAvailable = bookings.length === 0;
-      } else {
-        const roomBooked = bookings.some((b: { room: string }) => b.room === room);
-        const largeBooked = bookings.some((b: { room: string }) => b.room === 'large');
-        isAvailable = !roomBooked && !largeBooked;
-      }
-    } else {
-      const fulldayBooked = bookings.some((b: { slot: string; room: string }) => b.slot === 'fullday' && b.room === room);
-      const largeFulldayBooked = bookings.some((b: { slot: string; room: string }) => b.slot === 'fullday' && b.room === 'large');
-
-      if (fulldayBooked || largeFulldayBooked) {
-        isAvailable = false;
-      } else {
-        const bookingsForSlot = bookings.filter((b: { slot: string }) => b.slot === slot);
-        if (room === 'large') {
-          isAvailable = bookingsForSlot.length === 0;
-        } else {
-          const roomBooked = bookingsForSlot.some((b: { room: string }) => b.room === room);
-          const largeBooked = bookingsForSlot.some((b: { room: string }) => b.room === 'large');
-          isAvailable = !roomBooked && !largeBooked;
-        }
-      }
-    }
+    const isAvailable = isSlotAvailableWithGlobalExclusion(existingBookings || [], slot);
 
     if (!isAvailable) {
       return NextResponse.json({ error: 'Ce créneau n\'est pas disponible' }, { status: 409 });

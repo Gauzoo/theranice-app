@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { formatPinCode } from '@/lib/nuki';
 import {
   SLOT_LABELS,
@@ -12,9 +13,34 @@ import {
   BUSINESS_POSTAL_CODE,
   BUSINESS_CITY,
 } from '@/lib/constants';
+import { isInternalApiRequest } from '@/lib/internalApiAuth';
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+const schema = z.object({
+  email: z.string().email().max(320),
+  nom: z.string().max(200).optional(),
+  prenom: z.string().max(200).optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  slot: z.enum(['morning', 'afternoon', 'fullday']),
+  room: z.enum(['room1', 'room2', 'large']),
+  price: z.coerce.number().finite().nonnegative(),
+  accessCode: z.union([z.string(), z.number()]).optional().nullable(),
+});
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isInternalApiRequest(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Vérifie que la clé API est configurée
     if (!process.env.RESEND_API_KEY) {
       console.warn('RESEND_API_KEY not configured');
@@ -22,7 +48,15 @@ export async function POST(request: NextRequest) {
     }
 
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const { email, nom, prenom, date, slot, room, price, accessCode } = await request.json();
+    const body = await request.json();
+    const result = schema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json({ error: 'Données invalides' }, { status: 400 });
+    }
+
+    const { email, nom, prenom, date, slot, room, price, accessCode } = result.data;
+    const safeNom = escapeHtml(nom || '');
+    const safePrenom = escapeHtml(prenom || '');
 
     // Formatage de la date
     const bookingDate = new Date(date + 'T00:00:00');
@@ -41,8 +75,11 @@ export async function POST(request: NextRequest) {
     const accessTimeLabel = SLOT_ACCESS_TIMES[slot as keyof typeof SLOT_ACCESS_TIMES] || '';
 
     // Utilise le code réel Nuki passé par le webhook, ou fallback
-    const displayCode = accessCode ? formatPinCode(accessCode) : null;
-    const codeAvailable = !!accessCode;
+    const normalizedAccessCode = accessCode == null
+      ? null
+      : String(accessCode).replace(/\D/g, '');
+    const displayCode = normalizedAccessCode ? formatPinCode(normalizedAccessCode) : null;
+    const codeAvailable = !!normalizedAccessCode;
 
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
@@ -76,7 +113,7 @@ export async function POST(request: NextRequest) {
                 <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
                   <tr>
                     <td style="padding: 8px 0; color: #666; font-weight: 600; width: 140px;">Nom</td>
-                    <td style="padding: 8px 0; color: #333;">${prenom} ${nom}</td>
+                    <td style="padding: 8px 0; color: #333;">${safePrenom} ${safeNom}</td>
                   </tr>
                   <tr style="border-top: 1px solid #e5e5e5;">
                     <td style="padding: 8px 0; color: #666; font-weight: 600;">Salle réservée</td>
