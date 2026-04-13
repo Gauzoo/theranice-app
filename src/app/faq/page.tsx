@@ -56,7 +56,7 @@ const faqData = [
   {
     question: "Quand recevrai-je ma facture ?",
     answer:
-      "La facture est émise automatiquement à l'issue de la période de mise à disposition. Elle est transmise par email et reste disponible dans votre espace personnel.",
+      "La facture est émise automatiquement à l'issue de la période de mise à disposition et transmise par email.",
   },
   {
     question: "Quels professionnels peuvent exercer chez THÉRANICE ?",

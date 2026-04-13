@@ -146,7 +146,7 @@ export default function Home() {
             name: "Quand recevrai-je ma facture ?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "La facture est émise automatiquement à l'issue de la période de mise à disposition. Elle est transmise par email et reste disponible dans votre espace personnel.",
+              text: "La facture est émise automatiquement à l'issue de la période de mise à disposition et transmise par email.",
             },
           },
         ],
@@ -421,7 +421,7 @@ export default function Home() {
                     answer: (
                       <div className="space-y-3">
                         <p>La facture est émise automatiquement à l&apos;issue de la période de mise à disposition.</p>
-                        <p>Elle est transmise par email et reste disponible dans votre espace personnel.</p>
+                        <p>Elle est transmise par email.</p>
                       </div>
                     )
                   }
@@ -434,7 +434,7 @@ export default function Home() {
 
       <section className="bg-[#FFFFFF] py-16  scroll-mt-24" id="contact">
         <div className="mx-auto max-w-6xl px-6">
-        <h2 className={`${garamond.className} text-4xl text-[#D4A373] font-semibold`}>▸ Contact</h2>
+              "La facture est émise automatiquement à l'issue de la période de mise à disposition et transmise par email.",
         <p className="mt-6 text-slate-600">
           Besoin d&apos;infos supplémentaires ou d&apos;une visite ? Remplissez le formulaire ci-dessous et nous vous répondrons dans les plus brefs délais ou contactez-nous 
           directement par email à <strong>{CONTACT_EMAIL}</strong>.

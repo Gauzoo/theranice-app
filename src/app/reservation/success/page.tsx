@@ -64,7 +64,7 @@ function SuccessContent() {
               <div className="bg-[#FEFAE0] border-l-4 border-[#D4A373] p-6 mb-6">
                 <p className="text-slate-700">
                   <strong>Email de confirmation envoyé</strong><br />
-                  Vous allez recevoir un email avec tous les détails de votre réservation, votre code d&apos;accès et votre facture.
+                  Vous allez recevoir un email avec les détails de votre réservation et votre code d&apos;accès. Votre facture sera envoyée automatiquement après votre créneau.
                   
                 </p>
               </div>

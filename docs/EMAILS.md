@@ -110,6 +110,43 @@ npm install resend
 3. Vérifier les spams
 4. En production : vérifier que le domaine est bien vérifié
 
+### Renvoyer manuellement une facture
+Un endpoint admin permet de renvoyer une facture existante :
+
+- Route : `POST /api/admin/resend-invoice`
+- Auth : utilisateur admin connecté (email présent dans `ADMIN_EMAILS`)
+- Payload minimal :
+
+```json
+{
+  "bookingId": "uuid-booking"
+}
+```
+
+Ou par numéro de facture :
+
+```json
+{
+  "invoiceNumber": "2026-001"
+}
+```
+
+Optionnel : forcer une adresse de destination (support client) :
+
+```json
+{
+  "bookingId": "uuid-booking",
+  "email": "cliente@example.com"
+}
+```
+
+### Générer les factures manuellement (admin)
+En cas d'incident ou de retard cron, vous pouvez lancer la génération immédiatement :
+
+- Route : `POST /api/admin/generate-invoices`
+- Auth : utilisateur admin connecté (email présent dans `ADMIN_EMAILS`)
+- Réponse: reprend le résultat du cron (`generated`, `emailed`, `failed`, `results`)
+
 ### Erreur "Invalid from address"
 Le domaine d'envoi doit être vérifié dans Resend. En développement, utilisez `onboarding@resend.dev`.
 
@@ -122,6 +159,11 @@ Vérifier que `bookingData.id` est bien retourné dans la requête Supabase (ajo
 src/app/api/
 ├── send-confirmation/
 │   └── route.ts          # Email de confirmation
+├── admin/
+│   ├── generate-invoices/
+│   │   └── route.ts      # Déclenchement manuel du cron de factures
+│   └── resend-invoice/
+│       └── route.ts      # Renvoi manuel d'une facture
 └── send-cancellation/
     └── route.ts          # Email d'annulation
 ```

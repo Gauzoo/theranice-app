@@ -104,6 +104,8 @@ export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [generatingInvoices, setGeneratingInvoices] = useState(false);
+  const [resendingInvoiceId, setResendingInvoiceId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "today" | "upcoming" | "past">("upcoming");
   const [showAddModal, setShowAddModal] = useState(false);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
@@ -403,6 +405,97 @@ export default function AdminDashboard() {
       console.error('Erreur catch:', err);
       const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
       alert('Erreur : ' + errorMessage);
+    }
+  };
+
+  const handleResendInvoice = async (booking: Booking) => {
+    if (!confirm(`Renvoyer la facture pour la réservation du ${formatDate(booking.date)} ?`)) {
+      return;
+    }
+
+    setResendingInvoiceId(booking.id);
+
+    try {
+      const response = await fetch('/api/admin/resend-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: booking.id }),
+      });
+
+      const result = await response.json().catch(() => ({} as { error?: string; sentTo?: string; resendMessageId?: string | null }));
+
+      if (!response.ok) {
+        const apiError = typeof result.error === 'string' ? result.error : 'Erreur inconnue';
+
+        if (response.status === 404) {
+          alert('Facture introuvable pour cette réservation. Vérifiez que la génération de facture a bien été exécutée.');
+          return;
+        }
+
+        alert('Erreur lors du renvoi de la facture : ' + apiError);
+        return;
+      }
+
+      const destination = typeof result.sentTo === 'string' && result.sentTo
+        ? result.sentTo
+        : 'destinataire inconnu';
+
+      const messageId = typeof result.resendMessageId === 'string' && result.resendMessageId
+        ? `\nMessage ID: ${result.resendMessageId}`
+        : '';
+
+      alert(`Facture renvoyée avec succès à ${destination}${messageId}`);
+    } catch (err) {
+      console.error('Erreur renvoi facture:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
+      alert('Erreur : ' + errorMessage);
+    } finally {
+      setResendingInvoiceId(null);
+    }
+  };
+
+  const handleGenerateInvoicesNow = async () => {
+    if (!confirm('Lancer la génération des factures maintenant ?')) {
+      return;
+    }
+
+    setGeneratingInvoices(true);
+
+    try {
+      const response = await fetch('/api/admin/generate-invoices', {
+        method: 'POST',
+      });
+
+      const result = await response.json().catch(() => ({} as {
+        error?: string;
+        generated?: number;
+        emailed?: number;
+        failed?: number;
+        message?: string;
+      }));
+
+      if (!response.ok) {
+        const apiError = typeof result.error === 'string' ? result.error : 'Erreur inconnue';
+        alert('Erreur génération factures : ' + apiError);
+        return;
+      }
+
+      const generated = typeof result.generated === 'number' ? result.generated : 0;
+      const emailed = typeof result.emailed === 'number' ? result.emailed : 0;
+      const failed = typeof result.failed === 'number' ? result.failed : 0;
+      const message = typeof result.message === 'string' ? result.message : '';
+
+      if (message && generated === 0 && failed === 0) {
+        alert(message);
+      } else {
+        alert(`Factures générées: ${generated} | Emails envoyés: ${emailed} | Échecs: ${failed}`);
+      }
+    } catch (err) {
+      console.error('Erreur génération factures:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
+      alert('Erreur : ' + errorMessage);
+    } finally {
+      setGeneratingInvoices(false);
     }
   };
 
@@ -1001,6 +1094,15 @@ export default function AdminDashboard() {
             >
               + Ajouter une réservation
             </button>
+            <button
+              onClick={handleGenerateInvoicesNow}
+              disabled={generatingInvoices}
+              className={`w-full sm:w-auto bg-[#56862F] hover:bg-[#3f6821] text-white px-4 sm:px-6 py-2 text-sm sm:text-base font-medium transition-colors ${
+                generatingInvoices ? 'cursor-wait opacity-70' : 'cursor-pointer'
+              }`}
+            >
+              {generatingInvoices ? 'Génération...' : 'Générer factures'}
+            </button>
           </div>
 
           <div className="flex flex-wrap gap-3 mb-6">
@@ -1116,6 +1218,18 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
+                          {booking.status === 'confirmed' && (
+                            <button
+                              onClick={() => handleResendInvoice(booking)}
+                              disabled={resendingInvoiceId === booking.id}
+                              className={`text-[#56862F] hover:text-[#3f6821] text-sm font-medium ${
+                                resendingInvoiceId === booking.id ? 'cursor-wait opacity-70' : 'cursor-pointer'
+                              }`}
+                              title="Renvoyer la facture"
+                            >
+                              {resendingInvoiceId === booking.id ? 'Envoi...' : 'Renvoyer facture'}
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDeleteBooking(booking.id)}
                             className="text-[#d06264] hover:text-red-700 text-sm font-medium cursor-pointer"

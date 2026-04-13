@@ -12,6 +12,33 @@ import {
   type Slot,
 } from '@/lib/constants';
 
+type InvoiceResult = {
+  bookingId: string;
+  invoiceNumber: string;
+  status: 'success' | 'error';
+  stage?: 'profile' | 'pdf' | 'insert' | 'email';
+  invoiceCreated?: boolean;
+  emailTo?: string;
+  emailStatus?: 'sent' | 'failed';
+  error?: string;
+};
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return 'Erreur inconnue';
+}
+
+function normalizeEmail(email: string | null | undefined): string | null {
+  if (!email) {
+    return null;
+  }
+
+  const normalized = email.trim().toLowerCase();
+  return normalized || null;
+}
+
 export async function GET(request: Request) {
   try {
     // Vérifie l'authentification : Bearer token OU header Vercel cron
@@ -75,10 +102,15 @@ export async function GET(request: Request) {
 
     // Vérifier lesquels n'ont pas encore de facture
     const bookingIds = eligibleBookings.map((b) => b.id);
-    const { data: existingInvoices } = await supabase
+    const { data: existingInvoices, error: existingInvoicesError } = await supabase
       .from('invoices')
       .select('booking_id')
       .in('booking_id', bookingIds);
+
+    if (existingInvoicesError) {
+      console.error('Error fetching existing invoices:', existingInvoicesError);
+      return NextResponse.json({ error: 'Erreur récupération factures existantes' }, { status: 500 });
+    }
 
     const invoicedBookingIds = new Set(
       (existingInvoices || []).map((i) => i.booking_id)
@@ -94,10 +126,15 @@ export async function GET(request: Request) {
 
     // Récupérer les profils des utilisateurs concernés
     const userIds = [...new Set(toInvoice.map((b) => b.user_id))];
-    const { data: profiles } = await supabase
+    const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, nom, prenom, email, adresse, siret')
+      .select('id, nom, prenom, adresse, siret')
       .in('id', userIds);
+
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      return NextResponse.json({ error: 'Erreur récupération profils' }, { status: 500 });
+    }
 
     const profileMap = new Map(
       (profiles || []).map((p) => [p.id, p])
@@ -107,13 +144,18 @@ export async function GET(request: Request) {
     const year = parisTime.getFullYear();
     const prefix = `${year}-`;
 
-    const { data: lastInvoice } = await supabase
+    const { data: lastInvoice, error: lastInvoiceError } = await supabase
       .from('invoices')
       .select('invoice_number')
       .like('invoice_number', `${prefix}%`)
       .order('invoice_number', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
+
+    if (lastInvoiceError) {
+      console.error('Error fetching last invoice number:', lastInvoiceError);
+      return NextResponse.json({ error: 'Erreur récupération dernier numéro de facture' }, { status: 500 });
+    }
 
     let nextNumber = 1;
     if (lastInvoice?.invoice_number) {
@@ -125,13 +167,45 @@ export async function GET(request: Request) {
     // Initialiser Resend si disponible
     const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
-    const results: { bookingId: string; invoiceNumber: string; status: string; error?: string }[] = [];
+    const authEmailCache = new Map<string, string>();
+    const resolveRecipientEmail = async (userId: string): Promise<string | null> => {
+      const cached = authEmailCache.get(userId);
+      if (cached !== undefined) {
+        return cached || null;
+      }
+
+      try {
+        const { data: authUserData, error: authUserError } = await supabase.auth.admin.getUserById(userId);
+        if (authUserError) {
+          console.error(`[generate-invoices] Auth user fetch failed for ${userId}:`, authUserError);
+          authEmailCache.set(userId, '');
+          return null;
+        }
+
+        const email = normalizeEmail(authUserData.user?.email);
+        authEmailCache.set(userId, email || '');
+        return email;
+      } catch (error) {
+        console.error(`[generate-invoices] Unexpected auth lookup error for ${userId}:`, error);
+        authEmailCache.set(userId, '');
+        return null;
+      }
+    };
+
+    const results: InvoiceResult[] = [];
 
     // Générer les factures dans l'ordre chronologique
     for (const booking of toInvoice) {
       const profile = profileMap.get(booking.user_id);
       if (!profile) {
-        results.push({ bookingId: booking.id, invoiceNumber: '', status: 'error', error: 'Profil introuvable' });
+        console.error(`[generate-invoices] Missing profile for booking ${booking.id} (user ${booking.user_id})`);
+        results.push({
+          bookingId: booking.id,
+          invoiceNumber: '',
+          status: 'error',
+          stage: 'profile',
+          error: 'Profil introuvable',
+        });
         continue;
       }
 
@@ -139,6 +213,8 @@ export async function GET(request: Request) {
       const today = parisTime.toISOString().split('T')[0];
 
       try {
+        const recipientEmail = await resolveRecipientEmail(booking.user_id);
+
         // Générer le PDF
         const pdfBuffer = generateInvoicePDF({
           invoiceNumber,
@@ -151,7 +227,7 @@ export async function GET(request: Request) {
           datePaiement: booking.date,
           room: booking.room,
           slot: booking.slot,
-          amountHT: parseFloat(booking.price),
+          amountHT: Number(booking.price),
         });
 
         // Insérer en base
@@ -159,8 +235,8 @@ export async function GET(request: Request) {
           booking_id: booking.id,
           user_id: booking.user_id,
           invoice_number: invoiceNumber,
-          amount_ht: parseFloat(booking.price),
-          amount_ttc: parseFloat(booking.price),
+          amount_ht: Number(booking.price),
+          amount_ttc: Number(booking.price),
           date_emission: today,
           date_prestation: booking.date,
           date_paiement: booking.date,
@@ -171,99 +247,167 @@ export async function GET(request: Request) {
         });
 
         if (insertError) {
-          results.push({ bookingId: booking.id, invoiceNumber, status: 'error', error: insertError.message });
+          console.error(`[generate-invoices] Invoice insert failed for booking ${booking.id}:`, insertError);
+          results.push({
+            bookingId: booking.id,
+            invoiceNumber,
+            status: 'error',
+            stage: 'insert',
+            invoiceCreated: false,
+            error: insertError.message,
+          });
+          continue;
+        }
+
+        // Le numéro est consommé dès que l'insertion est réussie.
+        nextNumber++;
+
+        if (!recipientEmail) {
+          console.error(`[generate-invoices] Recipient email not found for booking ${booking.id} (user ${booking.user_id})`);
+          results.push({
+            bookingId: booking.id,
+            invoiceNumber,
+            status: 'error',
+            stage: 'email',
+            invoiceCreated: true,
+            emailStatus: 'failed',
+            error: 'Email client introuvable dans auth.users',
+          });
+          continue;
+        }
+
+        if (!resend) {
+          console.error(`[generate-invoices] RESEND_API_KEY missing while sending invoice ${invoiceNumber} for booking ${booking.id}`);
+          results.push({
+            bookingId: booking.id,
+            invoiceNumber,
+            status: 'error',
+            stage: 'email',
+            invoiceCreated: true,
+            emailStatus: 'failed',
+            emailTo: recipientEmail,
+            error: 'RESEND_API_KEY manquante',
+          });
           continue;
         }
 
         // Envoyer l'email avec le PDF
-        if (resend && profile.email) {
-          const roomLabel = ROOM_LABELS_FORMAL[booking.room as keyof typeof ROOM_LABELS_FORMAL] || booking.room;
-          const prestationDate = new Date(booking.date + 'T00:00:00');
-          const formattedDate = prestationDate.toLocaleDateString('fr-FR', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          });
-          const formattedPaiement = prestationDate.toLocaleDateString('fr-FR', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-          });
+        const roomLabel = ROOM_LABELS_FORMAL[booking.room as keyof typeof ROOM_LABELS_FORMAL] || booking.room;
+        const prestationDate = new Date(booking.date + 'T00:00:00');
+        const formattedDate = prestationDate.toLocaleDateString('fr-FR', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        const formattedPaiement = prestationDate.toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        });
 
-          await resend.emails.send({
-            from: EMAIL_FROM,
-            to: [profile.email],
-            subject: `Votre facture – THÉRANICE`,
-            attachments: [
-              {
-                filename: `${invoiceNumber}.pdf`,
-                content: pdfBuffer.toString('base64'),
-              },
-            ],
-            html: `
-              <!DOCTYPE html>
-              <html>
-                <head><meta charset="utf-8"></head>
-                <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.7; color: #333333; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5;">
+        const { error: emailError } = await resend.emails.send({
+          from: EMAIL_FROM,
+          to: [recipientEmail],
+          subject: `Votre facture – THÉRANICE`,
+          attachments: [
+            {
+              filename: `${invoiceNumber}.pdf`,
+              content: pdfBuffer.toString('base64'),
+            },
+          ],
+          html: `
+            <!DOCTYPE html>
+            <html>
+              <head><meta charset="utf-8"></head>
+              <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.7; color: #333333; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f5f5f5;">
+                
+                <div style="background: linear-gradient(135deg, #D4A373 0%, #c39363 100%); color: white; padding: 30px; text-align: center;">
+                  <h1 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 1px;">THÉRANICE</h1>
+                  <p style="margin: 8px 0 0; font-size: 14px; opacity: 0.9;">Votre facture</p>
+                </div>
+                
+                <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e5e5; border-top: none;">
                   
-                  <div style="background: linear-gradient(135deg, #D4A373 0%, #c39363 100%); color: white; padding: 30px; text-align: center;">
-                    <h1 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 1px;">THÉRANICE</h1>
-                    <p style="margin: 8px 0 0; font-size: 14px; opacity: 0.9;">Votre facture</p>
-                  </div>
+                  <p>Madame, Monsieur,</p>
                   
-                  <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e5e5; border-top: none;">
-                    
-                    <p>Madame, Monsieur,</p>
-                    
-                    <p>Nous vous prions de bien vouloir trouver ci-joint la facture n° <strong>${invoiceNumber}</strong> relative à la mise à disposition temporaire d'espace professionnel intervenue le <strong>${formattedDate}</strong>.</p>
-                    
-                    <p>Nous vous confirmons que le règlement a été enregistré le <strong>${formattedPaiement}</strong> par <strong>carte bancaire</strong>.</p>
-                    
-                    <p>Cette facture demeure également accessible depuis votre espace personnel.</p>
-                    
-                    <p>Nous vous remercions de la confiance accordée à THÉRANICE et restons à votre disposition pour toute information complémentaire.</p>
-                    
-                    <p style="font-size: 13px; color: #666; margin-top: 20px;">
-                      Dans le cadre de notre engagement solidaire, 1 € sera reversé à la Ligue contre le Cancer au titre de cette réservation.
-                    </p>
-                    
-                    <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e5e5;">
-                    
-                    <p style="font-size: 13px; color: #666;">
-                      Cordialement,<br>
-                      <strong>L'équipe THÉRANICE</strong>
-                    </p>
-                    
-                    <p style="font-size: 12px; color: #999; margin-top: 20px;">
-                      ${BUSINESS_ADDRESS}<br>
-                      ${BUSINESS_POSTAL_CODE} ${BUSINESS_CITY}
-                    </p>
-                  </div>
+                  <p>Nous vous prions de bien vouloir trouver ci-joint la facture n° <strong>${invoiceNumber}</strong> relative à la mise à disposition temporaire d'espace professionnel intervenue le <strong>${formattedDate}</strong>.</p>
                   
-                  <div style="text-align: center; color: #999; font-size: 12px; padding: 20px;">
-                    <p>© ${new Date().getFullYear()} THÉRANICE – Tous droits réservés</p>
-                  </div>
-                </body>
-              </html>
-            `,
+                  <p>Nous vous confirmons que le règlement a été enregistré le <strong>${formattedPaiement}</strong> par <strong>carte bancaire</strong>.</p>
+                  
+                  <p>Conservez cet email et la facture jointe pour votre comptabilité.</p>
+                  
+                  <p>Nous vous remercions de la confiance accordée à THÉRANICE et restons à votre disposition pour toute information complémentaire.</p>
+                  
+                  <p style="font-size: 13px; color: #666; margin-top: 20px;">
+                    Dans le cadre de notre engagement solidaire, 1 € sera reversé à la Ligue contre le Cancer au titre de cette réservation.
+                  </p>
+                  
+                  <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e5e5;">
+                  
+                  <p style="font-size: 13px; color: #666;">
+                    Cordialement,<br>
+                    <strong>L'équipe THÉRANICE</strong>
+                  </p>
+                  
+                  <p style="font-size: 12px; color: #999; margin-top: 20px;">
+                    ${BUSINESS_ADDRESS}<br>
+                    ${BUSINESS_POSTAL_CODE} ${BUSINESS_CITY}
+                  </p>
+                </div>
+                
+                <div style="text-align: center; color: #999; font-size: 12px; padding: 20px;">
+                  <p>© ${new Date().getFullYear()} THÉRANICE – Tous droits réservés</p>
+                </div>
+              </body>
+            </html>
+          `,
+        });
+
+        if (emailError) {
+          console.error(`[generate-invoices] Email send failed for invoice ${invoiceNumber} (booking ${booking.id}):`, emailError);
+          results.push({
+            bookingId: booking.id,
+            invoiceNumber,
+            status: 'error',
+            stage: 'email',
+            invoiceCreated: true,
+            emailTo: recipientEmail,
+            emailStatus: 'failed',
+            error: emailError.message,
           });
+          continue;
         }
 
-        results.push({ bookingId: booking.id, invoiceNumber, status: 'success' });
-        nextNumber++;
+        results.push({
+          bookingId: booking.id,
+          invoiceNumber,
+          status: 'success',
+          stage: 'email',
+          invoiceCreated: true,
+          emailTo: recipientEmail,
+          emailStatus: 'sent',
+        });
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
-        results.push({ bookingId: booking.id, invoiceNumber, status: 'error', error: errorMessage });
+        console.error(`[generate-invoices] PDF/render failure for booking ${booking.id}:`, err);
+        results.push({
+          bookingId: booking.id,
+          invoiceNumber,
+          status: 'error',
+          stage: 'pdf',
+          invoiceCreated: false,
+          error: getErrorMessage(err),
+        });
       }
     }
 
-    const generated = results.filter((r) => r.status === 'success').length;
+    const generated = results.filter((r) => r.invoiceCreated).length;
+    const emailed = results.filter((r) => r.emailStatus === 'sent').length;
     const failed = results.filter((r) => r.status === 'error').length;
 
-    console.log(`[generate-invoices] Generated: ${generated}, Failed: ${failed}`);
+    console.log(`[generate-invoices] Generated: ${generated}, Emailed: ${emailed}, Failed: ${failed}`);
 
-    return NextResponse.json({ generated, failed, results });
+    return NextResponse.json({ generated, emailed, failed, results });
   } catch (err) {
     console.error('Generate invoices cron error:', err);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });

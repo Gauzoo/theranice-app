@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
               </div>
               
               <p>Le règlement a bien été enregistré.</p>
-              <p>La facture correspondante vous est transmise en pièce jointe d'un email séparé.</p>
+              <p>La facture correspondante vous sera transmise en pièce jointe d'un email séparé après votre créneau.</p>
               
               <!-- Code d'accès -->
               <h3 style="color: #D4A373; margin-top: 30px; font-size: 16px;">🔐 Votre code d'accès</h3>
