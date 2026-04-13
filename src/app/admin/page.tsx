@@ -1219,7 +1219,7 @@ export default function AdminDashboard() {
                               }`}
                               title="Renvoyer la facture"
                             >
-                              {resendingInvoiceId === booking.id ? 'Envoi...' : 'Renvoyer facture'}
+                              {resendingInvoiceId === booking.id ? 'Envoi...' : 'Facture'}
                             </button>
                           )}
                           <button

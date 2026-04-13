@@ -14,6 +14,7 @@ import {
   FULLDAY_PRICES,
   ROOM_LABELS,
   SLOT_LABELS,
+  SLOT_START_HOURS,
   type Slot,
   type Room,
 } from '@/lib/constants';
@@ -248,12 +249,11 @@ export default function ReservationPage() {
     }
 
     // Vérifie si le créneau a déjà commencé (pour aujourd'hui)
-    const SLOT_START: Record<Slot, number> = { morning: 8, afternoon: 14, fullday: 8 };
     const now = new Date();
     const pastDate = selectedDates.find(date => {
       const isToday = date.toDateString() === now.toDateString();
       if (!isToday) return false;
-      return now.getHours() >= SLOT_START[selectedSlot];
+      return now.getHours() >= (SLOT_START_HOURS[selectedSlot] ?? 0);
     });
 
     if (pastDate) {
@@ -315,12 +315,11 @@ export default function ReservationPage() {
     }
 
     // Vérifie si un créneau du panier a déjà commencé entre-temps
-    const CHECKOUT_SLOT_START: Record<Slot, number> = { morning: 8, afternoon: 14, fullday: 8 };
     const checkoutNow = new Date();
     const pastItem = cart.find(item => {
       const isToday = item.date.toDateString() === checkoutNow.toDateString();
       if (!isToday) return false;
-      return checkoutNow.getHours() >= CHECKOUT_SLOT_START[item.slot];
+      return checkoutNow.getHours() >= (SLOT_START_HOURS[item.slot] ?? 0);
     });
 
     if (pastItem) {

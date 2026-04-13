@@ -10,6 +10,7 @@ import {
   ROOM_LABELS,
   SLOT_LABELS,
   SLOT_ACCESS_TIMES,
+  SLOT_END_HOURS,
 } from '@/lib/constants';
 
 const garamond = EB_Garamond({
@@ -143,23 +144,27 @@ export default function MesReservationsPage() {
     return daysDiff > 14;
   };
 
+  const getBookingEndDateTime = (booking: Booking): Date => {
+    const slotEndHour = SLOT_END_HOURS[booking.slot] ?? 18;
+    return new Date(`${booking.date}T${String(slotEndHour).padStart(2, '0')}:00:00`);
+  };
+
   const getFilteredBookings = (): Booking[] => {
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
 
     switch (filter) {
       case "upcoming":
         return bookings.filter(b => {
-          const bookingDate = new Date(b.date + 'T00:00:00');
+          const bookingEndDate = getBookingEndDateTime(b);
           // Inclut confirmé et en attente de paiement
-          return (b.status === 'confirmed' || b.status === 'pending_payment') && bookingDate >= now;
+          return (b.status === 'confirmed' || b.status === 'pending_payment') && bookingEndDate >= now;
         });
       case "past":
         return bookings.filter(b => {
-          const bookingDate = new Date(b.date + 'T00:00:00');
+          const bookingEndDate = getBookingEndDateTime(b);
           // Les réservations passées ou annulées ou en conflit sont ignorées ici ? 
           // Généralement on veut voir l'historique des confirmées passées
-          return b.status === 'confirmed' && bookingDate < now;
+          return b.status === 'confirmed' && bookingEndDate < now;
         });
       case "cancelled":
         return bookings.filter(b => b.status === 'cancelled' || b.status === 'conflict' || b.status === 'conflict_paid');
@@ -289,7 +294,7 @@ export default function MesReservationsPage() {
         ) : (
           <div className="space-y-4">
             {filteredBookings.map((booking) => {
-              const isPast = new Date(booking.date + 'T00:00:00') < new Date();
+              const isPast = getBookingEndDateTime(booking) < new Date();
               const isCancelled = booking.status === 'cancelled' || booking.status === 'conflict' || booking.status === 'conflict_paid';
               const isPending = booking.status === 'pending_payment';
               const canCancel = canCancelBooking(booking) && !isPending;
