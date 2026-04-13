@@ -1094,15 +1094,7 @@ export default function AdminDashboard() {
             >
               + Ajouter une réservation
             </button>
-            <button
-              onClick={handleGenerateInvoicesNow}
-              disabled={generatingInvoices}
-              className={`w-full sm:w-auto bg-[#56862F] hover:bg-[#3f6821] text-white px-4 sm:px-6 py-2 text-sm sm:text-base font-medium transition-colors ${
-                generatingInvoices ? 'cursor-wait opacity-70' : 'cursor-pointer'
-              }`}
-            >
-              {generatingInvoices ? 'Génération...' : 'Générer factures'}
-            </button>
+
           </div>
 
           <div className="flex flex-wrap gap-3 mb-6">
