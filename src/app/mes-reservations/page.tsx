@@ -10,8 +10,8 @@ import {
   ROOM_LABELS,
   SLOT_LABELS,
   SLOT_ACCESS_TIMES,
-  SLOT_END_HOURS,
 } from '@/lib/constants';
+import { hasBookingEndedInParis } from '@/lib/bookingLifecycle';
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -118,9 +118,8 @@ export default function MesReservationsPage() {
     return daysDiff > 14;
   };
 
-  const getBookingEndDateTime = (booking: Booking): Date => {
-    const slotEndHour = SLOT_END_HOURS[booking.slot] ?? 18;
-    return new Date(`${booking.date}T${String(slotEndHour).padStart(2, '0')}:00:00`);
+  const isBookingPast = (booking: Booking, now: Date): boolean => {
+    return hasBookingEndedInParis(booking.date, booking.slot, now);
   };
 
   const getFilteredBookings = (): Booking[] => {
@@ -129,22 +128,20 @@ export default function MesReservationsPage() {
     switch (filter) {
       case "upcoming":
         return bookings.filter(b => {
-          const bookingEndDate = getBookingEndDateTime(b);
           // Inclut confirmé et en attente de paiement
-          return (b.status === 'confirmed' || b.status === 'pending_payment') && bookingEndDate >= now;
+          return (b.status === 'confirmed' || b.status === 'pending_payment') && !isBookingPast(b, now);
         });
       case "past":
         return bookings.filter(b => {
-          const bookingEndDate = getBookingEndDateTime(b);
           // Les réservations passées ou annulées ou en conflit sont ignorées ici ? 
           // Généralement on veut voir l'historique des confirmées passées
-          return b.status === 'confirmed' && bookingEndDate < now;
+          return b.status === 'confirmed' && isBookingPast(b, now);
         });
       case "cancelled":
         return bookings.filter(b => b.status === 'cancelled' || b.status === 'conflict' || b.status === 'conflict_paid');
       default:
         // Trie par ordre décroissant de date pour 'all'
-        return bookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return [...bookings].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
   };
 
@@ -160,6 +157,7 @@ export default function MesReservationsPage() {
   };
 
   const filteredBookings = getFilteredBookings();
+  const bookingStateNow = new Date();
 
   if (!user) {
     return null;
@@ -268,7 +266,7 @@ export default function MesReservationsPage() {
         ) : (
           <div className="space-y-4">
             {filteredBookings.map((booking) => {
-              const isPast = getBookingEndDateTime(booking) < new Date();
+              const isPast = isBookingPast(booking, bookingStateNow);
               const isCancelled = booking.status === 'cancelled' || booking.status === 'conflict' || booking.status === 'conflict_paid';
               const isPending = booking.status === 'pending_payment';
               const canCancel = canCancelBooking(booking) && !isPending;

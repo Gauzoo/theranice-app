@@ -89,7 +89,7 @@ git commit -m "feat: Nuki Smart Lock integration"
 git push
 ```
 
-Le fichier `vercel.json` configure automatiquement un cron job quotidien à 2h du matin pour révoquer les codes expirés.
+Le fichier `vercel.json` configure automatiquement un cron job **horaire** (`35 * * * *`) pour révoquer les codes expirés peu après le cutoff opérationnel.
 
 ---
 
@@ -114,17 +114,18 @@ Le fichier `vercel.json` configure automatiquement un cron job quotidien à 2h d
 
 ### Nettoyage automatique (Cron)
 
-- Chaque jour à 2h du matin, `/api/cron/cleanup-nuki-codes` s'exécute
-- Tous les codes dont la date de réservation est passée sont révoqués
-- Ceci est une sécurité supplémentaire (les codes sont déjà limités dans le temps)
+- Le cron Vercel appelle `GET /api/cron/cleanup-nuki-codes` chaque heure à la minute 35 (UTC).
+- Les réservations sont considérées expirées selon un cutoff opérationnel en heure de Paris.
+- Cutoff actuel: matin 13h30, après-midi 22h00, journée complète 22h00.
+- Tous les codes actifs expirés (et en échec de révocation) sont retraités de façon idempotente.
 
 ### Créneaux horaires
 
 | Créneau | Heures d'accès au code |
 |---|---|
-| Matin | 7h30 - 12h30 |
-| Après-midi | 12h30 - 17h30 |
-| Journée complète | 7h30 - 17h30 |
+| Matin | 7h00 - 13h30 |
+| Après-midi | 13h00 - 21h00 |
+| Journée complète | 7h00 - 21h00 |
 
 > 30 minutes de marge sont ajoutées avant et après le créneau pour l'installation et le rangement.
 
@@ -160,4 +161,4 @@ Le fichier `vercel.json` configure automatiquement un cron job quotidien à 2h d
 
 - Vérifiez que `CRON_SECRET` est configuré dans les variables d'environnement Vercel
 - Les crons Vercel nécessitent un plan Pro ou supérieur
-- Alternative : configurez un service externe (cron-job.org) pour appeler `POST /api/cron/cleanup-nuki-codes` avec le header `Authorization: Bearer VOTRE_CRON_SECRET`
+- Alternative : configurez un service externe (cron-job.org) pour appeler `GET /api/cron/cleanup-nuki-codes` avec le header `Authorization: Bearer VOTRE_CRON_SECRET`

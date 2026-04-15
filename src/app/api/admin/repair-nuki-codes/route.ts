@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { checkAdminPermission } from '@/lib/adminAuth';
 import { deleteNukiKeypadCode } from '@/lib/nuki';
-import { SLOT_END_HOURS, type Slot } from '@/lib/constants';
+import { type Slot } from '@/lib/constants';
+import { getParisNow, hasBookingEndedInParis } from '@/lib/bookingLifecycle';
 
 const NUKI_API_BASE = 'https://api.nuki.io';
 
@@ -47,26 +48,8 @@ function normalizeCode(code: string | number): string {
   return digits.padStart(6, '0');
 }
 
-function getParisNow(): { today: string; hour: number } {
-  const now = new Date();
-  const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-  return {
-    today: parisTime.toISOString().split('T')[0],
-    hour: parisTime.getHours(),
-  };
-}
-
-function isBookingExpired(booking: BookingRow, today: string, currentHour: number): boolean {
-  if (booking.date < today) {
-    return true;
-  }
-
-  if (booking.date > today) {
-    return false;
-  }
-
-  const endHour = SLOT_END_HOURS[booking.slot] || 22;
-  return currentHour >= endHour;
+function isBookingExpired(booking: BookingRow, now: Date): boolean {
+  return hasBookingEndedInParis(booking.date, booking.slot, now);
 }
 
 async function listNukiKeypadAuths(): Promise<NukiAuthEntry[]> {
@@ -153,7 +136,10 @@ export async function POST(request: NextRequest) {
     }
 
     const rows = (bookings || []) as BookingRow[];
-    const { today, hour } = getParisNow();
+    const now = new Date();
+    const { date: today, minutesSinceMidnight } = getParisNow(now);
+    const hour = Math.floor(minutesSinceMidnight / 60);
+    const minute = minutesSinceMidnight % 60;
 
     const bookingsByCode = new Map<string, BookingRow[]>();
     const nukiByCode = new Map<string, NukiAuthEntry[]>();
@@ -208,7 +194,7 @@ export async function POST(request: NextRequest) {
       }
 
       const hasNonExpiredBooking = matchingBookings.some(
-        (booking) => !isBookingExpired(booking, today, hour)
+        (booking) => !isBookingExpired(booking, now)
       );
 
       if (!hasNonExpiredBooking) {
@@ -228,6 +214,7 @@ export async function POST(request: NextRequest) {
         nukiAuthsScanned: nukiAuths.length,
         parisToday: today,
         parisHour: hour,
+        parisMinute: minute,
         previewLimit: limit,
       },
       planned: {

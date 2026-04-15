@@ -88,6 +88,23 @@ export const SLOT_END_HOURS: Record<Slot, number> = {
   fullday: 22,
 };
 
+/** Heure de fin métier des créneaux (Paris) en minutes depuis minuit */
+export const SLOT_END_MINUTES: Record<Slot, number> = {
+  morning: 13 * 60,
+  afternoon: 20 * 60 + 30,
+  fullday: 20 * 60 + 30,
+};
+
+/**
+ * Cutoff de fin de disponibilité opérationnelle (Paris) utilisé pour
+ * la bascule à venir/passée et la révocation Nuki.
+ */
+export const SLOT_OPERATIONAL_CUTOFF_MINUTES: Record<Slot, number> = {
+  morning: 13 * 60 + 30,
+  afternoon: 22 * 60,
+  fullday: 22 * 60,
+};
+
 /** Minutes depuis minuit pour l'API Nuki (avec 30 min de marge avant/après) */
 export const NUKI_SLOT_TIMES: Record<Slot, { from: number; until: number }> = {
   morning:   { from: 420, until: 810 },   // 7h00 - 13h30

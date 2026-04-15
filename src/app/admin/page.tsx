@@ -13,6 +13,7 @@ import {
   type Slot,
   type Room,
 } from '@/lib/constants';
+import { getParisNow, hasBookingEndedInParis, isKnownSlot } from '@/lib/bookingLifecycle';
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -307,10 +308,8 @@ export default function AdminDashboard() {
 
   const calculateStats = (allBookings: Booking[]) => {
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
-
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const { date: parisToday } = getParisNow(now);
+    const currentYearMonth = parisToday.slice(0, 7);
 
     const confirmedBookings = allBookings.filter(b => b.status === 'confirmed');
     
@@ -318,16 +317,15 @@ export default function AdminDashboard() {
     const totalBookings = confirmedBookings.length;
     
     const upcomingBookings = confirmedBookings.filter(b => {
-      const bookingDate = new Date(b.date + 'T00:00:00');
-      return bookingDate >= now;
+      if (!isKnownSlot(b.slot)) {
+        return b.date >= parisToday;
+      }
+
+      return !hasBookingEndedInParis(b.date, b.slot, now);
     }).length;
 
     const monthRevenue = confirmedBookings
-      .filter(b => {
-        const bookingDate = new Date(b.date + 'T00:00:00');
-        return bookingDate.getMonth() === currentMonth && 
-               bookingDate.getFullYear() === currentYear;
-      })
+      .filter((b) => b.date.slice(0, 7) === currentYearMonth)
       .reduce((sum, b) => sum + b.price, 0);
 
     setStats({
@@ -340,30 +338,40 @@ export default function AdminDashboard() {
 
   const getFilteredBookings = (): Booking[] => {
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const { date: parisToday } = getParisNow(now);
 
     switch (filter) {
       case "today":
         return bookings.filter(b => {
-          const bookingDate = new Date(b.date + 'T00:00:00');
-          return bookingDate.getTime() === today.getTime() && (b.status === 'confirmed' || b.status === 'pending_payment');
+          return b.date === parisToday && (b.status === 'confirmed' || b.status === 'pending_payment');
         });
       case "upcoming":
         return bookings.filter(b => {
-          const bookingDate = new Date(b.date + 'T00:00:00');
-          return bookingDate >= now && (b.status === 'confirmed' || b.status === 'pending_payment');
+          if (!(b.status === 'confirmed' || b.status === 'pending_payment')) {
+            return false;
+          }
+
+          if (!isKnownSlot(b.slot)) {
+            return b.date >= parisToday;
+          }
+
+          return !hasBookingEndedInParis(b.date, b.slot, now);
         });
       case "past":
         return bookings.filter(b => {
-          const bookingDate = new Date(b.date + 'T00:00:00');
-          return bookingDate < now && b.status === 'confirmed';
+          if (b.status !== 'confirmed') {
+            return false;
+          }
+
+          if (!isKnownSlot(b.slot)) {
+            return b.date < parisToday;
+          }
+
+          return hasBookingEndedInParis(b.date, b.slot, now);
         });
       default:
         // Trie par ordre décroissant de date pour 'all'
-        return bookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return [...bookings].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
   };
 

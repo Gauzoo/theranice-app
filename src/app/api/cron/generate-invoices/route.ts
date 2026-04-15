@@ -3,14 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { generateInvoicePDF } from '@/lib/invoice';
 import {
-  SLOT_END_HOURS,
   ROOM_LABELS_FORMAL,
   EMAIL_FROM,
   BUSINESS_ADDRESS,
   BUSINESS_POSTAL_CODE,
   BUSINESS_CITY,
-  type Slot,
 } from '@/lib/constants';
+import { getParisNow, hasBookingEndedInParis, isKnownSlot } from '@/lib/bookingLifecycle';
 
 type InvoiceResult = {
   bookingId: string;
@@ -62,11 +61,8 @@ export async function GET(request: Request) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Date/heure actuelle en timezone Paris
-    const parisTime = new Date(
-      new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' })
-    );
-    const currentHour = parisTime.getHours();
-    const todayStr = parisTime.toISOString().split('T')[0];
+    const now = new Date();
+    const { date: todayStr } = getParisNow(now);
 
     // Récupérer les bookings confirmés dont la prestation est passée
     // et qui n'ont pas encore de facture
@@ -88,12 +84,11 @@ export async function GET(request: Request) {
 
     // Filtrer : ne garder que ceux dont le créneau est terminé
     const eligibleBookings = bookings.filter((booking) => {
-      if (booking.date < todayStr) return true; // Dates passées
-      if (booking.date === todayStr) {
-        const slotEndHour = SLOT_END_HOURS[booking.slot as Slot] || 18;
-        return currentHour >= slotEndHour;
+      if (!isKnownSlot(booking.slot)) {
+        return booking.date < todayStr;
       }
-      return false;
+
+      return hasBookingEndedInParis(booking.date, booking.slot, now);
     });
 
     if (eligibleBookings.length === 0) {
@@ -141,7 +136,8 @@ export async function GET(request: Request) {
     );
 
     // Déterminer le prochain numéro de facture
-    const year = parisTime.getFullYear();
+    const parsedYear = Number.parseInt(todayStr.slice(0, 4), 10);
+    const year = Number.isFinite(parsedYear) ? parsedYear : new Date().getUTCFullYear();
     const prefix = `${year}-`;
 
     const { data: lastInvoice, error: lastInvoiceError } = await supabase
@@ -210,7 +206,7 @@ export async function GET(request: Request) {
       }
 
       const invoiceNumber = `${prefix}${String(nextNumber).padStart(3, '0')}`;
-      const today = parisTime.toISOString().split('T')[0];
+      const today = todayStr;
 
       try {
         const recipientEmail = await resolveRecipientEmail(booking.user_id);

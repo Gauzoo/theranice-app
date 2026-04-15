@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { deleteNukiKeypadCode, findNukiAuthIdByAccessCode } from '@/lib/nuki';
-import { SLOT_END_HOURS, type Slot } from '@/lib/constants';
+import { getParisNow, hasBookingEndedInParis, isKnownSlot } from '@/lib/bookingLifecycle';
 
 export async function GET(request: Request) {
   try {
@@ -27,9 +27,11 @@ export async function GET(request: Request) {
 
     // Heure actuelle en France (Europe/Paris)
     const now = new Date();
-    const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-    const todayStr = parisTime.toISOString().split('T')[0]; // YYYY-MM-DD
-    const currentHour = parisTime.getHours();
+    const parisNow = getParisNow(now);
+    const todayStr = parisNow.date;
+    const currentHour = Math.floor(parisNow.minutesSinceMidnight / 60);
+    const currentMinute = parisNow.minutesSinceMidnight % 60;
+    const currentParisTimeLabel = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
 
     // Récupère TOUTES les réservations avec un code Nuki actif
     // qui sont potentiellement expirées
@@ -49,24 +51,19 @@ export async function GET(request: Request) {
     }
 
     // Filtre les réservations dont le créneau est expiré
-    const expiredBookings = activeBookings.filter(booking => {
-      // Si la date est avant aujourd'hui → le créneau est forcément terminé
-      if (booking.date < todayStr) return true;
-      
-      // Si c'est aujourd'hui, vérifie l'heure de fin du créneau
-      if (booking.date === todayStr) {
-        const slotEndHour = SLOT_END_HOURS[booking.slot as Slot] || 18;
-        return currentHour >= slotEndHour;
+    const expiredBookings = activeBookings.filter((booking) => {
+      if (!isKnownSlot(booking.slot)) {
+        return booking.date < todayStr;
       }
-      
-      return false;
+
+      return hasBookingEndedInParis(booking.date, booking.slot, now);
     });
 
     if (expiredBookings.length === 0) {
       return NextResponse.json({ message: 'Aucun code expiré à révoquer', revoked: 0 });
     }
 
-    console.log(`[Cron Nuki] ${expiredBookings.length} code(s) à révoquer (heure Paris: ${currentHour}h)`);
+    console.log(`[Cron Nuki] ${expiredBookings.length} code(s) à révoquer (heure Paris: ${currentParisTimeLabel})`);
 
     const results: Array<{ id: string; success: boolean; error?: string }> = [];
 
