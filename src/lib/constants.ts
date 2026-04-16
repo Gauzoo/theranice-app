@@ -115,7 +115,7 @@ export const NUKI_SLOT_TIMES: Record<Slot, { from: number; until: number }> = {
 // --- Business ---
 
 export const BUSINESS_NAME = 'Théranice';
-export const BUSINESS_LEGAL_NAME = 'SCI THERA NICE';
+export const BUSINESS_LEGAL_NAME = 'THERANICE';
 export const BUSINESS_ADDRESS = '19 rue Michelet';
 export const BUSINESS_CITY = 'Nice';
 export const BUSINESS_POSTAL_CODE = '06100';
