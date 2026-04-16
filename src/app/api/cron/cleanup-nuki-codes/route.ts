@@ -29,9 +29,6 @@ export async function GET(request: Request) {
     const now = new Date();
     const parisNow = getParisNow(now);
     const todayStr = parisNow.date;
-    const currentHour = Math.floor(parisNow.minutesSinceMidnight / 60);
-    const currentMinute = parisNow.minutesSinceMidnight % 60;
-    const currentParisTimeLabel = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
 
     // Récupère TOUTES les réservations avec un code Nuki actif
     // qui sont potentiellement expirées
@@ -63,7 +60,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'Aucun code expiré à révoquer', revoked: 0 });
     }
 
-    console.log(`[Cron Nuki] ${expiredBookings.length} code(s) à révoquer (heure Paris: ${currentParisTimeLabel})`);
+    console.log(`[Cron Nuki] ${expiredBookings.length} code(s) à révoquer`);
 
     const results: Array<{ id: string; success: boolean; error?: string }> = [];
 

@@ -42,6 +42,7 @@ export default function MesReservationsPage() {
   const [filter, setFilter] = useState<"all" | "upcoming" | "past" | "cancelled">("upcoming");
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [now, setNow] = useState<Date>(() => new Date());
   const router = useRouter();
 
   useEffect(() => {
@@ -54,6 +55,11 @@ export default function MesReservationsPage() {
     
     fetchBookings(user.id);
   }, [user, authLoading, router]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchBookings = async (userId: string) => {
     const supabase = createClient();
@@ -123,8 +129,6 @@ export default function MesReservationsPage() {
   };
 
   const getFilteredBookings = (): Booking[] => {
-    const now = new Date();
-
     switch (filter) {
       case "upcoming":
         return bookings.filter(b => {
@@ -157,7 +161,7 @@ export default function MesReservationsPage() {
   };
 
   const filteredBookings = getFilteredBookings();
-  const bookingStateNow = new Date();
+  const bookingStateNow = now;
 
   if (!user) {
     return null;

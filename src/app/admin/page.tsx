@@ -108,6 +108,7 @@ export default function AdminDashboard() {
   const [generatingInvoices, setGeneratingInvoices] = useState(false);
   const [resendingInvoiceId, setResendingInvoiceId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "today" | "upcoming" | "past">("upcoming");
+  const [now, setNow] = useState<Date>(() => new Date());
   const [showAddModal, setShowAddModal] = useState(false);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const [users, setUsers] = useState<Array<{id: string, nom: string, prenom: string, telephone?: string}>>([]);
@@ -185,6 +186,11 @@ export default function AdminDashboard() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const getPendingValidationsFromMembers = (memberList: Member[]): PendingValidation[] => {
     return memberList.filter((member): member is PendingValidation => {
@@ -307,7 +313,6 @@ export default function AdminDashboard() {
   };
 
   const calculateStats = (allBookings: Booking[]) => {
-    const now = new Date();
     const { date: parisToday } = getParisNow(now);
     const currentYearMonth = parisToday.slice(0, 7);
 
@@ -337,7 +342,6 @@ export default function AdminDashboard() {
   };
 
   const getFilteredBookings = (): Booking[] => {
-    const now = new Date();
     const { date: parisToday } = getParisNow(now);
 
     switch (filter) {
