@@ -101,8 +101,8 @@ export const SLOT_END_MINUTES: Record<Slot, number> = {
  */
 export const SLOT_OPERATIONAL_CUTOFF_MINUTES: Record<Slot, number> = {
   morning: 13 * 60 + 30,
-  afternoon: 22 * 60,
-  fullday: 22 * 60,
+  afternoon: 21 * 60,
+  fullday: 21 * 60,
 };
 
 /** Minutes depuis minuit pour l'API Nuki (avec 30 min de marge avant/après) */
