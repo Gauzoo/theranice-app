@@ -38,12 +38,20 @@ from: 'Theranice <contact@theranice.com>'
 
 ### ✅ Email de confirmation (après réservation)
 - **Route API** : `/api/send-confirmation`
-- **Trigger** : Après création d'une réservation
+- **Trigger** : Après validation du paiement Stripe
 - **Contenu** :
   - Récapitulatif de la réservation
   - Date, créneau, salle, prix
   - Code d'accès (6 caractères)
+  - PDF `Consignes_Theranice.pdf` en pièce jointe
   - Lien vers "Mes réservations"
+
+### Pièce jointe des consignes
+
+- **Source de vérité** : `public/doc/Consignes_Theranice.pdf`
+- **Comportement** : l'email de confirmation échoue explicitement si le PDF est manquant, vide ou invalide
+- **Garde-fou applicatif** : seuil interne de 25 MB côté serveur pour rester sous la limite Resend de 40 MB par email après encodage Base64
+- **Point d'intégration** : helper serveur dédié dans `src/lib/emailAttachments.ts`
 
 ### 🔴 Email d'annulation
 - **Route API** : `/api/send-cancellation`
@@ -89,7 +97,8 @@ npm install resend
 ### 💰 Email après paiement
 - Une fois Stripe intégré
 - Envoyer confirmation uniquement après paiement réussi
-- Inclure facture en PDF
+- Confirmation active avec PDF de consignes joint
+- La facture reste envoyée plus tard, après le créneau, dans un email séparé
 
 ### 📊 Email récapitulatif mensuel
 - Pour les utilisateurs réguliers

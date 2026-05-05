@@ -7,6 +7,54 @@ import { getInternalApiHeaders } from '@/lib/internalApiAuth';
 // Désactive le body parser de Next.js pour Stripe webhooks
 export const dynamic = 'force-dynamic';
 
+type ConfirmationEmailPayload = {
+  email: string | null;
+  nom?: string | null;
+  prenom?: string | null;
+  date: string;
+  slot: string;
+  room: string;
+  price: number;
+  bookingId: string;
+  accessCode: string | null;
+};
+
+async function sendConfirmationEmail(
+  payload: ConfirmationEmailPayload,
+  internalApiHeaders: Record<string, string>
+) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!siteUrl) {
+    throw new Error('NEXT_PUBLIC_SITE_URL is not configured');
+  }
+
+  const recipientEmail = payload.email?.trim();
+  if (!recipientEmail) {
+    throw new Error(`Missing customer email for booking ${payload.bookingId}`);
+  }
+
+  const response = await fetch(`${siteUrl}/api/send-confirmation`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...internalApiHeaders,
+    },
+    body: JSON.stringify({
+      ...payload,
+      email: recipientEmail,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => '');
+    throw new Error(
+      `send-confirmation failed for booking ${payload.bookingId} with status ${response.status}${
+        errorBody ? `: ${errorBody}` : ''
+      }`
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
@@ -174,13 +222,8 @@ export async function POST(request: NextRequest) {
               
               // Envoi email confirmation avec le vrai code
               try {
-                await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-confirmation`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    ...internalApiHeaders,
-                  },
-                  body: JSON.stringify({
+                await sendConfirmationEmail(
+                  {
                     email: session.customer_email,
                     nom: session.metadata?.nom,
                     prenom: session.metadata?.prenom,
@@ -189,10 +232,13 @@ export async function POST(request: NextRequest) {
                     room,
                     price: booking.price,
                     bookingId: booking.id,
-                    accessCode: accessCode,
-                  }),
-                });
-              } catch (e) { console.error('Email error', e); }
+                    accessCode,
+                  },
+                  internalApiHeaders
+                );
+              } catch (emailError) {
+                console.error('[stripe-webhook] Email error in cart flow:', emailError);
+              }
 
             } else {
               results.push({ id: booking.id, status: 'error', error: updateError });
@@ -320,13 +366,8 @@ export async function POST(request: NextRequest) {
 
         // Envoie l'email de confirmation (un par date pour l'instant)
         try {
-          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-confirmation`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...internalApiHeaders,
-            },
-            body: JSON.stringify({
+          await sendConfirmationEmail(
+            {
               email: session.customer_email,
               nom,
               prenom,
@@ -335,11 +376,12 @@ export async function POST(request: NextRequest) {
               room,
               price: unitPrice,
               bookingId: bookingData.id,
-              accessCode: accessCode,
-            }),
-          });
+              accessCode,
+            },
+            internalApiHeaders
+          );
         } catch (emailError) {
-          console.error(`Error sending confirmation email for ${date}:`, emailError);
+          console.error(`[stripe-webhook] Error sending confirmation email for ${date}:`, emailError);
         }
       }
 

@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { formatPinCode } from '@/lib/nuki';
+import { getBookingConfirmationAttachments } from '@/lib/emailAttachments';
 import {
   SLOT_LABELS,
   ROOM_LABELS_FORMAL,
@@ -14,6 +15,8 @@ import {
   BUSINESS_CITY,
 } from '@/lib/constants';
 import { isInternalApiRequest } from '@/lib/internalApiAuth';
+
+export const runtime = 'nodejs';
 
 function escapeHtml(str: string): string {
   return str
@@ -32,6 +35,7 @@ const schema = z.object({
   slot: z.enum(['morning', 'afternoon', 'fullday']),
   room: z.enum(['room1', 'room2', 'large']),
   price: z.coerce.number().finite().nonnegative(),
+  bookingId: z.string().uuid().optional(),
   accessCode: z.union([z.string(), z.number()]).optional().nullable(),
 });
 
@@ -54,7 +58,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Données invalides' }, { status: 400 });
     }
 
-    const { email, nom, prenom, date, slot, room, price, accessCode } = result.data;
+    const { email, nom, prenom, date, slot, room, price, bookingId, accessCode } = result.data;
     const safeNom = escapeHtml(nom || '');
     const safePrenom = escapeHtml(prenom || '');
 
@@ -81,10 +85,28 @@ export async function POST(request: NextRequest) {
     const displayCode = normalizedAccessCode ? formatPinCode(normalizedAccessCode) : null;
     const codeAvailable = !!normalizedAccessCode;
 
+    let attachments;
+    try {
+      attachments = await getBookingConfirmationAttachments();
+    } catch (attachmentError) {
+      console.error('[send-confirmation] Failed to prepare booking attachment:', {
+        bookingId: bookingId || null,
+        email,
+        date,
+        error: attachmentError,
+      });
+
+      return NextResponse.json(
+        { error: 'Impossible de préparer les consignes PDF' },
+        { status: 500 }
+      );
+    }
+
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
       to: [email],
       subject: 'Confirmation de votre réservation – THÉRANICE',
+      attachments,
       html: `
         <!DOCTYPE html>
         <html>
@@ -135,6 +157,7 @@ export async function POST(request: NextRequest) {
               </div>
               
               <p>Le règlement a bien été enregistré.</p>
+              <p>Les consignes d'accès et d'utilisation de THÉRANICE sont jointes à ce message au format PDF.</p>
               <p>La facture correspondante vous sera transmise en pièce jointe d'un email séparé après votre créneau.</p>
               
               <!-- Code d'accès -->
@@ -205,7 +228,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      console.error('Resend error:', error);
+      console.error('[send-confirmation] Resend error:', {
+        bookingId: bookingId || null,
+        email,
+        date,
+        error,
+      });
       return NextResponse.json({ error: 'Erreur lors de l\'envoi de l\'email' }, { status: 500 });
     }
 
