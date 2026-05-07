@@ -11,21 +11,6 @@ const nextConfig: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
   },
-  async redirects() {
-    return [
-      {
-        source: '/:path*',
-        has: [
-          {
-            type: 'host',
-            value: 'www.theranice.fr',
-          },
-        ],
-        destination: 'https://theranice.fr/:path*',
-        permanent: true,
-      },
-    ];
-  },
   async headers() {
     return [
       {
