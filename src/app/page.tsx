@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import Carousel from "@/components/Carousel";
 import FAQ from "@/components/FAQ";
 import ContactForm from "@/components/ContactForm";
@@ -10,6 +11,17 @@ const garamond = EB_Garamond({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
+
+export const metadata: Metadata = {
+  title: "Location de salles pour thérapeutes à Nice",
+  description: "Louez une salle thérapeutique à Nice chez Théranice: espaces calmes, équipés et flexibles pour thérapeutes, psychologues, coachs et praticiens bien-être.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    url: SITE_URL,
+    title: "Théranice — Location de salles pour thérapeutes à Nice",
+    description: "Des espaces calmes et soignés à Nice pour exercer avec sérénité, à la demi-journée ou à la journée.",
+  },
+};
 
 const spaces = [
   {

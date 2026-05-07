@@ -18,11 +18,11 @@ export const metadata: Metadata = {
   },
   description: "Théranice propose des salles thérapeutiques à Nice, équipées et calmes, pour thérapeutes et praticiens bien-être. Réservez votre espace en quelques clics.",
   keywords: ["location salle thérapeute Nice", "cabinet consultation Nice", "salle massage Nice", "espace bien-être professionnel Nice", "location bureau thérapeute", "cabinet thérapie Nice", "salle sophrologie Nice", "location salle hypnothérapie Nice", "Théranice"],
-  metadataBase: new URL("https://theranice.fr"),
+  metadataBase: new URL(SITE_URL),
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    url: "https://theranice.fr",
+    url: SITE_URL,
     siteName: "Théranice",
     title: "Théranice — Location de salles pour thérapeutes à Nice",
     description: "Des espaces calmes et soignés pour exercer avec sérénité. Salon Athéna, Salle Gaïa, Grande Salle — à partir de 8€/h.",
@@ -83,10 +83,10 @@ export default function RootLayout({
   const websiteJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "@id": "https://theranice.fr/#website",
+    "@id": `${SITE_URL}/#website`,
     name: "Théranice",
-    url: "https://theranice.fr",
-    publisher: { "@id": "https://theranice.fr/#organization" },
+    url: SITE_URL,
+    publisher: { "@id": `${SITE_URL}/#organization` },
   };
 
   const breadcrumbJsonLd = {
@@ -97,7 +97,7 @@ export default function RootLayout({
         "@type": "ListItem",
         position: 1,
         name: "Accueil",
-        item: "https://theranice.fr",
+        item: SITE_URL,
       },
     ],
   };

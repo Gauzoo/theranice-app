@@ -20,6 +20,7 @@ export const metadata: Metadata = {
     "Théranice FAQ",
   ],
   alternates: { canonical: "/faq" },
+  robots: { index: false, follow: false },
 };
 
 const faqData = [
