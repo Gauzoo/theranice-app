@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import Script from "next/script";
 import Carousel from "@/components/Carousel";
 import FAQ from "@/components/FAQ";
 import ContactForm from "@/components/ContactForm";
@@ -168,10 +169,9 @@ export default function Home() {
 
   return (
     <div className="bg-slate-50 text-slate-900">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <Script id="home-jsonld" type="application/ld+json">
+        {JSON.stringify(jsonLd)}
+      </Script>
       <section
         className="relative isolate flex min-h-[84vh] items-center overflow-hidden pt-24 text-white"
         id="hero"
@@ -446,7 +446,7 @@ export default function Home() {
 
       <section className="bg-[#FFFFFF] py-16  scroll-mt-24" id="contact">
         <div className="mx-auto max-w-6xl px-6">
-              "La facture est émise automatiquement à l'issue de la période de mise à disposition et transmise par email.",
+
         <p className="mt-6 text-slate-600">
           Besoin d&apos;infos supplémentaires ou d&apos;une visite ? Remplissez le formulaire ci-dessous et nous vous répondrons dans les plus brefs délais ou contactez-nous 
           directement par email à <strong>{CONTACT_EMAIL}</strong>.

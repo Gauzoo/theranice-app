@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
+import Script from "next/script";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -105,18 +106,15 @@ export default function RootLayout({
   return (
     <html lang="fr" className="scroll-smooth" suppressHydrationWarning>
       <body className={`${poppins.className} antialiased`} suppressHydrationWarning>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-        />
+        <Script id="organization-jsonld" type="application/ld+json">
+          {JSON.stringify(organizationJsonLd)}
+        </Script>
+        <Script id="website-jsonld" type="application/ld+json">
+          {JSON.stringify(websiteJsonLd)}
+        </Script>
+        <Script id="breadcrumb-jsonld" type="application/ld+json">
+          {JSON.stringify(breadcrumbJsonLd)}
+        </Script>
         <AuthProvider>
           <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
             <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-[#D4A373] focus:text-white focus:px-4 focus:py-2">

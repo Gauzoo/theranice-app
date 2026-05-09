@@ -127,6 +127,7 @@ export const CONTACT_EMAIL = 'contact@theranice.fr';
 export const SITE_URL = 'https://theranice.fr';
 export const OPENING_HOURS = '7h30 à 20h30';
 export const OPENING_HOURS_SCHEMA = 'Mo-Sa 07:30-20:30';
+export const LEGAL_PAGES_LAST_UPDATED_LABEL = '9 mai 2026';
 
 // --- Emails ---
 

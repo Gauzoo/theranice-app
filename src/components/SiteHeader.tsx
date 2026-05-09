@@ -537,9 +537,11 @@ export default function SiteHeader() {
 
         {/* Overlay sombre derrière le menu mobile */}
         {isMobileMenuOpen && (
-          <div
+          <button
+            type="button"
             className="fixed inset-0 bg-black/50 z-30 xl:hidden"
             onClick={() => setIsMobileMenuOpen(false)}
+            aria-label="Fermer le menu mobile"
           />
         )}
       </div>

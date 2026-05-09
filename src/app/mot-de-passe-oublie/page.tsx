@@ -71,6 +71,7 @@ export default function MotDePasseOublie() {
           src="/photos/covers1.jpg"
           alt="Théranice"
           fill
+          sizes="100vw"
           className="absolute inset-0 object-cover"
           priority
         />

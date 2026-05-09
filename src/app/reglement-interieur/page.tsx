@@ -1,6 +1,12 @@
 import Image from "next/image";
 import { EB_Garamond } from "next/font/google";
-import { BUSINESS_LEGAL_NAME, BUSINESS_ADDRESS, BUSINESS_POSTAL_CODE, BUSINESS_CITY } from '@/lib/constants';
+import {
+  BUSINESS_LEGAL_NAME,
+  BUSINESS_ADDRESS,
+  BUSINESS_POSTAL_CODE,
+  BUSINESS_CITY,
+  LEGAL_PAGES_LAST_UPDATED_LABEL,
+} from '@/lib/constants';
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -22,6 +28,7 @@ export default function ReglementInterieurPage() {
           src="/photos/covers1.jpg"
           alt="Théranice"
           fill
+          sizes="100vw"
           className="absolute inset-0 object-cover"
           priority
         />
@@ -173,7 +180,7 @@ export default function ReglementInterieurPage() {
             </ul>
 
             <p className="text-sm text-slate-500 mt-12">
-              Dernière mise à jour : {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
+              Dernière mise à jour : {LEGAL_PAGES_LAST_UPDATED_LABEL}
             </p>
           </div>
         </div>

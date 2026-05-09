@@ -16,7 +16,7 @@ export default function ResetPassword() {
   const [hasSession, setHasSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const router = useRouter();
+  const { push } = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
@@ -227,7 +227,7 @@ export default function ResetPassword() {
       await supabase.auth.signOut();
       setSuccess(true);
       setTimeout(() => {
-        router.push("/connexion");
+        push("/connexion");
       }, 3000);
     } catch {
       setError("Une erreur est survenue lors de la modification du mot de passe. Veuillez réessayer.");
@@ -244,6 +244,7 @@ export default function ResetPassword() {
           src="/photos/covers1.jpg"
           alt="Théranice"
           fill
+          sizes="100vw"
           className="absolute inset-0 object-cover"
           priority
         />

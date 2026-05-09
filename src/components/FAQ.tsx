@@ -24,7 +24,7 @@ export default function FAQ({ items }: FAQProps) {
     <div className="space-y-4">
       {items.map((item, index) => (
         <div
-          key={index}
+          key={item.question}
           className="overflow-hidden border border-slate-200 bg-white shadow-sm transition-colors duration-300 hover:border-[#D4A373]/45"
         >
           <button

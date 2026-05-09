@@ -404,7 +404,7 @@ export default function ReservationPage() {
           <h2 className={`${garamond.className} text-4xl font-semibold mb-8 text-[#D4A373]`}>
             ▸ Réserver un créneau
           </h2>
-          <p className="max-w-3xl text-lg leading-8 text-slate-600">
+          <p className="mb-8 max-w-3xl text-lg leading-8 text-slate-600">
             Consultez les disponibilités des espaces Théranice, choisissez votre salle et réservez votre créneau à la demi-journée ou à la journée une fois votre profil praticien validé.
           </p>
 

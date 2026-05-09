@@ -6,6 +6,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { translateSupabaseAuthError } from "@/lib/supabase/authErrors";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const garamond = EB_Garamond({
   subsets: ["latin"],
@@ -17,7 +18,7 @@ export default function ComptePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const router = useRouter();
+  const { push, refresh } = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -90,8 +91,8 @@ export default function ComptePage() {
         setSuccess(true);
         // Rediriger vers la page profil pour compléter les documents
         setTimeout(() => {
-          router.push("/profil");
-          router.refresh();
+          push("/profil");
+          refresh();
         }, 3000);
       }
     } catch (err) {
@@ -111,6 +112,7 @@ export default function ComptePage() {
           src="/photos/covers1.jpg"
           alt="Theranice"
           fill
+          sizes="100vw"
           className="absolute inset-0 object-cover"
           priority
         />
@@ -295,17 +297,17 @@ export default function ComptePage() {
                 />
                 <span className="text-sm text-slate-700 leading-relaxed">
                   J&apos;ai lu et j&apos;accepte les{" "}
-                  <a href="/conditions-generales" target="_blank" className="text-[#D4A373] underline hover:text-[#c49363] font-medium">
+                  <Link href="/conditions-generales" target="_blank" rel="noopener noreferrer" className="text-[#D4A373] underline hover:text-[#c49363] font-medium">
                     Conditions Générales de Mise à Disposition
-                  </a>
+                  </Link>
                   , le{" "}
-                  <a href="/reglement-interieur" target="_blank" className="text-[#D4A373] underline hover:text-[#c49363] font-medium">
+                  <Link href="/reglement-interieur" target="_blank" rel="noopener noreferrer" className="text-[#D4A373] underline hover:text-[#c49363] font-medium">
                     Règlement Intérieur
-                  </a>
+                  </Link>
                   {" "}et la{" "}
-                  <a href="/politique-confidentialite" target="_blank" className="text-[#D4A373] underline hover:text-[#c49363] font-medium">
+                  <Link href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="text-[#D4A373] underline hover:text-[#c49363] font-medium">
                     Politique de Confidentialité
-                  </a>
+                  </Link>
                   . <span className="text-red-500">*</span>
                 </span>
               </label>

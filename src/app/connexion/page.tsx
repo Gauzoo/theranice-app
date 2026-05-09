@@ -16,18 +16,20 @@ const garamond = EB_Garamond({
 export default function ConnexionPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+  const { push, refresh } = useRouter();
   
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const updateCredentialsField = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -48,8 +50,8 @@ export default function ConnexionPage() {
       }
 
       if (data.user) {
-        router.push("/");
-        router.refresh();
+        push("/");
+        refresh();
       }
     } catch (err) {
       setError(translateSupabaseAuthError(err, "Email ou mot de passe incorrect"));
@@ -68,6 +70,7 @@ export default function ConnexionPage() {
           src="/photos/covers1.jpg"
           alt="Theranice"
           fill
+          sizes="100vw"
           className="absolute inset-0 object-cover"
           priority
         />
@@ -102,7 +105,7 @@ export default function ConnexionPage() {
                 id="email"
                 name="email"
                 value={formData.email}
-                onChange={handleChange}
+                onChange={updateCredentialsField}
                 required
                 className="w-full border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
                 placeholder="e-mail *"
@@ -116,7 +119,7 @@ export default function ConnexionPage() {
                 id="password"
                 name="password"
                 value={formData.password}
-                onChange={handleChange}
+                onChange={updateCredentialsField}
                 required
                 className="w-full border border-slate-300 px-4 py-3 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
                 placeholder="Mot de passe *"

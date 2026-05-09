@@ -1,7 +1,9 @@
 import Image from "next/image";
+import Link from "next/link";
 import { EB_Garamond } from "next/font/google";
 import FAQ from "@/components/FAQ";
 import type { Metadata } from "next";
+import Script from "next/script";
 import { CONTACT_EMAIL } from '@/lib/constants';
 
 const garamond = EB_Garamond({
@@ -92,10 +94,9 @@ export default function FAQPage() {
 
   return (
     <div className="bg-slate-50 text-slate-900">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <Script id="faq-jsonld" type="application/ld+json">
+        {JSON.stringify(jsonLd)}
+      </Script>
 
       {/* Hero */}
       <section className="relative isolate flex min-h-[40vh] items-center justify-center overflow-hidden pt-24 text-white">
@@ -103,6 +104,7 @@ export default function FAQPage() {
           src="/photos/covers2.jpg"
           alt="Espace Théranice — location de salle thérapeutique à Nice"
           fill
+          sizes="100vw"
           className="absolute inset-0 object-cover"
           priority
         />
@@ -149,12 +151,12 @@ export default function FAQPage() {
                 {CONTACT_EMAIL}
               </a>{" "}
               ou consultez nos{" "}
-              <a
+              <Link
                 href="/conditions-generales"
                 className="font-medium text-[#D4A373] hover:underline"
               >
                 conditions générales
-              </a>
+              </Link>
               .
             </p>
           </div>
