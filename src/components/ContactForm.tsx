@@ -7,14 +7,16 @@ export default function ContactForm() {
   const [formData, setFormData] = useState({
     nom: '',
     prenom: '',
-    sujet: '',
+    email: '',
     message: ''
   });
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [submittedEmail, setSubmittedEmail] = useState('');
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatus('loading');
+    setSubmittedEmail('');
 
     try {
       const res = await fetch('/api/contact', {
@@ -25,8 +27,9 @@ export default function ContactForm() {
 
       if (!res.ok) throw new Error();
 
+      setSubmittedEmail(formData.email);
       setStatus('success');
-      setFormData({ nom: '', prenom: '', sujet: '', message: '' });
+      setFormData({ nom: '', prenom: '', email: '', message: '' });
     } catch {
       setStatus('error');
     }
@@ -44,12 +47,12 @@ export default function ContactForm() {
     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
       {status === 'success' && (
         <div className="border border-green-200 bg-green-50 px-5 py-4 text-green-800">
-          Message envoyé ! Nous vous répondrons dans les plus brefs délais.
+          Message envoyé ! Nous vous répondrons à {submittedEmail} dans les plus brefs délais.
         </div>
       )}
       {status === 'error' && (
         <div className="border border-red-200 bg-red-50 px-5 py-4 text-red-800">
-          Une erreur est survenue. Veuillez réessayer ou nous écrire directement à {CONTACT_EMAIL}.
+          Une erreur est survenue. Veuillez vérifier votre adresse email ou nous écrire directement à {CONTACT_EMAIL}.
         </div>
       )}
       <div className="grid gap-6 md:grid-cols-2">
@@ -64,6 +67,7 @@ export default function ContactForm() {
             name="nom"
             value={formData.nom}
             onChange={handleChange}
+            autoComplete="family-name"
             required
             className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
             placeholder="Votre nom"
@@ -81,6 +85,7 @@ export default function ContactForm() {
             name="prenom"
             value={formData.prenom}
             onChange={handleChange}
+            autoComplete="given-name"
             required
             className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
             placeholder="Votre prénom"
@@ -88,20 +93,21 @@ export default function ContactForm() {
         </div>
       </div>
 
-      {/* Sujet */}
+      {/* Email */}
       <div>
-        <label htmlFor="sujet" className="block text-sm font-semibold text-slate-900">
-          Sujet <span className="text-red-500">*</span>
+        <label htmlFor="email" className="block text-sm font-semibold text-slate-900">
+          Email <span className="text-red-500">*</span>
         </label>
         <input
-          type="text"
-          id="sujet"
-          name="sujet"
-          value={formData.sujet}
+          type="email"
+          id="email"
+          name="email"
+          value={formData.email}
           onChange={handleChange}
+          autoComplete="email"
           required
           className="mt-2 w-full border border-slate-300 px-4 py-2 text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#D4A373] focus:outline-none focus:ring-1 focus:ring-[#D4A373]"
-          placeholder="Objet de votre message"
+          placeholder="votre@email.fr"
         />
       </div>
 

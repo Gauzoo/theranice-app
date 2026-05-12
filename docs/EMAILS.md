@@ -61,6 +61,14 @@ from: 'Theranice <contact@theranice.com>'
   - Détails de la réservation annulée
   - Lien pour faire une nouvelle réservation
 
+### ✅ Email de contact
+- **Route API** : `/api/contact`
+- **Trigger** : Soumission du formulaire de contact sur le site
+- **Champs transmis** : nom, prénom, email, message
+- **Destinataire** : `contact@theranice.fr`
+- **Reply-To** : l'email saisi par le visiteur
+- **Expéditeur technique** : `Theranice <noreply@theranice.fr>`
+
 ## Code d'accès
 
 Actuellement, le code est généré à partir des 6 premiers caractères de l'ID de la réservation (UUID).

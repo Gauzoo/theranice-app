@@ -13,6 +13,14 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#x27;');
 }
 
+function normalizeField(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export async function POST(request: NextRequest) {
   try {
     // CSRF: vérifier l'origine de la requête
@@ -28,25 +36,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Origine non autorisée' }, { status: 403 });
     }
 
-    const { nom, prenom, sujet, message } = await request.json();
+    const payload = await request.json() as Record<string, unknown>;
+    const nom = normalizeField(payload.nom);
+    const prenom = normalizeField(payload.prenom);
+    const email = normalizeField(payload.email).toLowerCase();
+    const message = normalizeField(payload.message);
 
-    if (!nom || !prenom || !sujet || !message) {
+    if (!nom || !prenom || !email || !message) {
       return NextResponse.json(
         { error: 'Tous les champs sont requis' },
         { status: 400 }
       );
     }
 
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: 'Adresse email invalide' },
+        { status: 400 }
+      );
+    }
+
     const safeNom = escapeHtml(nom);
     const safePrenom = escapeHtml(prenom);
-    const safeSujet = escapeHtml(sujet);
+    const safeEmail = escapeHtml(email);
     const safeMessage = escapeHtml(message);
 
     const { data, error } = await resend.emails.send({
       from: 'Theranice <noreply@theranice.fr>',
       to: [CONTACT_EMAIL],
-      replyTo: undefined,
-      subject: `[Contact] ${safeSujet}`,
+      replyTo: email,
+      subject: `[Contact] Nouveau message de ${safePrenom} ${safeNom}`,
+      text: `Nouveau message de contact\n\nNom: ${nom} ${prenom}\nEmail: ${email}\n\nMessage:\n${message}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -72,8 +92,8 @@ export async function POST(request: NextRequest) {
                 <div class="value">${safeNom} ${safePrenom}</div>
               </div>
               <div class="field">
-                <div class="label">Sujet</div>
-                <div class="value">${safeSujet}</div>
+                <div class="label">Email</div>
+                <div class="value"><a href="mailto:${safeEmail}" style="color: #D4A373; text-decoration: none;">${safeEmail}</a></div>
               </div>
               <div class="field">
                 <div class="label">Message</div>
